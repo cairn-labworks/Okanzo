@@ -2,12 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
 
 import 'data/repository/settings_repository.dart';
 import 'di/app_container.dart';
 import 'domain/model/app_theme.dart';
 import 'domain/model/theme_mode.dart';
+import 'l10n/app_localizations.dart';
 import 'ui/lock/lock_screen.dart';
 import 'ui/navigation/app_shell.dart';
 import 'ui/theme/dynamic_color.dart';
@@ -48,6 +50,13 @@ class OkanzoApp extends StatelessWidget {
             return MaterialApp(
               title: 'Okanzo',
               debugShowCheckedModeBanner: false,
+              localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
               theme: buildTheme(
                 brightness: Brightness.light,
                 dynamicScheme: useDynamic ? lightDynamic : null,
@@ -131,8 +140,8 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
     if (_prompting) return;
     _prompting = true;
     final String? error = await BiometricAuthenticator.authenticate(
-      title: 'Unlock Okanzo',
-      subtitle: "Confirm it's you to view your net worth",
+      title: 'Unlock Okanzo'.tr,
+      subtitle: "Confirm it's you to view your net worth".tr,
     );
     _prompting = false;
     // Stay locked on failure; the user can retry from the lock screen.

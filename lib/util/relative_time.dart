@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// Human-friendly "time ago" label for the exchange-rate timestamp.
 ///
 /// Mirrors Android's `DateUtils.getRelativeTimeSpanString` closely enough for
@@ -15,17 +17,21 @@ String relativeTimeSpan(int epochMillis, {DateTime? now}) {
   const int hour = 60 * minute;
   const int day = 24 * hour;
 
-  if (deltaMillis < minute) return '0 minutes ago';
+  if (deltaMillis < minute) return '0 minutes ago'.tr;
   if (deltaMillis < hour) {
     final int minutes = deltaMillis ~/ minute;
-    return minutes == 1 ? '1 minute ago' : '$minutes minutes ago';
+    return minutes == 1
+        ? '1 minute ago'.tr
+        : '{count} minutes ago'.tr.replaceAll('{count}', '$minutes');
   }
   if (deltaMillis < day) {
     final int hours = deltaMillis ~/ hour;
-    return hours == 1 ? '1 hour ago' : '$hours hours ago';
+    return hours == 1
+        ? '1 hour ago'.tr
+        : '{count} hours ago'.tr.replaceAll('{count}', '$hours');
   }
   final int days = deltaMillis ~/ day;
-  if (days == 1) return 'Yesterday';
-  if (days < 7) return '$days days ago';
+  if (days == 1) return 'Yesterday'.tr;
+  if (days < 7) return '{count} days ago'.tr.replaceAll('{count}', '$days');
   return DateFormat.yMMMd().format(moment);
 }

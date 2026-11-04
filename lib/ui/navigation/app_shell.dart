@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../asset/asset_edit_screen.dart';
 import '../home/home_screen.dart';
 import '../liability/liability_edit_screen.dart';
@@ -9,10 +10,10 @@ import '../statistics/statistics_screen.dart';
 
 /// Top-level destinations shown in the bottom bar / navigation rail.
 enum TopLevelDestination {
-  home('Home', Icons.home, Icons.home_outlined),
-  statistics('Statistics', Icons.pie_chart, Icons.pie_chart_outline),
+  home('Home'.tr, Icons.home, Icons.home_outlined),
+  statistics('Statistics'.tr, Icons.pie_chart, Icons.pie_chart_outline),
   portfolios(
-    'Portfolios',
+    'Portfolios'.tr,
     Icons.account_balance_wallet,
     Icons.account_balance_wallet_outlined,
   );

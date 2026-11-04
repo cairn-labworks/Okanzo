@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/model/net_worth_summary.dart';
+import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../theme/app_style.dart';
 import '../theme/theme.dart';
@@ -33,13 +34,13 @@ class NetWorthCard extends StatelessWidget {
           Row(
             children: <Widget>[
               Text(
-                'Net worth',
+                'Net worth'.tr,
                 style: theme.textTheme.labelLarge?.copyWith(color: onHero),
               ),
               if (summary.hasApproximateConversions) ...<Widget>[
                 const SizedBox(width: 8),
                 Tooltip(
-                  message: 'Some values are approximate',
+                  message: 'Some values are approximate'.tr,
                   child: Icon(Icons.info_outlined, size: 16, color: onHero),
                 ),
               ],
@@ -64,7 +65,7 @@ class NetWorthCard extends StatelessWidget {
                   accent: onGradient ? onHero : finance.positive,
                   onGradient: onGradient,
                   onHero: onHero,
-                  label: 'Assets',
+                  label: 'Assets'.tr,
                   amount: hideBalances
                       ? CurrencyUtil.maskShort
                       : CurrencyUtil.format(
@@ -80,7 +81,7 @@ class NetWorthCard extends StatelessWidget {
                   accent: onGradient ? onHero : finance.negative,
                   onGradient: onGradient,
                   onHero: onHero,
-                  label: 'Liabilities',
+                  label: 'Liabilities'.tr,
                   amount: hideBalances
                       ? CurrencyUtil.maskShort
                       : CurrencyUtil.format(

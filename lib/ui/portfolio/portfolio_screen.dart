@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
+import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../theme/theme.dart';
 import 'portfolio_list_view_model.dart';
@@ -40,7 +41,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     if (message != null && mounted) {
       _viewModel!.consumeMessage();
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+          .showSnackBar(SnackBar(content: Text(message.tr)));
     }
   }
 
@@ -60,11 +61,11 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         final List<PortfolioRow> rows = viewModel.rows;
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Portfolios'),
+            title: Text('Portfolios'.tr),
             leading: widget.onClose == null
                 ? null
                 : IconButton(
-                    tooltip: 'Back',
+                    tooltip: 'Back'.tr,
                     onPressed: widget.onClose,
                     icon: const Icon(Icons.arrow_back),
                   ),
@@ -73,7 +74,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
             heroTag: 'portfolio-create',
             onPressed: _showCreateDialog,
             icon: const Icon(Icons.add),
-            label: const Text('New'),
+            label: Text('New'.tr),
           ),
           body: ListView.separated(
             padding: const EdgeInsets.only(
@@ -101,18 +102,18 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
 
   Future<void> _showCreateDialog() async {
     final String? name = await _showNameDialog(
-      title: 'New portfolio',
+      title: 'New portfolio'.tr,
       initial: '',
-      confirmLabel: 'Create',
+      confirmLabel: 'Create'.tr,
     );
     if (name != null) _viewModel?.create(name);
   }
 
   Future<void> _showRenameDialog(PortfolioEntity portfolio) async {
     final String? name = await _showNameDialog(
-      title: 'Rename portfolio',
+      title: 'Rename portfolio'.tr,
       initial: portfolio.name,
-      confirmLabel: 'Save',
+      confirmLabel: 'Save'.tr,
     );
     if (name != null) _viewModel?.rename(portfolio.id, name);
   }
@@ -122,19 +123,21 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
         await showDialog<bool>(
           context: context,
           builder: (BuildContext context) => AlertDialog(
-            title: const Text('Delete portfolio?'),
+            title: Text('Delete portfolio?'.tr),
             content: Text(
-              '"${portfolio.name}" and all of its assets and liabilities '
-              'will be permanently removed.',
+              '"{portfolio}" and all of its assets and liabilities will be '
+                      'permanently removed.'
+                  .tr
+                  .replaceAll('{portfolio}', portfolio.name),
             ),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+                child: Text('Cancel'.tr),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Delete'),
+                child: Text('Delete'.tr),
               ),
             ],
           ),
@@ -196,12 +199,12 @@ class _PortfolioCard extends StatelessWidget {
                   ),
                 ),
                 if (row.portfolio.isDefault)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 4),
-                    child: Chip(label: Text('Default')),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Chip(label: Text('Default'.tr)),
                   ),
                 PopupMenuButton<String>(
-                  tooltip: 'More',
+                  tooltip: 'More'.tr,
                   icon: const Icon(Icons.more_vert),
                   onSelected: (String value) {
                     switch (value) {
@@ -216,17 +219,17 @@ class _PortfolioCard extends StatelessWidget {
                   itemBuilder: (BuildContext context) =>
                       <PopupMenuEntry<String>>[
                         if (!row.portfolio.isDefault)
-                          const PopupMenuItem<String>(
+                          PopupMenuItem<String>(
                             value: 'default',
-                            child: Text('Set as default'),
+                            child: Text('Set as default'.tr),
                           ),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'rename',
-                          child: Text('Rename'),
+                          child: Text('Rename'.tr),
                         ),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'delete',
-                          child: Text('Delete'),
+                          child: Text('Delete'.tr),
                         ),
                       ],
                 ),
@@ -237,7 +240,10 @@ class _PortfolioCard extends StatelessWidget {
               style: theme.textTheme.headlineSmall,
             ),
             Text(
-              '${row.assetCount} assets · ${row.liabilityCount} liabilities',
+              '{assets} assets · {liabilities} liabilities'
+                  .tr
+                  .replaceAll('{assets}', '${row.assetCount}')
+                  .replaceAll('{liabilities}', '${row.liabilityCount}'),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -284,15 +290,15 @@ class _NameDialogState extends State<_NameDialog> {
         controller: _controller,
         autofocus: true,
         onChanged: (_) => setState(() {}),
-        decoration: const InputDecoration(
-          border: OutlineInputBorder(),
-          labelText: 'Name',
+        decoration: InputDecoration(
+          border: const OutlineInputBorder(),
+          labelText: 'Name'.tr,
         ),
       ),
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text('Cancel'.tr),
         ),
         TextButton(
           onPressed: canConfirm

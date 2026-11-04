@@ -9,6 +9,7 @@ import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
 import '../../domain/model/app_theme.dart';
 import '../../domain/model/theme_mode.dart';
+import '../../l10n/app_localizations.dart';
 import '../../util/biometric_authenticator.dart';
 import '../../util/currency_util.dart';
 import '../../util/link_opener.dart';
@@ -47,7 +48,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (message != null && mounted) {
       _viewModel!.consumeMessage();
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+          .showSnackBar(SnackBar(content: Text(message.tr)));
     }
   }
 
@@ -69,37 +70,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final int? fxUpdatedAt = viewModel.fxUpdatedAt;
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Settings'),
+            title: Text('Settings'.tr),
             leading: IconButton(
-              tooltip: 'Back',
+              tooltip: 'Back'.tr,
               onPressed: widget.onClose,
               icon: const Icon(Icons.arrow_back),
             ),
           ),
           body: ListView(
             children: <Widget>[
-              const _SectionTitle('Appearance'),
+              _SectionTitle('Appearance'.tr),
               _SettingRow(
-                title: 'App theme',
-                subtitle:
-                    '${settings.appTheme.displayName} — '
-                    '${settings.appTheme.description}',
+                title: 'App theme'.tr,
+                subtitle: '${settings.appTheme.displayName.tr} — '
+                    '${settings.appTheme.description.tr}',
                 onTap: () => _showAppThemeDialog(settings.appTheme),
               ),
               _SettingRow(
-                title: 'Light / dark',
+                title: 'Light / dark'.tr,
                 subtitle: settings.appTheme == AppTheme.midnight
-                    ? 'Always dark on Midnight'
-                    : settings.themeMode.displayName,
+                    ? 'Always dark on Midnight'.tr
+                    : settings.themeMode.displayName.tr,
                 onTap: settings.appTheme == AppTheme.midnight
                     ? null
                     : () => _showThemeDialog(settings.themeMode),
               ),
               _SwitchRow(
-                title: 'Dynamic color',
+                title: 'Dynamic color'.tr,
                 subtitle: settings.appTheme == AppTheme.midnight
-                    ? 'Not used on Midnight'
-                    : 'Use colors from your wallpaper (Android 12+)',
+                    ? 'Not used on Midnight'.tr
+                    : 'Use colors from your wallpaper (Android 12+)'.tr,
                 value:
                     settings.dynamicColor &&
                     settings.appTheme == AppTheme.classic,
@@ -108,38 +108,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     : viewModel.setDynamicColor,
               ),
               const Divider(height: 1),
-              const _SectionTitle('Currency'),
+              _SectionTitle('Currency'.tr),
               _SettingRow(
-                title: 'Base currency',
+                title: 'Base currency'.tr,
                 subtitle:
                     '${settings.baseCurrency} — '
                     '${CurrencyUtil.displayName(settings.baseCurrency)}',
                 onTap: () => _showCurrencyPicker(settings.baseCurrency),
               ),
               const Divider(height: 1),
-              const _SectionTitle('Security'),
+              _SectionTitle('Security'.tr),
               _SwitchRow(
-                title: 'App lock',
-                subtitle: 'Require fingerprint or device PIN to open Okanzo',
+                title: 'App lock'.tr,
+                subtitle: 'Require fingerprint or device PIN to open Okanzo'.tr,
                 value: settings.appLockEnabled,
                 onChanged: _onAppLockChanged,
               ),
               const Divider(height: 1),
-              const _SectionTitle('Data'),
+              _SectionTitle('Data'.tr),
               _SettingRow(
-                title: 'Exchange rates',
+                title: 'Exchange rates'.tr,
                 subtitle: fxUpdatedAt == null
-                    ? 'Not fetched yet'
-                    : 'Updated ${relativeTimeSpan(fxUpdatedAt)}',
+                    ? 'Not fetched yet'.tr
+                    : 'Updated {time}'
+                          .tr
+                          .replaceAll('{time}', relativeTimeSpan(fxUpdatedAt)),
                 trailing: IconButton(
-                  tooltip: 'Refresh rates',
+                  tooltip: 'Refresh rates'.tr,
                   onPressed: viewModel.refreshRates,
                   icon: const Icon(Icons.refresh),
                 ),
               ),
               _SettingRow(
-                title: 'Export portfolios',
-                subtitle: 'Save an encrypted, password-protected backup',
+                title: 'Export portfolios'.tr,
+                subtitle: 'Save an encrypted, password-protected backup'.tr,
                 onTap: () {
                   if (viewModel.portfolios.isNotEmpty) {
                     _showExportDialog(viewModel.portfolios);
@@ -147,18 +149,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               _SettingRow(
-                title: 'Import portfolios',
-                subtitle: 'Restore from an encrypted backup file',
+                title: 'Import portfolios'.tr,
+                subtitle: 'Restore from an encrypted backup file'.tr,
                 onTap: _startImport,
               ),
               const Divider(height: 1),
-              const _SectionTitle('About'),
-              const _SettingRow(
-                title: 'Okanzo',
-                subtitle: 'Version 1.2.3 · Open source (MIT)',
+              _SectionTitle('About'.tr),
+              _SettingRow(
+                title: 'Okanzo'.tr,
+                subtitle: 'Version 1.2.3 · Open source (MIT)'.tr,
               ),
               _SettingRow(
-                title: 'Privacy policy',
+                title: 'Privacy policy'.tr,
                 subtitle: 'cairn-labworks.github.io/Okanzo/privacy',
                 onTap: _openPrivacyPolicy,
               ),
@@ -169,8 +171,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 child: Text(
                   'Your data is stored encrypted on this device and never '
-                  'leaves it, except when you export a backup. Stock and '
-                  'exchange-rate lookups send only the ticker or currency code.',
+                          'leaves it, except when you export a backup. Stock and '
+                          'exchange-rate lookups send only the ticker or currency code.'
+                      .tr,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -189,7 +192,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await showDialog<void>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('Privacy policy'),
+        title: Text('Privacy policy'.tr),
         content: const SelectableText(LinkOpener.privacyPolicyUrl),
         actions: <Widget>[
           TextButton(
@@ -199,11 +202,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               );
               Navigator.of(dialogContext).pop();
             },
-            child: const Text('Copy link'),
+            child: Text('Copy link'.tr),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Close'),
+            child: Text('Close'.tr),
           ),
         ],
       ),
@@ -221,10 +224,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         viewModel.setAppLockEnabled(true);
       case BiometricCapability.notEnrolled:
         viewModel.postMessage(
-          'Set up a screen lock or fingerprint in system settings first',
+          'Set up a screen lock or fingerprint in system settings first'.tr,
         );
       case BiometricCapability.unavailable:
-        viewModel.postMessage("This device can't authenticate you");
+        viewModel.postMessage("This device can't authenticate you".tr);
     }
   }
 
@@ -232,7 +235,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final AppThemeMode? mode = await showDialog<AppThemeMode>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Text('Theme'),
+        title: Text('Theme'.tr),
         content: RadioGroup<AppThemeMode>(
           groupValue: selected,
           onChanged: (AppThemeMode? value) => Navigator.of(context).pop(value),
@@ -242,7 +245,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               for (final AppThemeMode mode in AppThemeMode.values)
                 RadioListTile<AppThemeMode>(
                   value: mode,
-                  title: Text(mode.displayName),
+                  title: Text(mode.displayName.tr),
                 ),
             ],
           ),
@@ -250,7 +253,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: Text('Close'.tr),
           ),
         ],
       ),
@@ -262,7 +265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final AppTheme? theme = await showDialog<AppTheme>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Text('App theme'),
+        title: Text('App theme'.tr),
         content: RadioGroup<AppTheme>(
           groupValue: selected,
           onChanged: (AppTheme? value) => Navigator.of(context).pop(value),
@@ -272,8 +275,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               for (final AppTheme option in AppTheme.values)
                 RadioListTile<AppTheme>(
                   value: option,
-                  title: Text(option.displayName),
-                  subtitle: Text(option.description),
+                  title: Text(option.displayName.tr),
+                  subtitle: Text(option.description.tr),
                 ),
             ],
           ),
@@ -281,7 +284,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: Text('Close'.tr),
           ),
         ],
       ),
@@ -310,22 +313,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
         request.password,
       );
       final Uri? saved = await FilePicker.saveFile(
-        dialogTitle: 'Export portfolios',
+        dialogTitle: 'Export portfolios'.tr,
         fileName: 'okanzo-backup.okanzo',
         bytes: bytes,
       );
       if (saved == null) return;
       viewModel.postMessage(
-        'Exported ${request.portfolioIds.length} portfolio(s)',
+        'Exported {count} portfolio(s)'
+            .tr
+            .replaceAll('{count}', '${request.portfolioIds.length}'),
       );
     } catch (error) {
-      viewModel.postMessage('Export failed: $error');
+      viewModel.postMessage(
+        'Export failed: {error}'.tr.replaceAll('{error}', '$error'),
+      );
     }
   }
 
   Future<void> _startImport() async {
     final PlatformFile? file = await FilePicker.pickFile(
-      dialogTitle: 'Import backup',
+      dialogTitle: 'Import backup'.tr,
     );
     if (file == null || !mounted) return;
     final String? password = await showDialog<String>(
@@ -338,11 +345,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final Uint8List bytes = await file.readAsBytes();
       final ImportResult result = await viewModel.importBackup(bytes, password);
       viewModel.postMessage(
-        'Imported ${result.portfolios} portfolio(s), '
-        '${result.assets} assets, ${result.liabilities} liabilities',
+        'Imported {portfolios} portfolio(s), {assets} assets, '
+                '{liabilities} liabilities'
+            .tr
+            .replaceAll('{portfolios}', '${result.portfolios}')
+            .replaceAll('{assets}', '${result.assets}')
+            .replaceAll('{liabilities}', '${result.liabilities}'),
       );
     } catch (error) {
-      viewModel.postMessage('Import failed: $error');
+      viewModel.postMessage(
+        'Import failed: {error}'.tr.replaceAll('{error}', '$error'),
+      );
     }
   }
 }
@@ -500,7 +513,7 @@ class _ExportDialogState extends State<_ExportDialog> {
         chosen.isNotEmpty && password.length >= 4 && password == confirm;
 
     return AlertDialog(
-      title: const Text('Export portfolios'),
+      title: Text('Export portfolios'.tr),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -508,7 +521,8 @@ class _ExportDialogState extends State<_ExportDialog> {
           children: <Widget>[
             Text(
               "Choose portfolios and set a password. You'll need this exact "
-              'password to import the file again.',
+                      'password to import the file again.'
+                  .tr,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 12),
@@ -525,24 +539,24 @@ class _ExportDialogState extends State<_ExportDialog> {
             const SizedBox(height: 8),
             _PasswordField(
               controller: _password,
-              label: 'Password',
+              label: 'Password'.tr,
               visible: _visible,
               onToggleVisibility: () => setState(() => _visible = !_visible),
               onChanged: (_) => setState(() {}),
               isError: password.isNotEmpty && password.length < 4,
               supportingText: password.isNotEmpty && password.length < 4
-                  ? 'Use at least 4 characters'
+                  ? 'Use at least 4 characters'.tr
                   : null,
             ),
             const SizedBox(height: 8),
             _PasswordField(
               controller: _confirm,
-              label: 'Confirm password',
+              label: 'Confirm password'.tr,
               visible: _visible,
               onToggleVisibility: () => setState(() => _visible = !_visible),
               onChanged: (_) => setState(() {}),
               isError: mismatch,
-              supportingText: mismatch ? "Passwords don't match" : null,
+              supportingText: mismatch ? "Passwords don't match".tr : null,
             ),
           ],
         ),
@@ -550,14 +564,14 @@ class _ExportDialogState extends State<_ExportDialog> {
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text('Cancel'.tr),
         ),
         TextButton(
           onPressed: canExport
               ? () =>
                     Navigator.of(context).pop(_ExportRequest(chosen, password))
               : null,
-          child: const Text('Export'),
+          child: Text('Export'.tr),
         ),
       ],
     );
@@ -585,19 +599,19 @@ class _ImportPasswordDialogState extends State<_ImportPasswordDialog> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     return AlertDialog(
-      title: const Text('Import backup'),
+      title: Text('Import backup'.tr),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'Enter the password used when this backup was exported.',
+            'Enter the password used when this backup was exported.'.tr,
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 12),
           _PasswordField(
             controller: _password,
-            label: 'Password',
+            label: 'Password'.tr,
             visible: _visible,
             onToggleVisibility: () => setState(() => _visible = !_visible),
             onChanged: (_) => setState(() {}),
@@ -607,13 +621,13 @@ class _ImportPasswordDialogState extends State<_ImportPasswordDialog> {
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text('Cancel'.tr),
         ),
         TextButton(
           onPressed: _password.text.isEmpty
               ? null
               : () => Navigator.of(context).pop(_password.text),
-          child: const Text('Import'),
+          child: Text('Import'.tr),
         ),
       ],
     );
@@ -658,7 +672,7 @@ class _PasswordField extends StatelessWidget {
         helperText: isError ? null : supportingText,
         errorText: isError ? supportingText : null,
         suffixIcon: IconButton(
-          tooltip: visible ? 'Hide password' : 'Show password',
+          tooltip: (visible ? 'Hide password' : 'Show password').tr,
           onPressed: onToggleVisibility,
           icon: Icon(visible ? Icons.visibility_off : Icons.visibility),
         ),

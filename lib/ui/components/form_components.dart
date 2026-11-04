@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 
 /// Outlined text field with the app's standard sizing and helper slots.
@@ -144,7 +145,7 @@ class _CurrencyPickerDialogState extends State<_CurrencyPickerDialog> {
   Widget build(BuildContext context) {
     final List<String> results = _results;
     return AlertDialog(
-      title: const Text('Choose currency'),
+      title: Text('Choose currency'.tr),
       content: SizedBox(
         width: 400,
         child: Column(
@@ -155,9 +156,9 @@ class _CurrencyPickerDialogState extends State<_CurrencyPickerDialog> {
               child: TextField(
                 controller: _query,
                 onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Search',
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  labelText: 'Search'.tr,
                 ),
               ),
             ),
@@ -191,7 +192,7 @@ class _CurrencyPickerDialogState extends State<_CurrencyPickerDialog> {
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+          child: Text('Close'.tr),
         ),
       ],
     );

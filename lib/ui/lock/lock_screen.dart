@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Full-screen gate shown while the app is locked.
 class LockScreen extends StatefulWidget {
   const LockScreen({required this.onUnlock, super.key});
@@ -44,7 +46,7 @@ class _LockScreenState extends State<LockScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 24),
                 child: Text(
-                  'Okanzo is locked',
+                  'Okanzo is locked'.tr,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w600,
@@ -55,7 +57,8 @@ class _LockScreenState extends State<LockScreen> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   'Unlock with your fingerprint or device PIN to view your '
-                  'net worth.',
+                          'net worth.'
+                      .tr,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
@@ -67,7 +70,7 @@ class _LockScreenState extends State<LockScreen> {
                 child: FilledButton.icon(
                   onPressed: () => widget.onUnlock(),
                   icon: const Icon(Icons.fingerprint, size: 20),
-                  label: const Text('Unlock'),
+                  label: Text('Unlock'.tr),
                 ),
               ),
             ],
