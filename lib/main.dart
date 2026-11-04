@@ -26,8 +26,32 @@ Future<void> main() async {
   runApp(AppScope(container: container, child: const OkanzoApp()));
 }
 
-class OkanzoApp extends StatelessWidget {
+class OkanzoApp extends StatefulWidget {
   const OkanzoApp({super.key});
+
+  @override
+  State<OkanzoApp> createState() => _OkanzoAppState();
+}
+
+class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    Intl.defaultLocale = locales != null && locales.isNotEmpty
+        ? locales.first.toString()
+        : Intl.systemLocale;
+  }
 
   @override
   Widget build(BuildContext context) {

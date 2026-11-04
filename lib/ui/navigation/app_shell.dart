@@ -10,10 +10,10 @@ import '../statistics/statistics_screen.dart';
 
 /// Top-level destinations shown in the bottom bar / navigation rail.
 enum TopLevelDestination {
-  home('Home'.tr, Icons.home, Icons.home_outlined),
-  statistics('Statistics'.tr, Icons.pie_chart, Icons.pie_chart_outline),
+  home('Home', Icons.home, Icons.home_outlined),
+  statistics('Statistics', Icons.pie_chart, Icons.pie_chart_outline),
   portfolios(
-    'Portfolios'.tr,
+    'Portfolios',
     Icons.account_balance_wallet,
     Icons.account_balance_wallet_outlined,
   );
@@ -98,7 +98,7 @@ class _AppShellState extends State<AppShell> {
               NavigationDestination(
                 icon: Icon(destination.unselectedIcon),
                 selectedIcon: Icon(destination.selectedIcon),
-                label: destination.label,
+                label: destination.label.tr,
               ),
           ],
         ),
@@ -118,7 +118,7 @@ class _AppShellState extends State<AppShell> {
                 NavigationRailDestination(
                   icon: Icon(destination.unselectedIcon),
                   selectedIcon: Icon(destination.selectedIcon),
-                  label: Text(destination.label),
+                  label: Text(destination.label.tr),
                 ),
             ],
           ),
