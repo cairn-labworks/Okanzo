@@ -64,6 +64,38 @@ void main() {
       },
     );
 
+    test('uses the USD pair for bare crypto symbols', () async {
+      Uri? seen;
+      final StockPriceService service = serviceReturning(
+        metaBody(<String, Object?>{
+          'regularMarketPrice': 90000.0,
+          'currency': 'USD',
+        }),
+        onRequest: (Uri uri) => seen = uri,
+      );
+
+      final Result<StockQuote> result = await service.fetchQuote(
+        ' btc ',
+        isCrypto: true,
+      );
+
+      expect(seen.toString(), contains('/v8/finance/chart/BTC-USD'));
+      expect(result.value.symbol, 'BTC-USD');
+      expect(result.value.price, 90000.0);
+    });
+
+    test('does not append a second quote currency to crypto pairs', () async {
+      Uri? seen;
+      final StockPriceService service = serviceReturning(
+        metaBody(<String, Object?>{'regularMarketPrice': 90000.0}),
+        onRequest: (Uri uri) => seen = uri,
+      );
+
+      await service.fetchQuote('BTC-USD', isCrypto: true);
+
+      expect(seen.toString(), contains('/v8/finance/chart/BTC-USD'));
+    });
+
     test('falls back to previousClose then chartPreviousClose', () async {
       final Result<StockQuote> previous = await serviceReturning(
         metaBody(<String, Object?>{'previousClose': 10.0}),

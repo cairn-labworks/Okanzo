@@ -97,7 +97,10 @@ class AssetEditViewModel extends ChangeNotifier {
       return;
     }
     _update(_form.copyWith(isFetchingPrice: true));
-    final Result<StockQuote> result = await _assetRepository.fetchQuote(symbol);
+    final Result<StockQuote> result = await _assetRepository.fetchQuote(
+      symbol,
+      isCrypto: _form.type == AssetType.crypto,
+    );
     if (result.isSuccess) {
       final StockQuote quote = result.value;
       _update(
