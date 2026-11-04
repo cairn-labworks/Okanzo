@@ -10,6 +10,7 @@ A private, offline-first app for tracking your **net worth** — your assets min
   - **Stocks / funds / crypto**: enter a ticker symbol, quantity and currency, and Okanzo fetches the latest closing price to compute the holding's value automatically.
     - For **crypto**, bare symbols such as `BTC` and `ETH` use Yahoo Finance's USD pairs (`BTC-USD`, `ETH-USD`). Explicit pairs such as `BTC-EUR` are preserved. Existing crypto holdings with bare symbols use the same lookup when you refresh prices.
     - Fetched prices use the quote's currency, including when refreshing saved holdings; values are then converted to your base currency. Changing the asset type or ticker clears the previous quote until you fetch or refresh again.
+  - **International exchanges**: use Yahoo Finance's exchange suffix in the ticker (for example, `7203.T` for Tokyo, `600519.SS` for Shanghai, `000001.SZ` for Shenzhen, `0700.HK` for Hong Kong, `AIR.PA` for Euronext Paris, `VOD.L` for London, `RELIANCE.NS` for India's NSE, or `SHOP.TO` for Toronto). These major markets are a practical priority alongside the existing NYSE/Nasdaq symbols; quote availability depends on Yahoo Finance.
   - **Gold** and other quantity-based assets: enter a quantity and a price per unit.
   - **Cash, property, vehicles, …**: enter a single value.
 - **Liabilities** — track loans, mortgages, credit cards, pending payments and taxes.

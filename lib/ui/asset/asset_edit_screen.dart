@@ -171,7 +171,10 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
           LabeledTextField(
             controller: _symbol,
             label: 'Ticker symbol',
-            placeholder: 'e.g. AAPL, BTC-USD',
+            placeholder: 'e.g. AAPL, VOD.L, 7203.T, BTC-USD',
+            supportingText:
+                'For international listings, include the Yahoo Finance '
+                'exchange suffix (e.g. .HK, .SS, .SZ, .TO, .NS).',
             onChanged: viewModel.onSymbolChange,
           ),
           const SizedBox(height: 16),

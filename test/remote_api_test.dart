@@ -149,6 +149,34 @@ void main() {
       },
     );
 
+    test(
+      'supports Yahoo Finance symbols for major international exchanges',
+      () async {
+        const List<String> symbols = <String>[
+          '7203.T',
+          '600519.SS',
+          '000001.SZ',
+          '0700.HK',
+          'AIR.PA',
+          'VOD.L',
+          'RELIANCE.NS',
+          'SHOP.TO',
+        ];
+
+        for (final String symbol in symbols) {
+          Uri? seen;
+          final StockPriceService service = serviceReturning(
+            metaBody(<String, Object?>{'regularMarketPrice': 1.0}),
+            onRequest: (Uri uri) => seen = uri,
+          );
+          final Result<StockQuote> result = await service.fetchQuote(symbol);
+
+          expect(seen!.pathSegments.last, symbol);
+          expect(result.value.symbol, symbol);
+        }
+      },
+    );
+
     test('falls back to previousClose then chartPreviousClose', () async {
       final Result<StockQuote> previous = await serviceReturning(
         metaBody(<String, Object?>{'previousClose': 10.0}),
