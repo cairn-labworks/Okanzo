@@ -64,6 +64,91 @@ void main() {
       },
     );
 
+    test('uses the USD pair for bare crypto symbols', () async {
+      Uri? seen;
+      final StockPriceService service = serviceReturning(
+        metaBody(<String, Object?>{
+          'regularMarketPrice': 90000.0,
+          'currency': 'USD',
+        }),
+        onRequest: (Uri uri) => seen = uri,
+      );
+
+      final Result<StockQuote> result = await service.fetchQuote(
+        ' btc ',
+        isCrypto: true,
+      );
+
+      expect(seen.toString(), contains('/v8/finance/chart/BTC-USD'));
+      expect(result.value.symbol, 'BTC-USD');
+      expect(result.value.price, 90000.0);
+      expect(result.value.currency, 'USD');
+    });
+
+    test('does not append a second quote currency to crypto pairs', () async {
+      Uri? seen;
+      final StockPriceService service = serviceReturning(
+        metaBody(<String, Object?>{'regularMarketPrice': 90000.0}),
+        onRequest: (Uri uri) => seen = uri,
+      );
+
+      await service.fetchQuote('BTC-USD', isCrypto: true);
+
+      expect(seen.toString(), contains('/v8/finance/chart/BTC-USD'));
+    });
+
+    test('preserves non-USD crypto pairs', () async {
+      Uri? seen;
+      final StockPriceService service = serviceReturning(
+        metaBody(<String, Object?>{
+          'regularMarketPrice': 80000.0,
+          'currency': 'EUR',
+        }),
+        onRequest: (Uri uri) => seen = uri,
+      );
+
+      final Result<StockQuote> result = await service.fetchQuote(
+        ' btc-eur ',
+        isCrypto: true,
+      );
+
+      expect(seen!.path, '/v8/finance/chart/BTC-EUR');
+      expect(result.value.symbol, 'BTC-EUR');
+      expect(result.value.currency, 'EUR');
+    });
+
+    test('leaves a stock ticker named BTC unchanged', () async {
+      Uri? seen;
+      final StockPriceService service = serviceReturning(
+        metaBody(<String, Object?>{'regularMarketPrice': 36.0}),
+        onRequest: (Uri uri) => seen = uri,
+      );
+
+      final Result<StockQuote> result = await service.fetchQuote('BTC');
+
+      expect(seen!.path, '/v8/finance/chart/BTC');
+      expect(result.value.symbol, 'BTC');
+    });
+
+    test(
+      'does not fall back to a bare ticker when a crypto pair fails',
+      () async {
+        final List<String> paths = <String>[];
+        final StockPriceService service = serviceReturning(
+          '{"chart":{"result":[]}}',
+          onRequest: (Uri uri) => paths.add(uri.path),
+        );
+
+        final Result<StockQuote> result = await service.fetchQuote(
+          'ETH',
+          isCrypto: true,
+        );
+
+        expect(result.errorMessage, 'No data returned for ETH-USD');
+        expect(paths, <String>['/v8/finance/chart/ETH-USD']);
+      },
+    );
+
     test('falls back to previousClose then chartPreviousClose', () async {
       final Result<StockQuote> previous = await serviceReturning(
         metaBody(<String, Object?>{'previousClose': 10.0}),

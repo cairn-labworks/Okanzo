@@ -1,3 +1,4 @@
+import '../../domain/model/asset_type.dart';
 import '../../util/result.dart';
 import '../local/dao/asset_dao.dart';
 import '../local/entity/asset_entity.dart';
@@ -52,8 +53,10 @@ class AssetRepository {
       _dao.updatePositions(orderedIds);
 
   /// Looks up a live quote for a symbol without persisting anything.
-  Future<Result<StockQuote>> fetchQuote(String symbol) =>
-      _stockPriceService.fetchQuote(symbol);
+  Future<Result<StockQuote>> fetchQuote(
+    String symbol, {
+    bool isCrypto = false,
+  }) => _stockPriceService.fetchQuote(symbol, isCrypto: isCrypto);
 
   /// Refreshes the market price for a single asset (by symbol) and persists it.
   /// Returns the updated price on success.
@@ -64,10 +67,16 @@ class AssetRepository {
     }
     final Result<StockQuote> quote = await _stockPriceService.fetchQuote(
       symbol,
+      isCrypto: asset.type == AssetType.crypto,
     );
     if (quote.isFailure) return Result<double>.failure(quote.errorMessage!);
     final int now = DateTime.now().millisecondsSinceEpoch;
-    await _dao.updatePrice(asset.id, quote.value.price, now);
+    await _dao.updatePrice(
+      asset.id,
+      quote.value.price,
+      now,
+      currency: quote.value.currency,
+    );
     return Result<double>.success(quote.value.price);
   }
 
