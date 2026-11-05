@@ -7,6 +7,8 @@ Future<void> main() async {
     'exchange-picker',
     'bse-quote',
     'global-portfolio',
+    'preferred-exchanges',
+    'empty-exchanges',
   };
   const List<int> pngHeader = <int>[137, 80, 78, 71, 13, 10, 26, 10];
   final Set<String> captured = <String>{};

@@ -76,7 +76,7 @@ class AssetEditViewModel extends ChangeNotifier {
         preferredExchanges.firstOrNull ?? StockExchange.other;
     _update(
       _form.copyWith(
-        currency: exchange.currency ?? base,
+        currency: base,
         exchange: exchange,
         loading: false,
       ),
@@ -122,6 +122,7 @@ class AssetEditViewModel extends ChangeNotifier {
   Future<void> fetchPrice() async {
     final String symbol = _form.quoteSymbol;
     final AssetType type = _form.type;
+    final StockExchange exchange = _form.exchange;
     if (symbol.isEmpty) {
       _emit(
         const AssetEditEvent(
@@ -138,12 +139,14 @@ class AssetEditViewModel extends ChangeNotifier {
     );
     if (_form.type != type || _form.quoteSymbol != symbol) {
       _update(_form.copyWith(isFetchingPrice: false));
-      _emit(
-        const AssetEditEvent(
-          AssetEditEventType.error,
-          'Ticker or exchange changed; fetch the price again',
-        ),
-      );
+      if (_form.type == type && _form.exchange != exchange) {
+        _emit(
+          const AssetEditEvent(
+            AssetEditEventType.error,
+            'Ticker or exchange changed; fetch the price again',
+          ),
+        );
+      }
       return;
     }
     if (result.isSuccess) {

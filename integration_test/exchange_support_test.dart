@@ -7,8 +7,10 @@ import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/stock_exchange.dart';
 import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
+import 'package:okanzo/ui/asset/stock_exchange_field.dart';
 import 'package:okanzo/ui/home/home_screen.dart';
 import 'package:okanzo/util/currency_util.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _Listing {
   const _Listing(
@@ -102,12 +104,83 @@ Future<void> _select<T>(WidgetTester tester, String label) async {
   await _tap(tester, find.text(label).last);
 }
 
+List<String> _exchangeLabels(WidgetTester tester) => tester
+    .widget<DropdownMenu<Object>>(find.byType(DropdownMenu<Object>))
+    .dropdownMenuEntries
+    .map((DropdownMenuEntry<Object> entry) => entry.label)
+    .toList();
+
+Future<void> _openPreferences(WidgetTester tester) async {
+  await _tap(tester, find.byType(DropdownMenu<Object>));
+  await _tap(tester, find.text(StockExchangeField.manageLabel).last);
+  expect(find.text('Preferred exchanges'), findsOneWidget);
+}
+
+Future<void> _togglePreference(
+  WidgetTester tester,
+  StockExchange exchange,
+) async {
+  final Finder checkbox = find.byKey(ValueKey<StockExchange>(exchange));
+  await tester.scrollUntilVisible(
+    checkbox,
+    120,
+    scrollable: find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(Scrollable),
+    ),
+  );
+  await _tap(tester, checkbox);
+}
+
+Future<void> _setPreferences(
+  WidgetTester tester,
+  List<StockExchange> desired, {
+  Future<void> Function()? beforeSave,
+}) async {
+  final List<StockExchange> current = tester
+      .widget<StockExchangeField>(find.byType(StockExchangeField))
+      .preferredExchanges;
+  await _openPreferences(tester);
+  for (final StockExchange exchange in StockExchange.values) {
+    if (desired.contains(exchange) != current.contains(exchange)) {
+      await _togglePreference(tester, exchange);
+    }
+  }
+  await beforeSave?.call();
+  await _tap(
+    tester,
+    find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.widgetWithText(TextButton, 'Save'),
+    ),
+  );
+  expect(find.byType(AlertDialog), findsNothing);
+  expect(_exchangeLabels(tester), <String>[
+    for (final StockExchange exchange in StockExchange.values)
+      if (desired.contains(exchange)) exchange.displayName,
+    StockExchangeField.manageLabel,
+  ]);
+}
+
+Future<void> _selectExchange(
+  WidgetTester tester,
+  StockExchange exchange,
+) async {
+  final List<StockExchange> preferred = tester
+      .widget<StockExchangeField>(find.byType(StockExchangeField))
+      .preferredExchanges;
+  if (!preferred.contains(exchange)) {
+    await _setPreferences(tester, <StockExchange>[...preferred, exchange]);
+  }
+  await _select<Object>(tester, exchange.displayName);
+}
+
 Future<void> _newAsset(WidgetTester tester) async {
   await _tap(tester, find.byType(FloatingActionButton));
   await _tap(tester, find.text('New asset'));
   await _waitUntil(
     tester,
-    () => find.byType(DropdownMenu<StockExchange>).evaluate().isNotEmpty,
+    () => find.byType(StockExchangeField).evaluate().isNotEmpty,
     'new asset editor',
   );
 }
@@ -160,25 +233,52 @@ void main() {
       expect(cipher, isNotEmpty);
       expect(cipher.first.values.single, isNotEmpty);
 
+      expect(
+        container.settingsRepository.current.preferredExchanges,
+        <StockExchange>[StockExchange.us],
+      );
+      await _newAsset(tester);
+      expect(_exchangeLabels(tester), <String>[
+        StockExchange.us.displayName,
+        StockExchangeField.manageLabel,
+      ]);
+      await _openPreferences(tester);
+      await _togglePreference(tester, StockExchange.us);
+      await _tap(tester, find.text('Cancel'));
+      expect(
+        container.settingsRepository.current.preferredExchanges,
+        <StockExchange>[StockExchange.us],
+      );
+      await _setPreferences(
+        tester,
+        <StockExchange>[
+          StockExchange.us,
+          StockExchange.hongKong,
+          StockExchange.bse,
+        ],
+        beforeSave: () async {
+          if (_captureScreenshots) {
+            await binding.takeScreenshot('preferred-exchanges');
+          }
+        },
+      );
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
       final Map<String, AssetEntity> saved = <String, AssetEntity>{};
       for (final _Listing listing in _listings) {
         await _newAsset(tester);
         if (listing.type != AssetType.stock) {
           await _select<AssetType>(tester, listing.type.displayName);
         }
-        await _select<StockExchange>(tester, listing.exchange.displayName);
+        await _selectExchange(tester, listing.exchange);
         await _enter(tester, 'Name', listing.name);
         await _enter(tester, 'Ticker symbol', listing.ticker);
         await _enter(tester, 'Quantity', '2');
         if (_captureScreenshots && listing.exchange == StockExchange.bse) {
           FocusManager.instance.primaryFocus?.unfocus();
           await tester.pumpAndSettle();
-          await _tap(tester, find.byType(DropdownMenu<StockExchange>));
-          await Scrollable.ensureVisible(
-            tester.element(find.text(StockExchange.hongKong.displayName).last),
-            alignment: 0.5,
-          );
-          await tester.pumpAndSettle();
+          await _tap(tester, find.byType(DropdownMenu<Object>));
           await binding.takeScreenshot('exchange-picker');
           await _tap(tester, find.text(StockExchange.bse.displayName).last);
         }
@@ -200,7 +300,7 @@ void main() {
         );
         if (_captureScreenshots && listing.exchange == StockExchange.bse) {
           await Scrollable.ensureVisible(
-            tester.element(find.byType(DropdownMenu<StockExchange>)),
+            tester.element(find.byType(StockExchangeField)),
             alignment: 0.1,
           );
           await tester.pumpAndSettle();
@@ -239,15 +339,13 @@ void main() {
         await _tap(tester, find.text(listing.name));
         await _waitUntil(
           tester,
-          () => find.byType(DropdownMenu<StockExchange>).evaluate().isNotEmpty,
+          () => find.byType(StockExchangeField).evaluate().isNotEmpty,
           'reopening ${listing.symbol}',
         );
         expect(
           tester
-              .widget<DropdownMenu<StockExchange>>(
-                find.byType(DropdownMenu<StockExchange>),
-              )
-              .initialSelection,
+              .widget<StockExchangeField>(find.byType(StockExchangeField))
+              .selected,
           listing.exchange,
         );
         expect(
@@ -293,13 +391,64 @@ void main() {
       }
 
       await _newAsset(tester);
-      await _select<StockExchange>(tester, StockExchange.bse.displayName);
+      await _selectExchange(tester, StockExchange.bse);
       await _tap(tester, find.text('Fetch latest price'));
       expect(find.text('Enter a ticker symbol first'), findsOneWidget);
       await _select<AssetType>(tester, AssetType.crypto.displayName);
-      expect(find.byType(DropdownMenu<StockExchange>), findsNothing);
+      expect(find.byType(StockExchangeField), findsNothing);
       await tester.pageBack();
       await tester.pumpAndSettle();
+
+      await _tap(tester, find.text(_listings.first.name));
+      await _waitUntil(
+        tester,
+        () => find.byType(StockExchangeField).evaluate().isNotEmpty,
+        'saved Hong Kong holding',
+      );
+      await _setPreferences(tester, const <StockExchange>[]);
+      expect(
+        tester
+            .widget<StockExchangeField>(find.byType(StockExchangeField))
+            .selected,
+        StockExchange.hongKong,
+      );
+      expect(
+        tester
+            .widget<TextField>(find.widgetWithText(TextField, 'Ticker symbol'))
+            .controller
+            ?.text,
+        '0700.HK',
+      );
+      expect(find.textContaining('Last price:'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await (await SharedPreferences.getInstance()).reload();
+      expect(container.settingsRepository.current.preferredExchanges, isEmpty);
+      await _newAsset(tester);
+      expect(_exchangeLabels(tester), <String>[StockExchangeField.manageLabel]);
+      expect(
+        tester
+            .widget<StockExchangeField>(find.byType(StockExchangeField))
+            .selected,
+        isNull,
+      );
+      if (_captureScreenshots) {
+        await _tap(tester, find.byType(DropdownMenu<Object>));
+        await binding.takeScreenshot('empty-exchanges');
+        await _tap(tester, find.text(StockExchangeField.manageLabel).last);
+        await _tap(tester, find.text('Cancel'));
+      }
+      await _setPreferences(tester, <StockExchange>[
+        StockExchange.us,
+        StockExchange.bse,
+      ]);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await (await SharedPreferences.getInstance()).reload();
+      expect(
+        container.settingsRepository.current.preferredExchanges,
+        <StockExchange>[StockExchange.us, StockExchange.bse],
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
@@ -323,6 +472,18 @@ void main() {
           listing,
         );
       }
+      expect(
+        _container(tester).settingsRepository.current.preferredExchanges,
+        <StockExchange>[StockExchange.us, StockExchange.bse],
+      );
+      await _newAsset(tester);
+      expect(_exchangeLabels(tester), <String>[
+        StockExchange.us.displayName,
+        StockExchange.bse.displayName,
+        StockExchangeField.manageLabel,
+      ]);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
       binding.reportData = <String, Object?>{
         ...?binding.reportData,
         'holdingsSavedReopenedAndRefreshed': _listings.length,
@@ -331,6 +492,9 @@ void main() {
         ],
         'sqlcipherVersion': cipher.first.values.single,
         'databaseReopened': true,
+        'preferredExchangesPersisted': true,
+        'emptyPreferencesVerified': true,
+        'unpreferredHoldingPreserved': true,
       };
       debugPrint('ANDROID EXCHANGE SMOKE PASSED: ${_listings.length} holdings');
     },

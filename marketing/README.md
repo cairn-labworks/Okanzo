@@ -41,7 +41,9 @@ captures of the app, using a **Global demo** portfolio with sample holdings:
 
 | File | Screen |
 |------|--------|
-| [exchange-picker.png](screenshots/exchanges/exchange-picker.png) | Stock/fund exchange dropdown |
+| [exchange-picker.png](screenshots/exchanges/exchange-picker.png) | Shortlist dropdown with a final preference-management action |
+| [preferred-exchanges.png](screenshots/exchanges/preferred-exchanges.png) | Checkbox popup for choosing preferred exchanges |
+| [empty-exchanges.png](screenshots/exchanges/empty-exchanges.png) | Dropdown with no preferred exchanges selected |
 | [bse-quote.png](screenshots/exchanges/bse-quote.png) | BSE holding with a fetched INR quote |
 | [global-portfolio.png](screenshots/exchanges/global-portfolio.png) | International holdings in one portfolio |
 

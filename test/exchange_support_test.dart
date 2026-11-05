@@ -17,6 +17,7 @@ import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/stock_exchange.dart';
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
+import 'package:okanzo/ui/asset/stock_exchange_field.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
@@ -99,6 +100,15 @@ class _Container extends Fake implements AppContainer {
 
   @override
   final SettingsRepository settingsRepository;
+}
+
+class _FailingSettingsRepository extends SettingsRepository {
+  _FailingSettingsRepository(super.preferences);
+
+  @override
+  Future<void> setPreferredExchanges(List<StockExchange> exchanges) async {
+    throw StateError('Storage unavailable');
+  }
 }
 
 AssetEntity _holding(int id, String symbol) => AssetEntity(
@@ -372,6 +382,10 @@ void main() {
   testWidgets('editor dropdown qualifies BSE and recognizes full HK tickers', (
     WidgetTester tester,
   ) async {
+    await settings.setPreferredExchanges(<StockExchange>[
+      StockExchange.us,
+      StockExchange.bse,
+    ]);
     await tester.pumpWidget(
       AppScope(
         container: _Container(repository, settings),
@@ -381,7 +395,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final Finder exchangeMenu = find.byType(DropdownMenu<StockExchange>);
+    final Finder exchangeMenu = find.byType(DropdownMenu<Object>);
     await tester.ensureVisible(exchangeMenu);
     await tester.tap(exchangeMenu);
     await tester.pumpAndSettle();
@@ -395,7 +409,9 @@ void main() {
     await tester.enterText(ticker, 'RELIANCE');
     await tester.pumpAndSettle();
     expect(
-      tester.widget<DropdownMenu<StockExchange>>(exchangeMenu).initialSelection,
+      tester
+          .widget<StockExchangeField>(find.byType(StockExchangeField))
+          .selected,
       StockExchange.bse,
     );
     final Finder fetch = find.text('Fetch latest price');
@@ -412,7 +428,9 @@ void main() {
     await tester.enterText(ticker, '0700.HK');
     await tester.pumpAndSettle();
     expect(
-      tester.widget<DropdownMenu<StockExchange>>(exchangeMenu).initialSelection,
+      tester
+          .widget<StockExchangeField>(find.byType(StockExchangeField))
+          .selected,
       StockExchange.hongKong,
     );
   });
@@ -431,7 +449,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(DropdownMenu<StockExchange>), findsNothing);
+    expect(find.byType(StockExchangeField), findsNothing);
     expect(
       tester
           .widget<TextField>(find.widgetWithText(TextField, 'Ticker symbol'))
@@ -439,5 +457,227 @@ void main() {
           ?.text,
       'BTC-USD',
     );
+  });
+
+  Future<void> openEditor(WidgetTester tester, {int assetId = 0}) async {
+    await tester.pumpWidget(
+      AppScope(
+        container: _Container(repository, settings),
+        child: MaterialApp(
+          home: AssetEditScreen(portfolioId: 1, assetId: assetId),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  List<String> menuLabels(WidgetTester tester) => tester
+      .widget<DropdownMenu<Object>>(find.byType(DropdownMenu<Object>))
+      .dropdownMenuEntries
+      .map((DropdownMenuEntry<Object> entry) => entry.label)
+      .toList();
+
+  Future<void> openPreferences(WidgetTester tester) async {
+    final Finder menu = find.byType(DropdownMenu<Object>);
+    await tester.ensureVisible(menu);
+    await tester.tap(menu);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(StockExchangeField.manageLabel).last);
+    await tester.pumpAndSettle();
+    expect(find.text('Preferred exchanges'), findsOneWidget);
+  }
+
+  Future<void> togglePreference(
+    WidgetTester tester,
+    StockExchange exchange,
+  ) async {
+    final Finder checkbox = find.byKey(ValueKey<StockExchange>(exchange));
+    await tester.scrollUntilVisible(
+      checkbox,
+      120,
+      scrollable: find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await tester.tap(checkbox);
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> savePreferences(WidgetTester tester) async {
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(TextButton, 'Save'),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('default dropdown has only US and the final preference action', (
+    WidgetTester tester,
+  ) async {
+    await openEditor(tester);
+
+    expect(menuLabels(tester), <String>[
+      StockExchange.us.displayName,
+      StockExchangeField.manageLabel,
+    ]);
+  });
+
+  testWidgets('checkbox preferences update the dropdown and persist', (
+    WidgetTester tester,
+  ) async {
+    await openEditor(tester);
+    await openPreferences(tester);
+    await togglePreference(tester, StockExchange.bse);
+    await savePreferences(tester);
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(menuLabels(tester), <String>[
+      StockExchange.us.displayName,
+      StockExchange.bse.displayName,
+      StockExchangeField.manageLabel,
+    ]);
+    expect(settings.current.preferredExchanges, <StockExchange>[
+      StockExchange.us,
+      StockExchange.bse,
+    ]);
+    expect(
+      tester
+          .widget<DropdownMenu<Object>>(find.byType(DropdownMenu<Object>))
+          .controller
+          ?.text,
+      StockExchange.us.displayName,
+    );
+  });
+
+  testWidgets('cancel and dismiss do not save checkbox changes', (
+    WidgetTester tester,
+  ) async {
+    await openEditor(tester);
+    await openPreferences(tester);
+    await togglePreference(tester, StockExchange.us);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(settings.current.preferredExchanges, <StockExchange>[
+      StockExchange.us,
+    ]);
+
+    await openPreferences(tester);
+    await togglePreference(tester, StockExchange.us);
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
+    expect(settings.current.preferredExchanges, <StockExchange>[
+      StockExchange.us,
+    ]);
+  });
+
+  testWidgets(
+    'none selected leaves only the management option and no selection',
+    (WidgetTester tester) async {
+      await openEditor(tester);
+      await openPreferences(tester);
+      await togglePreference(tester, StockExchange.us);
+      await savePreferences(tester);
+
+      expect(settings.current.preferredExchanges, isEmpty);
+      expect(menuLabels(tester), <String>[StockExchangeField.manageLabel]);
+      expect(
+        tester
+            .widget<StockExchangeField>(find.byType(StockExchangeField))
+            .selected,
+        isNull,
+      );
+      await openPreferences(tester);
+      await togglePreference(tester, StockExchange.bse);
+      await savePreferences(tester);
+      expect(menuLabels(tester), <String>[
+        StockExchange.bse.displayName,
+        StockExchangeField.manageLabel,
+      ]);
+      expect(
+        tester
+            .widget<StockExchangeField>(find.byType(StockExchangeField))
+            .selected,
+        StockExchange.bse,
+      );
+    },
+  );
+
+  testWidgets('removing a saved holding exchange does not change its quote', (
+    WidgetTester tester,
+  ) async {
+    dao.assets.add(_holding(1, '0700.HK').copyWith(currency: 'HKD'));
+    await settings.setPreferredExchanges(<StockExchange>[
+      StockExchange.us,
+      StockExchange.hongKong,
+    ]);
+    await openEditor(tester, assetId: 1);
+    await openPreferences(tester);
+    await togglePreference(tester, StockExchange.hongKong);
+    await savePreferences(tester);
+
+    expect(menuLabels(tester), <String>[
+      StockExchange.us.displayName,
+      StockExchangeField.manageLabel,
+    ]);
+    final DropdownMenu<Object> menu = tester.widget<DropdownMenu<Object>>(
+      find.byType(DropdownMenu<Object>),
+    );
+    expect(menu.controller?.text, StockExchange.hongKong.displayName);
+    expect(
+      find.text('Last price: ${CurrencyUtil.format(10, 'HKD')}'),
+      findsOneWidget,
+    );
+    final Finder ticker = find.widgetWithText(TextField, 'Ticker symbol');
+    expect(tester.widget<TextField>(ticker).controller?.text, '0700.HK');
+  });
+
+  testWidgets(
+    'funds use the same shortlist and blank forms use its first exchange',
+    (WidgetTester tester) async {
+      await settings.setPreferredExchanges(<StockExchange>[StockExchange.bse]);
+      await openEditor(tester);
+      expect(
+        tester
+            .widget<StockExchangeField>(find.byType(StockExchangeField))
+            .selected,
+        StockExchange.bse,
+      );
+      final Finder typeMenu = find.byType(DropdownMenu<AssetType>);
+      await tester.tap(typeMenu);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AssetType.mutualFund.displayName).last);
+      await tester.pumpAndSettle();
+
+      expect(menuLabels(tester), <String>[
+        StockExchange.bse.displayName,
+        StockExchangeField.manageLabel,
+      ]);
+    },
+  );
+
+  testWidgets('failed preference save is visible and keeps the dialog open', (
+    WidgetTester tester,
+  ) async {
+    settings = _FailingSettingsRepository(
+      await SharedPreferences.getInstance(),
+    );
+    addTearDown(settings.dispose);
+    await openEditor(tester);
+    await openPreferences(tester);
+    await togglePreference(tester, StockExchange.us);
+    await savePreferences(tester);
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      find.textContaining("Couldn't save preferred exchanges:"),
+      findsOneWidget,
+    );
+    expect(settings.current.preferredExchanges, <StockExchange>[
+      StockExchange.us,
+    ]);
+    expect(find.widgetWithText(TextButton, 'Save'), findsWidgets);
   });
 }
