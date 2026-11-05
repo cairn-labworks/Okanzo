@@ -72,11 +72,22 @@ class AssetDao {
     _notify();
   }
 
-  Future<void> updatePrice(int id, double price, int timestamp) async {
-    await _db.rawUpdate(
-      'UPDATE ${Tables.assets} '
-      'SET lastPrice = ?, lastPriceTimestamp = ?, updatedAt = ? WHERE id = ?',
-      <Object?>[price, timestamp, timestamp, id],
+  Future<void> updatePrice(
+    int id,
+    double price,
+    int timestamp, {
+    String? currency,
+  }) async {
+    await _db.update(
+      Tables.assets,
+      <String, Object?>{
+        'lastPrice': price,
+        'lastPriceTimestamp': timestamp,
+        'updatedAt': timestamp,
+        if (currency != null && currency.isNotEmpty) 'currency': currency,
+      },
+      where: 'id = ?',
+      whereArgs: <Object?>[id],
     );
     _notify();
   }

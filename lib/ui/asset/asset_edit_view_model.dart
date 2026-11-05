@@ -64,7 +64,8 @@ class AssetEditViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void onTypeChange(AssetType type) => _update(_form.copyWith(type: type));
+  void onTypeChange(AssetType type) =>
+      _update(_form.copyWith(type: type, clearLastPrice: _form.type != type));
 
   void onNameChange(String value) => _update(_form.copyWith(name: value));
 
@@ -87,6 +88,7 @@ class AssetEditViewModel extends ChangeNotifier {
 
   Future<void> fetchPrice() async {
     final String symbol = _form.symbol.trim();
+    final AssetType type = _form.type;
     if (symbol.isEmpty) {
       _emit(
         const AssetEditEvent(
@@ -99,8 +101,12 @@ class AssetEditViewModel extends ChangeNotifier {
     _update(_form.copyWith(isFetchingPrice: true));
     final Result<StockQuote> result = await _assetRepository.fetchQuote(
       symbol,
-      isCrypto: _form.type == AssetType.crypto,
+      isCrypto: type == AssetType.crypto,
     );
+    if (_form.type != type || _form.symbol.trim() != symbol) {
+      _update(_form.copyWith(isFetchingPrice: false));
+      return;
+    }
     if (result.isSuccess) {
       final StockQuote quote = result.value;
       _update(

@@ -71,7 +71,12 @@ class AssetRepository {
     );
     if (quote.isFailure) return Result<double>.failure(quote.errorMessage!);
     final int now = DateTime.now().millisecondsSinceEpoch;
-    await _dao.updatePrice(asset.id, quote.value.price, now);
+    await _dao.updatePrice(
+      asset.id,
+      quote.value.price,
+      now,
+      currency: quote.value.currency,
+    );
     return Result<double>.success(quote.value.price);
   }
 
