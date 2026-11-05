@@ -3,6 +3,11 @@ import 'package:okanzo/data/repository/settings_repository.dart';
 import 'package:okanzo/domain/model/stock_exchange.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class _RejectingPreferences extends Fake implements SharedPreferences {
+  @override
+  Future<bool> setStringList(String key, List<String> value) async => false;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -20,6 +25,24 @@ void main() {
     expect(repository.current.preferredExchanges, <StockExchange>[
       StockExchange.us,
     ]);
+  });
+
+  test('reports a rejected storage write instead of succeeding', () async {
+    final SettingsRepository rejecting = SettingsRepository(
+      _RejectingPreferences(),
+    );
+    addTearDown(rejecting.dispose);
+
+    await expectLater(
+      rejecting.setPreferredExchanges(<StockExchange>[StockExchange.bse]),
+      throwsA(
+        isA<StateError>().having(
+          (StateError error) => error.message,
+          'message',
+          'Exchange preferences could not be saved',
+        ),
+      ),
+    );
   });
 
   test('persists a deduplicated shortlist in exchange order', () async {

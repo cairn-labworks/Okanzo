@@ -60,3 +60,28 @@ flutter drive \
 The capture uses Flutter's integration-test image surface; the app's
 `FLAG_SECURE` screenshot protection stays enabled. The full live exchange smoke
 test also runs, so network access and Yahoo quote availability are required.
+
+### Physical-device validation
+
+The [Android 13 wireless captures](screenshots/exchanges/android-13-wireless/)
+show the same feature on a physical phone in dark mode:
+
+| Screen | Capture |
+|--------|---------|
+| Preferred-only dropdown | [exchange-picker.png](screenshots/exchanges/android-13-wireless/exchange-picker.png) |
+| Checkbox popup | [preferred-exchanges.png](screenshots/exchanges/android-13-wireless/preferred-exchanges.png) |
+| Empty shortlist | [empty-exchanges.png](screenshots/exchanges/android-13-wireless/empty-exchanges.png) |
+| Live BSE quote | [bse-quote.png](screenshots/exchanges/android-13-wireless/bse-quote.png) |
+| Sample international holdings | [global-portfolio.png](screenshots/exchanges/android-13-wireless/global-portfolio.png) |
+
+Two full integration runs passed over wireless debugging, including all 14
+live stock/ETF quotes, saving/reopening, bulk refresh, encrypted database
+reopening, and preference defaults, Save/Cancel, empty lists and persistence.
+The installed release app and its data were not modified; tests used a separate
+debug app, which the runner removed afterward. All captures contain sample data
+and preserve `FLAG_SECURE`.
+
+Preference unit tests cover defaults, storage failure, deduplication,
+reload/persistence, explicitly empty lists, obsolete entries and notifications.
+Widget tests cover the filtered menu, checkbox popup, cancellation/dismissal,
+empty state, existing nonpreferred holdings, funds and visible save failures.
