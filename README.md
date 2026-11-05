@@ -8,6 +8,7 @@ A private, offline-first app for tracking your **net worth** — your assets min
 
 - **Assets** — track stocks, mutual funds/ETFs, crypto, gold, cash, bank deposits, real estate, vehicles, bonds and more. Each asset type shows only the fields that make sense for it.
   - **Stocks / funds / crypto**: enter a ticker symbol, quantity and currency, and Okanzo fetches the latest closing price to compute the holding's value automatically.
+    - For **crypto**, bare symbols such as `BTC` and `ETH` use Yahoo Finance's USD pairs (`BTC-USD`, `ETH-USD`). Explicit pairs such as `BTC-EUR` are preserved. Existing crypto holdings with bare symbols use the same lookup when you refresh prices.
   - **Gold** and other quantity-based assets: enter a quantity and a price per unit.
   - **Cash, property, vehicles, …**: enter a single value.
 - **Liabilities** — track loans, mortgages, credit cards, pending payments and taxes.
