@@ -10,6 +10,8 @@ A private, offline-first app for tracking your **net worth** — your assets min
   - **Stocks / funds / crypto**: enter a ticker symbol, quantity and currency, and Okanzo fetches the latest closing price to compute the holding's value automatically.
     - For **crypto**, bare symbols such as `BTC` and `ETH` use Yahoo Finance's USD pairs (`BTC-USD`, `ETH-USD`). Explicit pairs such as `BTC-EUR` are preserved. Existing crypto holdings with bare symbols use the same lookup when you refresh prices.
     - Fetched prices use the quote's currency, including when refreshing saved holdings; values are then converted to your base currency. Changing the asset type or ticker clears the previous quote until you fetch or refresh again.
+  - **International exchanges**: choose an exchange for stocks and funds, then enter the local ticker. Okanzo adds Yahoo Finance's suffix automatically and uses the quote's currency when fetching or refreshing prices. The selector includes NYSE/Nasdaq, Shanghai, Japan Exchange Group (Tokyo), Hong Kong, BSE (India), and Euronext Paris, Amsterdam, Brussels, Lisbon, Dublin, Oslo and Milan. For example, choose Hong Kong and enter `0700`, or BSE and enter `RELIANCE`. Full tickers such as `0700.HK` and `RELIANCE.BO` also work. Choose **Other / full Yahoo ticker** for additional markets such as Shenzhen (`000001.SZ`), London (`VOD.L`), India's NSE (`RELIANCE.NS`) or Toronto (`SHOP.TO`). Quotes in minor units, such as British pence, are converted to their standard currency units before valuation. Existing holdings keep their exchange-qualified tickers; no database or backup migration is needed. Quote availability and delays depend on [Yahoo Finance's exchange coverage](https://help.yahoo.com/kb/finance/complete-list-markets-exchanges-yahoo-finance-sln2310.html).
+    - **Preferred exchanges**: the dropdown shows only your saved shortlist, starting with **US (NYSE / Nasdaq)**. Its final **Select preferred exchanges...** option opens a checkbox popup where you can select or deselect exchanges. Preferences apply to stocks and funds across portfolios and persist across app restarts. Selecting none is allowed: the dropdown then shows only the preference-management option, and full Yahoo tickers can still be entered. Existing holdings retain their exchange and quote even when it is removed from the shortlist.
   - **Gold** and other quantity-based assets: enter a quantity and a price per unit.
   - **Cash, property, vehicles, …**: enter a single value.
 - **Liabilities** — track loans, mortgages, credit cards, pending payments and taxes.
@@ -131,6 +133,16 @@ dart format .
 flutter analyze
 dart test                   # pure-Dart unit tests
 ```
+
+For the live Android exchange smoke test, use a dedicated emulator:
+
+```bash
+flutter test integration_test/exchange_support_test.dart -d <android-device-id>
+```
+
+This test creates a separate test portfolio and exercises the real Yahoo API,
+exchange selector, encrypted database, saving/reopening holdings and price
+refresh. It requires network access and depends on Yahoo quote availability.
 
 The test suite covers the pieces where behaviour must be exact: currency formatting and rounding, net-worth and FX conversion, asset/liability form validation and entity mapping, category ordering, list labels, quote/FX response parsing, and — most importantly — the encrypted backup format, which is verified byte-for-byte against a file produced by the original Android implementation.
 

@@ -33,3 +33,55 @@ $src    = "marketing\generate.html"
 
 Edit headlines, captions, callouts and the app-screen mockups in the `POSTERS`
 and screen-builder functions inside the generator, then re-run.
+
+## Exchange feature screenshots
+
+Unlike the promotional posters above, these are actual Android emulator
+captures of the app, using a **Global demo** portfolio with sample holdings:
+
+| File | Screen |
+|------|--------|
+| [exchange-picker.png](screenshots/exchanges/exchange-picker.png) | Shortlist dropdown with a final preference-management action |
+| [preferred-exchanges.png](screenshots/exchanges/preferred-exchanges.png) | Checkbox popup for choosing preferred exchanges |
+| [empty-exchanges.png](screenshots/exchanges/empty-exchanges.png) | Dropdown with no preferred exchanges selected |
+| [bse-quote.png](screenshots/exchanges/bse-quote.png) | BSE holding with a fetched INR quote |
+| [global-portfolio.png](screenshots/exchanges/global-portfolio.png) | International holdings in one portfolio |
+
+To regenerate them on a dedicated Android emulator:
+
+```bash
+flutter drive \
+  --driver=test_driver/exchange_screenshots.dart \
+  --target=integration_test/exchange_support_test.dart \
+  --dart-define=CAPTURE_SCREENSHOTS=true \
+  -d <android-device-id>
+```
+
+The capture uses Flutter's integration-test image surface; the app's
+`FLAG_SECURE` screenshot protection stays enabled. The full live exchange smoke
+test also runs, so network access and Yahoo quote availability are required.
+
+### Physical-device validation
+
+The [Android 13 wireless captures](screenshots/exchanges/android-13-wireless/)
+show the same feature on a physical phone in dark mode:
+
+| Screen | Capture |
+|--------|---------|
+| Preferred-only dropdown | [exchange-picker.png](screenshots/exchanges/android-13-wireless/exchange-picker.png) |
+| Checkbox popup | [preferred-exchanges.png](screenshots/exchanges/android-13-wireless/preferred-exchanges.png) |
+| Empty shortlist | [empty-exchanges.png](screenshots/exchanges/android-13-wireless/empty-exchanges.png) |
+| Live BSE quote | [bse-quote.png](screenshots/exchanges/android-13-wireless/bse-quote.png) |
+| Sample international holdings | [global-portfolio.png](screenshots/exchanges/android-13-wireless/global-portfolio.png) |
+
+Two full integration runs passed over wireless debugging, including all 14
+live stock/ETF quotes, saving/reopening, bulk refresh, encrypted database
+reopening, and preference defaults, Save/Cancel, empty lists and persistence.
+The installed release app and its data were not modified; tests used a separate
+debug app, which the runner removed afterward. All captures contain sample data
+and preserve `FLAG_SECURE`.
+
+Preference unit tests cover defaults, storage failure, deduplication,
+reload/persistence, explicitly empty lists, obsolete entries and notifications.
+Widget tests cover the filtered menu, checkbox popup, cancellation/dismissal,
+empty state, existing nonpreferred holdings, funds and visible save failures.

@@ -39,6 +39,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
   # Pure-Dart tests run with `dart test`, so they do not need the Flutter binding.
   test: ^1.26.0
   flutter_lints: ^6.0.0

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../di/app_container.dart';
 import '../../domain/model/asset_type.dart';
+import '../../domain/model/stock_exchange.dart';
 import '../../util/currency_util.dart';
 import '../components/form_components.dart';
 import '../theme/theme.dart';
 import 'asset_edit_view_model.dart';
 import 'asset_form_state.dart';
+import 'stock_exchange_field.dart';
 
 /// Create or edit a single asset.
 class AssetEditScreen extends StatefulWidget {
@@ -168,10 +170,36 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     switch (form.valuationMode) {
       case ValuationMode.market:
         return <Widget>[
+          if (form.usesStockExchange) ...<Widget>[
+            StockExchangeField(
+              selected:
+                  form.isEditing ||
+                      form.symbol.trim().isNotEmpty ||
+                      viewModel.preferredExchanges.contains(form.exchange)
+                  ? form.exchange
+                  : null,
+              preferredExchanges: viewModel.preferredExchanges,
+              onSavePreferences: viewModel.savePreferredExchanges,
+              onSelected: (StockExchange exchange) {
+                viewModel.onExchangeChange(exchange);
+                _symbol.text = viewModel.form.symbol;
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
           LabeledTextField(
             controller: _symbol,
             label: 'Ticker symbol',
-            placeholder: 'e.g. AAPL, BTC-USD',
+            placeholder: form.usesStockExchange
+                ? 'e.g. ${form.exchange.example}'
+                : 'e.g. BTC-USD, ETH-USD',
+            supportingText: !form.usesStockExchange
+                ? null
+                : form.exchange.suffix.isEmpty
+                ? 'Enter a Yahoo Finance ticker. Full exchange-qualified '
+                      'tickers are also accepted.'
+                : '${form.exchange.suffix} is added automatically. '
+                      'Full Yahoo Finance tickers are also accepted.',
             onChanged: viewModel.onSymbolChange,
           ),
           const SizedBox(height: 16),

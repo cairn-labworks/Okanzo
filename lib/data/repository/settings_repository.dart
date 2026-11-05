@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/model/app_theme.dart';
+import '../../domain/model/stock_exchange.dart';
 import '../../domain/model/theme_mode.dart';
 import '../../util/currency_util.dart';
 
@@ -16,6 +17,7 @@ class AppSettings {
     this.appLockEnabled = false,
     this.hideBalances = false,
     this.selectedPortfolioId,
+    this.preferredExchanges = const <StockExchange>[StockExchange.us],
   });
 
   final AppThemeMode themeMode;
@@ -25,6 +27,7 @@ class AppSettings {
   final bool appLockEnabled;
   final bool hideBalances;
   final int? selectedPortfolioId;
+  final List<StockExchange> preferredExchanges;
 }
 
 /// Section names used when persisting a portfolio's custom category order.
@@ -47,6 +50,7 @@ class SettingsRepository {
   static const String _keyAppLock = 'app_lock_enabled';
   static const String _keyHideBalances = 'hide_balances';
   static const String _keySelectedPortfolio = 'selected_portfolio_id';
+  static const String _keyPreferredExchanges = 'preferred_stock_exchanges';
 
   final SharedPreferences _prefs;
   final StreamController<AppSettings> _controller =
@@ -67,7 +71,30 @@ class SettingsRepository {
     appLockEnabled: _prefs.getBool(_keyAppLock) ?? false,
     hideBalances: _prefs.getBool(_keyHideBalances) ?? false,
     selectedPortfolioId: _selectedPortfolioId,
+    preferredExchanges: _preferredExchanges,
   );
+
+  List<StockExchange> get _preferredExchanges {
+    final List<String>? stored = _prefs.getStringList(_keyPreferredExchanges);
+    if (stored == null) return const <StockExchange>[StockExchange.us];
+    return List<StockExchange>.unmodifiable(
+      StockExchange.values.where(
+        (StockExchange exchange) => stored.contains(exchange.name),
+      ),
+    );
+  }
+
+  Future<void> setPreferredExchanges(List<StockExchange> exchanges) async {
+    final bool saved = await _prefs.setStringList(
+      _keyPreferredExchanges,
+      <String>[
+        for (final StockExchange exchange in StockExchange.values)
+          if (exchanges.contains(exchange)) exchange.name,
+      ],
+    );
+    if (!saved) throw StateError('Exchange preferences could not be saved');
+    _emit();
+  }
 
   int? get _selectedPortfolioId {
     final int? id = _prefs.getInt(_keySelectedPortfolio);

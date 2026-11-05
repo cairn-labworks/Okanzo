@@ -5,6 +5,7 @@ import 'package:http/testing.dart';
 import 'package:okanzo/data/remote/fx/fx_api.dart';
 import 'package:okanzo/data/remote/stock/chart_response.dart';
 import 'package:okanzo/data/remote/stock/stock_price_service.dart';
+import 'package:okanzo/domain/model/stock_exchange.dart';
 import 'package:okanzo/util/result.dart';
 import 'package:test/test.dart';
 
@@ -149,6 +150,58 @@ void main() {
       },
     );
 
+    test(
+      'fetches each selectable exchange ticker and retains its currency',
+      () async {
+        for (final StockExchange exchange in StockExchange.values) {
+          if (exchange == StockExchange.other) continue;
+          final String symbol = exchange.qualify(exchange.example);
+          Uri? seen;
+          final StockPriceService service = serviceReturning(
+            metaBody(<String, Object?>{
+              'regularMarketPrice': 123.45,
+              'currency': exchange.currency,
+            }),
+            onRequest: (Uri uri) => seen = uri,
+          );
+          final Result<StockQuote> result = await service.fetchQuote(symbol);
+
+          expect(seen!.pathSegments.last, symbol);
+          expect(result.value.symbol, symbol);
+          expect(result.value.price, 123.45);
+          expect(result.value.currency, exchange.currency);
+        }
+      },
+    );
+
+    test(
+      'supports Yahoo Finance symbols for major international exchanges',
+      () async {
+        const List<String> symbols = <String>[
+          '7203.T',
+          '600519.SS',
+          '000001.SZ',
+          '0700.HK',
+          'AIR.PA',
+          'VOD.L',
+          'RELIANCE.NS',
+          'SHOP.TO',
+        ];
+
+        for (final String symbol in symbols) {
+          Uri? seen;
+          final StockPriceService service = serviceReturning(
+            metaBody(<String, Object?>{'regularMarketPrice': 1.0}),
+            onRequest: (Uri uri) => seen = uri,
+          );
+          final Result<StockQuote> result = await service.fetchQuote(symbol);
+
+          expect(seen!.pathSegments.last, symbol);
+          expect(result.value.symbol, symbol);
+        }
+      },
+    );
+
     test('falls back to previousClose then chartPreviousClose', () async {
       final Result<StockQuote> previous = await serviceReturning(
         metaBody(<String, Object?>{'previousClose': 10.0}),
@@ -160,6 +213,35 @@ void main() {
       ).fetchQuote('X');
       expect(chart.value.price, 7.5);
     });
+
+    test(
+      'normalizes minor-unit prices without rescaling ISO currencies',
+      () async {
+        const Map<String, (String, double)> expected =
+            <String, (String, double)>{
+              'GBp': ('GBP', 1.25),
+              'GBX': ('GBP', 1.25),
+              'ZAc': ('ZAR', 1.25),
+              'ILA': ('ILS', 1.25),
+              'GBP': ('GBP', 125),
+              'ZAR': ('ZAR', 125),
+              'ILS': ('ILS', 125),
+            };
+
+        for (final MapEntry<String, (String, double)> entry
+            in expected.entries) {
+          final Result<StockQuote> result = await serviceReturning(
+            metaBody(<String, Object?>{
+              'regularMarketPrice': 125,
+              'currency': entry.key,
+            }),
+          ).fetchQuote('VOD.L');
+
+          expect(result.value.currency, entry.value.$1);
+          expect(result.value.price, entry.value.$2);
+        }
+      },
+    );
 
     test('surfaces the Yahoo error description from an error body', () async {
       final Result<StockQuote> result = await serviceReturning(

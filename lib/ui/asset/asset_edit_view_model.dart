@@ -7,6 +7,7 @@ import '../../data/remote/stock/stock_price_service.dart';
 import '../../data/repository/asset_repository.dart';
 import '../../data/repository/settings_repository.dart';
 import '../../domain/model/asset_type.dart';
+import '../../domain/model/stock_exchange.dart';
 import '../../util/result.dart';
 import 'asset_form_state.dart';
 
@@ -46,6 +47,21 @@ class AssetEditViewModel extends ChangeNotifier {
 
   AssetEditEvent? get event => _event;
 
+  List<StockExchange> get preferredExchanges =>
+      _settingsRepository.current.preferredExchanges;
+
+  Future<void> savePreferredExchanges(List<StockExchange> exchanges) async {
+    await _settingsRepository.setPreferredExchanges(exchanges);
+    if (!_form.isEditing &&
+        _form.symbol.trim().isEmpty &&
+        !preferredExchanges.contains(_form.exchange)) {
+      _form = _form.withExchange(
+        preferredExchanges.firstOrNull ?? StockExchange.other,
+      );
+    }
+    notifyListeners();
+  }
+
   Future<void> _load() async {
     if (_assetId != 0) {
       final AssetEntity? asset = await _assetRepository.getById(_assetId);
@@ -56,7 +72,15 @@ class AssetEditViewModel extends ChangeNotifier {
       }
     }
     final String base = _settingsRepository.current.baseCurrency;
-    _update(_form.copyWith(currency: base, loading: false));
+    final StockExchange exchange =
+        preferredExchanges.firstOrNull ?? StockExchange.other;
+    _update(
+      _form.copyWith(
+        currency: base,
+        exchange: exchange,
+        loading: false,
+      ),
+    );
   }
 
   void _update(AssetFormState next) {
@@ -64,8 +88,15 @@ class AssetEditViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void onTypeChange(AssetType type) =>
-      _update(_form.copyWith(type: type, clearLastPrice: _form.type != type));
+  void onTypeChange(AssetType type) => _update(
+    _form.copyWith(
+      type: type,
+      exchange: _form.usesStockExchange
+          ? _form.exchange
+          : StockExchange.fromSymbol(_form.symbol),
+      clearLastPrice: type != _form.type,
+    ),
+  );
 
   void onNameChange(String value) => _update(_form.copyWith(name: value));
 
@@ -78,8 +109,10 @@ class AssetEditViewModel extends ChangeNotifier {
   void onPricePerUnitChange(String value) =>
       _update(_form.copyWith(pricePerUnit: filterDecimal(value)));
 
-  void onSymbolChange(String value) =>
-      _update(_form.copyWith(symbol: value, clearLastPrice: true));
+  void onSymbolChange(String value) => _update(_form.withSymbol(value));
+
+  void onExchangeChange(StockExchange value) =>
+      _update(_form.withExchange(value));
 
   void onManualValueChange(String value) =>
       _update(_form.copyWith(manualValue: filterDecimal(value)));
@@ -87,8 +120,9 @@ class AssetEditViewModel extends ChangeNotifier {
   void onNotesChange(String value) => _update(_form.copyWith(notes: value));
 
   Future<void> fetchPrice() async {
-    final String symbol = _form.symbol.trim();
+    final String symbol = _form.quoteSymbol;
     final AssetType type = _form.type;
+    final StockExchange exchange = _form.exchange;
     if (symbol.isEmpty) {
       _emit(
         const AssetEditEvent(
@@ -103,8 +137,16 @@ class AssetEditViewModel extends ChangeNotifier {
       symbol,
       isCrypto: type == AssetType.crypto,
     );
-    if (_form.type != type || _form.symbol.trim() != symbol) {
+    if (_form.type != type || _form.quoteSymbol != symbol) {
       _update(_form.copyWith(isFetchingPrice: false));
+      if (_form.type == type && _form.exchange != exchange) {
+        _emit(
+          const AssetEditEvent(
+            AssetEditEventType.error,
+            'Ticker or exchange changed; fetch the price again',
+          ),
+        );
+      }
       return;
     }
     if (result.isSuccess) {
