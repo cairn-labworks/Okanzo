@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../di/app_container.dart';
 import '../../domain/model/asset_type.dart';
+import '../../domain/model/stock_exchange.dart';
 import '../../util/currency_util.dart';
 import '../components/form_components.dart';
 import '../theme/theme.dart';
@@ -168,13 +169,33 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     switch (form.valuationMode) {
       case ValuationMode.market:
         return <Widget>[
+          if (form.usesStockExchange) ...<Widget>[
+            DropdownSelector<StockExchange>(
+              key: ValueKey<StockExchange>(form.exchange),
+              label: 'Exchange',
+              selected: form.exchange,
+              options: StockExchange.values,
+              optionLabel: (StockExchange exchange) => exchange.displayName,
+              onSelected: (StockExchange exchange) {
+                viewModel.onExchangeChange(exchange);
+                _symbol.text = viewModel.form.symbol;
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
           LabeledTextField(
             controller: _symbol,
             label: 'Ticker symbol',
-            placeholder: 'e.g. AAPL, VOD.L, 7203.T, BTC-USD',
-            supportingText:
-                'For international listings, include the Yahoo Finance '
-                'exchange suffix (e.g. .HK, .SS, .SZ, .TO, .NS).',
+            placeholder: form.usesStockExchange
+                ? 'e.g. ${form.exchange.example}'
+                : 'e.g. BTC-USD, ETH-USD',
+            supportingText: !form.usesStockExchange
+                ? null
+                : form.exchange.suffix.isEmpty
+                ? 'Enter a Yahoo Finance ticker. Full exchange-qualified '
+                      'tickers are also accepted.'
+                : '${form.exchange.suffix} is added automatically. '
+                      'Full Yahoo Finance tickers are also accepted.',
             onChanged: viewModel.onSymbolChange,
           ),
           const SizedBox(height: 16),

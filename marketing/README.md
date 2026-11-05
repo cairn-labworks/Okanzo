@@ -33,3 +33,28 @@ $src    = "marketing\generate.html"
 
 Edit headlines, captions, callouts and the app-screen mockups in the `POSTERS`
 and screen-builder functions inside the generator, then re-run.
+
+## Exchange feature screenshots
+
+Unlike the promotional posters above, these are actual Android emulator
+captures of the app, using a **Global demo** portfolio with sample holdings:
+
+| File | Screen |
+|------|--------|
+| [exchange-picker.png](screenshots/exchanges/exchange-picker.png) | Stock/fund exchange dropdown |
+| [bse-quote.png](screenshots/exchanges/bse-quote.png) | BSE holding with a fetched INR quote |
+| [global-portfolio.png](screenshots/exchanges/global-portfolio.png) | International holdings in one portfolio |
+
+To regenerate them on a dedicated Android emulator:
+
+```bash
+flutter drive \
+  --driver=test_driver/exchange_screenshots.dart \
+  --target=integration_test/exchange_support_test.dart \
+  --dart-define=CAPTURE_SCREENSHOTS=true \
+  -d <android-device-id>
+```
+
+The capture uses Flutter's integration-test image surface; the app's
+`FLAG_SECURE` screenshot protection stays enabled. The full live exchange smoke
+test also runs, so network access and Yahoo quote availability are required.

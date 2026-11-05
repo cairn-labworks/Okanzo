@@ -1,5 +1,6 @@
 import '../../data/local/entity/asset_entity.dart';
 import '../../domain/model/asset_type.dart';
+import '../../domain/model/stock_exchange.dart';
 
 /// Editable state of the asset form. Pure data + validation so it can be
 /// unit-tested without a widget tree.
@@ -13,6 +14,7 @@ class AssetFormState {
     this.quantity = '',
     this.pricePerUnit = '',
     this.symbol = '',
+    this.exchange = StockExchange.us,
     this.manualValue = '',
     this.lastPrice,
     this.lastPriceTimestamp,
@@ -30,6 +32,7 @@ class AssetFormState {
   final String quantity;
   final String pricePerUnit;
   final String symbol;
+  final StockExchange exchange;
   final String manualValue;
   final double? lastPrice;
   final int? lastPriceTimestamp;
@@ -41,6 +44,39 @@ class AssetFormState {
   bool get isEditing => id != 0;
 
   ValuationMode get valuationMode => type.valuationMode;
+
+  bool get usesStockExchange =>
+      type == AssetType.stock || type == AssetType.mutualFund;
+
+  String get quoteSymbol => usesStockExchange
+      ? exchange.qualify(symbol)
+      : symbol.trim().toUpperCase();
+
+  AssetFormState withSymbol(String value) {
+    final StockExchange next = usesStockExchange && value.contains('.')
+        ? StockExchange.fromSymbol(value)
+        : exchange;
+    return copyWith(
+      symbol: value,
+      exchange: next,
+      currency: next != exchange ? next.currency : null,
+      clearLastPrice: true,
+    );
+  }
+
+  AssetFormState withExchange(StockExchange value) {
+    if (value == exchange) return this;
+    final String ticker = quoteSymbol;
+    final int separator = ticker.lastIndexOf('.');
+    return copyWith(
+      exchange: value,
+      symbol: value == StockExchange.other || separator < 0
+          ? ticker
+          : ticker.substring(0, separator),
+      currency: value.currency,
+      clearLastPrice: true,
+    );
+  }
 
   /// Live estimate of the asset's value in its own currency.
   double get estimatedValue {
@@ -83,7 +119,7 @@ class AssetFormState {
   /// time, and the repository re-stamps [updatedAt] when saving.
   AssetEntity toEntity({int? now}) {
     final int timestamp = now ?? DateTime.now().millisecondsSinceEpoch;
-    final String ticker = symbol.trim().toUpperCase();
+    final String ticker = quoteSymbol;
     return AssetEntity(
       id: id,
       portfolioId: portfolioId,
@@ -113,6 +149,7 @@ class AssetFormState {
         ? ''
         : formatInput(asset.pricePerUnit!),
     symbol: asset.symbol ?? '',
+    exchange: StockExchange.fromSymbol(asset.symbol ?? ''),
     manualValue: asset.manualValue == null
         ? ''
         : formatInput(asset.manualValue!),
@@ -131,6 +168,7 @@ class AssetFormState {
     String? quantity,
     String? pricePerUnit,
     String? symbol,
+    StockExchange? exchange,
     String? manualValue,
     double? lastPrice,
     int? lastPriceTimestamp,
@@ -149,6 +187,7 @@ class AssetFormState {
       quantity: quantity ?? this.quantity,
       pricePerUnit: pricePerUnit ?? this.pricePerUnit,
       symbol: symbol ?? this.symbol,
+      exchange: exchange ?? this.exchange,
       manualValue: manualValue ?? this.manualValue,
       lastPrice: clearLastPrice ? null : (lastPrice ?? this.lastPrice),
       lastPriceTimestamp: clearLastPrice

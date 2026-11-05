@@ -48,8 +48,15 @@ class StockPriceService {
       if (price == null) {
         return Result<StockQuote>.failure('No price available for $ticker');
       }
+      // Yahoo uses minor units for some listings; stored values use ISO currencies.
+      final (currency, divisor) = switch (meta.currency) {
+        'GBp' || 'GBX' => ('GBP', 100.0),
+        'ZAc' => ('ZAR', 100.0),
+        'ILA' => ('ILS', 100.0),
+        _ => (meta.currency, 1.0),
+      };
       return Result<StockQuote>.success(
-        StockQuote(symbol: ticker, price: price, currency: meta.currency),
+        StockQuote(symbol: ticker, price: price / divisor, currency: currency),
       );
     } on Object catch (error) {
       return Result<StockQuote>.failure(_describe(error));

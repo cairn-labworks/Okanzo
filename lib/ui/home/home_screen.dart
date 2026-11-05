@@ -485,6 +485,7 @@ class _AddFab extends StatelessWidget {
     final List<Color>? gradient = AppStyle.of(context).fabGradient;
     if (gradient == null) {
       return FloatingActionButton.extended(
+        heroTag: 'home-add-holding',
         onPressed: onPressed,
         icon: const Icon(Icons.add),
         label: const Text('Add'),
@@ -507,6 +508,7 @@ class _AddFab extends StatelessWidget {
         ],
       ),
       child: FloatingActionButton.extended(
+        heroTag: 'home-add-holding',
         onPressed: onPressed,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,

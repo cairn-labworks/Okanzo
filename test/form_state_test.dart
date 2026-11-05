@@ -2,11 +2,163 @@ import 'package:okanzo/data/local/entity/asset_entity.dart';
 import 'package:okanzo/data/local/entity/liability_entity.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/liability_type.dart';
+import 'package:okanzo/domain/model/stock_exchange.dart';
 import 'package:okanzo/ui/asset/asset_form_state.dart';
 import 'package:okanzo/ui/liability/liability_form_state.dart';
 import 'package:test/test.dart';
 
 void main() {
+  group('AssetFormState exchange selection', () {
+    test('exchange suffixes and currencies match Yahoo coverage', () {
+      const Map<StockExchange, (String, String?)> expected =
+          <StockExchange, (String, String?)>{
+            StockExchange.us: ('', 'USD'),
+            StockExchange.shanghai: ('.SS', 'CNY'),
+            StockExchange.euronextParis: ('.PA', 'EUR'),
+            StockExchange.euronextAmsterdam: ('.AS', 'EUR'),
+            StockExchange.euronextBrussels: ('.BR', 'EUR'),
+            StockExchange.euronextLisbon: ('.LS', 'EUR'),
+            StockExchange.euronextDublin: ('.IR', 'EUR'),
+            StockExchange.euronextOslo: ('.OL', 'NOK'),
+            StockExchange.euronextMilan: ('.MI', 'EUR'),
+            StockExchange.tokyo: ('.T', 'JPY'),
+            StockExchange.hongKong: ('.HK', 'HKD'),
+            StockExchange.bse: ('.BO', 'INR'),
+            StockExchange.other: ('', null),
+          };
+
+      expect(expected.keys, unorderedEquals(StockExchange.values));
+      for (final MapEntry<StockExchange, (String, String?)> entry
+          in expected.entries) {
+        expect(entry.key.suffix, entry.value.$1);
+        expect(entry.key.currency, entry.value.$2);
+      }
+    });
+
+    test('adds each exchange suffix when saving stocks and funds', () {
+      for (final AssetType type in <AssetType>[
+        AssetType.stock,
+        AssetType.mutualFund,
+      ]) {
+        for (final StockExchange exchange in StockExchange.values) {
+          final AssetFormState form = AssetFormState(
+            type: type,
+            name: 'Holding',
+            quantity: '1',
+          ).withExchange(exchange).withSymbol(exchange.example);
+          final String symbol = exchange.qualify(exchange.example);
+
+          expect(form.validate(), isNull);
+          expect(form.quoteSymbol, symbol);
+          expect(form.toEntity().symbol, symbol);
+        }
+      }
+    });
+
+    test(
+      'preserves leading zeros and accepts full tickers without doubling',
+      () {
+        final AssetFormState form = const AssetFormState()
+            .withExchange(StockExchange.hongKong)
+            .withSymbol(' 0700.hk ');
+
+        expect(form.exchange, StockExchange.hongKong);
+        expect(form.quoteSymbol, '0700.HK');
+        expect(form.toEntity().symbol, '0700.HK');
+      },
+    );
+
+    test('a full ticker selects its exchange and currency', () {
+      final AssetFormState form = const AssetFormState(currency: 'USD')
+          .withSymbol('reliance.bo');
+
+      expect(form.exchange, StockExchange.bse);
+      expect(form.currency, 'INR');
+      expect(form.quoteSymbol, 'RELIANCE.BO');
+    });
+
+    test('changing exchange replaces the suffix and clears the quote', () {
+      final AssetFormState form = const AssetFormState(
+        symbol: 'RELIANCE.BO',
+        exchange: StockExchange.bse,
+        currency: 'INR',
+        lastPrice: 100,
+        lastPriceTimestamp: 10,
+      ).withExchange(StockExchange.euronextParis);
+
+      expect(form.symbol, 'RELIANCE');
+      expect(form.quoteSymbol, 'RELIANCE.PA');
+      expect(form.currency, 'EUR');
+      expect(form.lastPrice, isNull);
+      expect(form.lastPriceTimestamp, isNull);
+    });
+
+    test('other mode keeps the full ticker, including unlisted exchanges', () {
+      final AssetFormState form = const AssetFormState(
+        symbol: '0700',
+        exchange: StockExchange.hongKong,
+      ).withExchange(StockExchange.other);
+
+      expect(form.symbol, '0700.HK');
+      expect(form.quoteSymbol, '0700.HK');
+      expect(form.withSymbol(' vod.l ').quoteSymbol, 'VOD.L');
+      expect(form.withSymbol(' vod.l ').exchange, StockExchange.other);
+      expect(
+        form.withSymbol('VOD.L').withExchange(StockExchange.bse).quoteSymbol,
+        'VOD.BO',
+      );
+    });
+
+    test('existing listings round-trip without a storage migration', () {
+      for (final String symbol in <String>[
+        'AAPL',
+        '0700.HK',
+        'RELIANCE.BO',
+        'AIR.PA',
+        'VOD.L',
+        '000001.SZ',
+      ]) {
+        final AssetEntity entity = AssetEntity(
+          portfolioId: 1,
+          type: AssetType.stock,
+          name: symbol,
+          currency: 'USD',
+          symbol: symbol,
+          createdAt: 1,
+          updatedAt: 2,
+        );
+        final AssetFormState form = AssetFormState.fromEntity(entity);
+
+        expect(form.exchange, StockExchange.fromSymbol(symbol));
+        expect(form.toEntity().symbol, symbol);
+        expect(form.currency, entity.currency);
+      }
+    });
+
+    test('exchange selection does not qualify cryptocurrency symbols', () {
+      final AssetFormState form = const AssetFormState(
+        type: AssetType.crypto,
+        symbol: ' btc-usd ',
+        exchange: StockExchange.hongKong,
+      );
+
+      expect(form.usesStockExchange, isFalse);
+      expect(form.quoteSymbol, 'BTC-USD');
+      expect(form.toEntity().symbol, 'BTC-USD');
+    });
+
+    test('blank local tickers remain invalid after selecting an exchange', () {
+      final AssetFormState form = const AssetFormState(
+        name: 'Holding',
+        quantity: '1',
+      ).withExchange(StockExchange.bse);
+
+      expect(form.quoteSymbol, isEmpty);
+      expect(form.validate(), 'Enter a ticker symbol');
+      expect(form.toEntity().symbol, isNull);
+    });
+  });
+
   group('AssetFormState.validate', () {
     test('requires a name and a currency first', () {
       expect(

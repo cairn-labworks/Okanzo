@@ -70,6 +70,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                   ),
           ),
           floatingActionButton: FloatingActionButton.extended(
+            heroTag: 'portfolio-create',
             onPressed: _showCreateDialog,
             icon: const Icon(Icons.add),
             label: const Text('New'),
