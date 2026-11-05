@@ -8,6 +8,7 @@ import '../components/form_components.dart';
 import '../theme/theme.dart';
 import 'asset_edit_view_model.dart';
 import 'asset_form_state.dart';
+import 'stock_exchange_field.dart';
 
 /// Create or edit a single asset.
 class AssetEditScreen extends StatefulWidget {
@@ -170,12 +171,15 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
       case ValuationMode.market:
         return <Widget>[
           if (form.usesStockExchange) ...<Widget>[
-            DropdownSelector<StockExchange>(
-              key: ValueKey<StockExchange>(form.exchange),
-              label: 'Exchange',
-              selected: form.exchange,
-              options: StockExchange.values,
-              optionLabel: (StockExchange exchange) => exchange.displayName,
+            StockExchangeField(
+              selected:
+                  form.isEditing ||
+                      form.symbol.trim().isNotEmpty ||
+                      viewModel.preferredExchanges.contains(form.exchange)
+                  ? form.exchange
+                  : null,
+              preferredExchanges: viewModel.preferredExchanges,
+              onSavePreferences: viewModel.savePreferredExchanges,
               onSelected: (StockExchange exchange) {
                 viewModel.onExchangeChange(exchange);
                 _symbol.text = viewModel.form.symbol;

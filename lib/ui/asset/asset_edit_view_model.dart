@@ -47,6 +47,21 @@ class AssetEditViewModel extends ChangeNotifier {
 
   AssetEditEvent? get event => _event;
 
+  List<StockExchange> get preferredExchanges =>
+      _settingsRepository.current.preferredExchanges;
+
+  Future<void> savePreferredExchanges(List<StockExchange> exchanges) async {
+    await _settingsRepository.setPreferredExchanges(exchanges);
+    if (!_form.isEditing &&
+        _form.symbol.trim().isEmpty &&
+        !preferredExchanges.contains(_form.exchange)) {
+      _form = _form.withExchange(
+        preferredExchanges.firstOrNull ?? StockExchange.other,
+      );
+    }
+    notifyListeners();
+  }
+
   Future<void> _load() async {
     if (_assetId != 0) {
       final AssetEntity? asset = await _assetRepository.getById(_assetId);
@@ -57,7 +72,15 @@ class AssetEditViewModel extends ChangeNotifier {
       }
     }
     final String base = _settingsRepository.current.baseCurrency;
-    _update(_form.copyWith(currency: base, loading: false));
+    final StockExchange exchange =
+        preferredExchanges.firstOrNull ?? StockExchange.other;
+    _update(
+      _form.copyWith(
+        currency: exchange.currency ?? base,
+        exchange: exchange,
+        loading: false,
+      ),
+    );
   }
 
   void _update(AssetFormState next) {
