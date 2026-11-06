@@ -114,7 +114,11 @@ class LiabilityCategoryGroup {
 
 /// The secondary line under an asset row: quantity, symbol and, when it differs
 /// from the base currency, the asset's own currency.
-String assetSubtitle(AssetEntity asset, String baseCurrency) {
+String assetSubtitle(
+  AssetEntity asset,
+  String baseCurrency, {
+  String unitsLabel = 'units',
+}) {
   String core;
   switch (asset.type.valuationMode) {
     case ValuationMode.market:
@@ -122,7 +126,7 @@ String assetSubtitle(AssetEntity asset, String baseCurrency) {
           ? '—'
           : formatQuantity(asset.quantity!);
       final String symbol = asset.symbol?.toUpperCase() ?? '';
-      core = symbol.isNotEmpty ? '$qty × $symbol' : '$qty units';
+      core = symbol.isNotEmpty ? '$qty × $symbol' : '$qty $unitsLabel';
     case ValuationMode.quantity:
       final String qty = asset.quantity == null
           ? '—'

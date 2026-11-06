@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../di/app_container.dart';
 import '../../domain/model/liability_type.dart';
+import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../asset/asset_edit_view_model.dart' show AssetEditEventType;
 import '../components/form_components.dart';
@@ -53,8 +54,9 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
       case AssetEditEventType.deleted:
         Navigator.of(context).pop();
       case AssetEditEventType.error:
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(event.message ?? '')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text((event.message ?? '').tr(context))),
+        );
     }
   }
 
@@ -86,17 +88,19 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
         if (!form.loading) _primeControllers(form);
         return Scaffold(
           appBar: AppBar(
-            title: Text(form.isEditing ? 'Edit liability' : 'New liability'),
+            title: Text(
+              (form.isEditing ? 'Edit liability' : 'New liability').tr(context),
+            ),
             actions: <Widget>[
               if (form.isEditing)
                 IconButton(
-                  tooltip: 'Delete',
+                  tooltip: 'Delete'.tr(context),
                   onPressed: viewModel.delete,
                   icon: const Icon(Icons.delete),
                 ),
               TextButton(
                 onPressed: form.isSaving ? null : viewModel.save,
-                child: const Text('Save'),
+                child: Text('Save'.tr(context)),
               ),
             ],
           ),
@@ -109,26 +113,27 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                   ),
                   children: <Widget>[
                     DropdownSelector<LiabilityType>(
-                      label: 'Type',
+                      label: 'Type'.tr(context),
                       selected: form.type,
                       options: LiabilityType.values,
-                      optionLabel: (LiabilityType type) => type.displayName,
+                      optionLabel: (LiabilityType type) =>
+                          type.displayName.tr(context),
                       onSelected: viewModel.onTypeChange,
                     ),
                     const SizedBox(height: 16),
                     LabeledTextField(
                       controller: _name,
-                      label: 'Name',
-                      placeholder: 'e.g. Home loan',
+                      label: 'Name'.tr(context),
+                      placeholder: 'e.g. Home loan'.tr(context),
                       onChanged: viewModel.onNameChange,
                     ),
                     const SizedBox(height: 16),
                     InkWell(
                       onTap: () => _pickCurrency(form.currency),
                       child: InputDecorator(
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Currency',
+                        decoration: InputDecoration(
+                          border: const OutlineInputBorder(),
+                          labelText: 'Currency'.tr(context),
                         ),
                         child: Text(
                           '${form.currency} — '
@@ -139,7 +144,7 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                     const SizedBox(height: 16),
                     LabeledTextField(
                       controller: _amount,
-                      label: 'Outstanding amount',
+                      label: 'Outstanding amount'.tr(context),
                       prefix: CurrencyUtil.symbol(form.currency),
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
@@ -149,7 +154,7 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                     const SizedBox(height: 16),
                     LabeledTextField(
                       controller: _notes,
-                      label: 'Notes (optional)',
+                      label: 'Notes (optional)'.tr(context),
                       singleLine: false,
                       onChanged: viewModel.onNotesChange,
                     ),

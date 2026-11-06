@@ -2,12 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
 
 import 'data/repository/settings_repository.dart';
 import 'di/app_container.dart';
 import 'domain/model/app_theme.dart';
 import 'domain/model/theme_mode.dart';
+import 'l10n/app_localizations.dart';
 import 'ui/lock/lock_screen.dart';
 import 'ui/navigation/app_shell.dart';
 import 'ui/theme/dynamic_color.dart';
@@ -24,8 +26,32 @@ Future<void> main() async {
   runApp(AppScope(container: container, child: const OkanzoApp()));
 }
 
-class OkanzoApp extends StatelessWidget {
+class OkanzoApp extends StatefulWidget {
   const OkanzoApp({super.key});
+
+  @override
+  State<OkanzoApp> createState() => _OkanzoAppState();
+}
+
+class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    Intl.defaultLocale = locales != null && locales.isNotEmpty
+        ? locales.first.toString()
+        : Intl.systemLocale;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +74,14 @@ class OkanzoApp extends StatelessWidget {
             return MaterialApp(
               title: 'Okanzo',
               debugShowCheckedModeBanner: false,
+              localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              locale: AppLocalizations.localeForLanguage(settings.language),
               theme: buildTheme(
                 brightness: Brightness.light,
                 dynamicScheme: useDynamic ? lightDynamic : null,
@@ -131,8 +165,8 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
     if (_prompting) return;
     _prompting = true;
     final String? error = await BiometricAuthenticator.authenticate(
-      title: 'Unlock Okanzo',
-      subtitle: "Confirm it's you to view your net worth",
+      title: 'Unlock Okanzo'.tr(context),
+      subtitle: "Confirm it's you to view your net worth".tr(context),
     );
     _prompting = false;
     // Stay locked on failure; the user can retry from the lock screen.

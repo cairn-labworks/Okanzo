@@ -10,6 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # Encrypted local database (SQLCipher), mirroring the Android app's storage.
   sqflite_sqlcipher: ^3.4.1

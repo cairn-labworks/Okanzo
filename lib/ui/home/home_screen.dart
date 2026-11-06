@@ -4,6 +4,7 @@ import '../../data/local/entity/asset_entity.dart';
 import '../../data/local/entity/liability_entity.dart';
 import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
+import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../components/drag_reorder_column.dart';
 import '../components/type_icons.dart';
@@ -57,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (message != null && mounted) {
       _viewModel!.consumeMessage();
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+          .showSnackBar(SnackBar(content: Text(message.tr(context))));
     }
   }
 
@@ -85,14 +86,17 @@ class _HomeScreenState extends State<HomeScreen> {
             actions: <Widget>[
               IconButton(
                 onPressed: viewModel.toggleHideBalances,
-                tooltip: state.hideBalances ? 'Show balances' : 'Hide balances',
+                tooltip:
+                    (state.hideBalances ? 'Show balances' : 'Hide balances').tr(
+                      context,
+                    ),
                 icon: Icon(
                   state.hideBalances ? Icons.visibility_off : Icons.visibility,
                 ),
               ),
               IconButton(
                 onPressed: state.isRefreshing ? null : viewModel.refresh,
-                tooltip: 'Refresh prices',
+                tooltip: 'Refresh prices'.tr(context),
                 icon: state.isRefreshing
                     ? const SizedBox(
                         width: 22,
@@ -103,16 +107,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               IconButton(
                 onPressed: widget.onOpenSettings,
-                tooltip: 'Settings',
+                tooltip: 'Settings'.tr(context),
                 icon: const Icon(Icons.settings),
               ),
             ],
           ),
           floatingActionButton: state.activePortfolio == null
               ? null
-              : _AddFab(
-                  onPressed: () => _showAddSheet(state.activePortfolio!),
-                ),
+              : _AddFab(onPressed: () => _showAddSheet(state.activePortfolio!)),
           body: state.loading
               ? const Center(child: CircularProgressIndicator())
               : _HomeContent(
@@ -153,13 +155,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     vertical: 8,
                   ),
                   child: Text(
-                    'Add to ${portfolio.name}',
+                    'Add to {portfolio}'
+                        .tr(context)
+                        .replaceAll('{portfolio}', portfolio.name),
                     style: Theme.of(sheetContext).textTheme.titleMedium,
                   ),
                 ),
                 _AddSheetRow(
                   icon: Icons.account_balance_wallet,
-                  label: 'New asset',
+                  label: 'New asset'.tr(context),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
                     widget.onOpenAssetEditor(portfolio.id, 0);
@@ -167,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 _AddSheetRow(
                   icon: Icons.inbox,
-                  label: 'New liability',
+                  label: 'New liability'.tr(context),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
                     widget.onOpenLiabilityEditor(portfolio.id, 0);
@@ -218,7 +222,7 @@ class _PortfolioTitle extends StatelessWidget {
       );
     }
     return PopupMenuButton<Object>(
-      tooltip: 'Switch portfolio',
+      tooltip: 'Switch portfolio'.tr(context),
       position: PopupMenuPosition.under,
       onSelected: (Object value) {
         if (value is int) {
@@ -232,16 +236,17 @@ class _PortfolioTitle extends StatelessWidget {
           PopupMenuItem<Object>(
             value: portfolio.id,
             child: Text(
-              portfolio.name + (portfolio.isDefault ? '  •  Default' : ''),
+              portfolio.name +
+                  (portfolio.isDefault ? '  •  ${'Default'.tr(context)}' : ''),
             ),
           ),
         const PopupMenuDivider(),
-        const PopupMenuItem<Object>(
+        PopupMenuItem<Object>(
           value: 'manage',
           child: ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.tune),
-            title: Text('Manage portfolios'),
+            title: Text('Manage portfolios'.tr(context)),
           ),
         ),
       ],
@@ -314,7 +319,7 @@ class _HomeContent extends StatelessWidget {
           ),
         ),
         SectionHeader(
-          title: 'Assets',
+          title: 'Assets'.tr(context),
           trailing: state.hideBalances
               ? CurrencyUtil.maskShort
               : CurrencyUtil.format(
@@ -323,11 +328,13 @@ class _HomeContent extends StatelessWidget {
                 ),
         ),
         if (!state.hasAnyAssets)
-          const EmptyState(
+          EmptyState(
             icon: Icons.account_balance_wallet,
-            title: 'No assets yet',
+            title: 'No assets yet'.tr(context),
             subtitle:
-                'Add stocks, cash, property and more to track their value.',
+                'Add stocks, cash, property and more to track their value.'.tr(
+                  context,
+                ),
           )
         else
           DragReorderColumn<AssetCategoryGroup>(
@@ -348,10 +355,8 @@ class _HomeContent extends StatelessWidget {
                   final String key = 'asset-${group.type.storageName}';
                   return _CategoryCardShell(
                     icon: assetTypeIcon(group.type),
-                    accent: colorful
-                        ? categoryColorAt(group.type.index)
-                        : null,
-                    title: group.type.displayName,
+                    accent: colorful ? categoryColorAt(group.type.index) : null,
+                    title: group.type.displayName.tr(context),
                     count: group.items.length,
                     totalText: state.hideBalances
                         ? CurrencyUtil.maskShort
@@ -376,6 +381,7 @@ class _HomeContent extends StatelessWidget {
                             subtitle: assetSubtitle(
                               line.asset,
                               group.baseCurrency,
+                              unitsLabel: 'units'.tr(context),
                             ),
                             amount: state.hideBalances
                                 ? CurrencyUtil.maskShort
@@ -392,7 +398,7 @@ class _HomeContent extends StatelessWidget {
           ),
         const SizedBox(height: 12),
         SectionHeader(
-          title: 'Liabilities',
+          title: 'Liabilities'.tr(context),
           trailing: state.hideBalances
               ? CurrencyUtil.maskShort
               : CurrencyUtil.format(
@@ -401,10 +407,12 @@ class _HomeContent extends StatelessWidget {
                 ),
         ),
         if (!state.hasAnyLiabilities)
-          const EmptyState(
+          EmptyState(
             icon: Icons.inbox,
-            title: 'No liabilities',
-            subtitle: 'Track loans, credit cards and pending payments here.',
+            title: 'No liabilities'.tr(context),
+            subtitle: 'Track loans, credit cards and pending payments here.'.tr(
+              context,
+            ),
           )
         else
           DragReorderColumn<LiabilityCategoryGroup>(
@@ -428,7 +436,7 @@ class _HomeContent extends StatelessWidget {
                     accent: colorful
                         ? categoryColorAt(group.type.index + 5)
                         : null,
-                    title: group.type.displayName,
+                    title: group.type.displayName.tr(context),
                     count: group.items.length,
                     totalText: state.hideBalances
                         ? CurrencyUtil.maskShort
@@ -488,7 +496,7 @@ class _AddFab extends StatelessWidget {
         heroTag: 'home-add-holding',
         onPressed: onPressed,
         icon: const Icon(Icons.add),
-        label: const Text('Add'),
+        label: Text('Add'.tr(context)),
       );
     }
     return DecoratedBox(
@@ -515,7 +523,7 @@ class _AddFab extends StatelessWidget {
         elevation: 0,
         highlightElevation: 0,
         icon: const Icon(Icons.add),
-        label: const Text('Add'),
+        label: Text('Add'.tr(context)),
       ),
     );
   }
@@ -568,7 +576,7 @@ class _CategoryCardShell extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  itemCountLabel(count),
+                  itemCountLabel(count).tr(context),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -587,7 +595,7 @@ class _CategoryCardShell extends StatelessWidget {
           Icon(
             isExpanded ? Icons.expand_less : Icons.expand_more,
             color: theme.colorScheme.onSurfaceVariant,
-            semanticLabel: isExpanded ? 'Collapse' : 'Expand',
+            semanticLabel: (isExpanded ? 'Collapse' : 'Expand').tr(context),
           ),
         ],
       ),
@@ -682,7 +690,7 @@ class _HoldingItemRow extends StatelessWidget {
                 Icons.drag_indicator,
                 size: 20,
                 color: theme.colorScheme.outline,
-                semanticLabel: 'Drag to reorder',
+                semanticLabel: 'Drag to reorder'.tr(context),
               ),
             ],
           ),

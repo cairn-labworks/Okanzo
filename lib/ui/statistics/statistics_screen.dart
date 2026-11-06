@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
+import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../components/donut_chart.dart';
 import '../components/ui_components.dart';
@@ -64,18 +65,20 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           appBar: AppBar(
             title: _PortfolioMenuTitle(
               portfolios: state.portfolios,
-              activeName: state.activePortfolio?.name ?? 'Statistics',
+              activeName:
+                  state.activePortfolio?.name ?? 'Statistics'.tr(context),
               onSelect: viewModel.selectPortfolio,
             ),
           ),
           body: !state.hasAnything
-              ? const Center(
+              ? Center(
                   child: EmptyState(
                     icon: Icons.pie_chart,
-                    title: 'Nothing to chart yet',
+                    title: 'Nothing to chart yet'.tr(context),
                     subtitle:
                         'Add assets or liabilities to this portfolio to '
-                        'see its breakdown.',
+                                'see its breakdown.'
+                            .tr(context),
                   ),
                 )
               : GestureDetector(
@@ -90,23 +93,23 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ),
                     children: <Widget>[
                       _ChartCard(
-                        title: 'Overview',
-                        subtitle: 'Assets vs. liabilities',
+                        title: 'Overview'.tr(context),
+                        subtitle: 'Assets vs. liabilities'.tr(context),
                         slices: <PieSlice>[
                           if (state.totalAssets > 0)
                             PieSlice(
-                              'Assets',
+                              'Assets'.tr(context),
                               state.totalAssets,
                               finance.positive,
                             ),
                           if (state.totalLiabilities > 0)
                             PieSlice(
-                              'Liabilities',
+                              'Liabilities'.tr(context),
                               state.totalLiabilities,
                               finance.negative,
                             ),
                         ],
-                        defaultCenterLabel: 'Net worth',
+                        defaultCenterLabel: 'Net worth'.tr(context),
                         defaultCenterValue: state.netWorth,
                         baseCurrency: state.baseCurrency,
                         hideBalances: state.hideBalances,
@@ -117,17 +120,17 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       if (state.hasAssets) ...<Widget>[
                         const SizedBox(height: 16),
                         _ChartCard(
-                          title: 'Assets',
-                          subtitle: 'By type',
+                          title: 'Assets'.tr(context),
+                          subtitle: 'By type'.tr(context),
                           slices: <PieSlice>[
                             for (int i = 0; i < state.assetsByType.length; i++)
                               PieSlice(
-                                state.assetsByType[i].label,
+                                state.assetsByType[i].label.tr(context),
                                 state.assetsByType[i].amount,
                                 chartColorAt(i),
                               ),
                           ],
-                          defaultCenterLabel: 'Assets',
+                          defaultCenterLabel: 'Assets'.tr(context),
                           defaultCenterValue: state.totalAssets,
                           baseCurrency: state.baseCurrency,
                           hideBalances: state.hideBalances,
@@ -139,8 +142,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       if (state.hasLiabilities) ...<Widget>[
                         const SizedBox(height: 16),
                         _ChartCard(
-                          title: 'Liabilities',
-                          subtitle: 'By type',
+                          title: 'Liabilities'.tr(context),
+                          subtitle: 'By type'.tr(context),
                           slices: <PieSlice>[
                             for (
                               int i = 0;
@@ -148,12 +151,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                               i++
                             )
                               PieSlice(
-                                state.liabilitiesByType[i].label,
+                                state.liabilitiesByType[i].label.tr(context),
                                 state.liabilitiesByType[i].amount,
                                 chartColorAt(i),
                               ),
                           ],
-                          defaultCenterLabel: 'Liabilities',
+                          defaultCenterLabel: 'Liabilities'.tr(context),
                           defaultCenterValue: state.totalLiabilities,
                           baseCurrency: state.baseCurrency,
                           hideBalances: state.hideBalances,
@@ -200,7 +203,7 @@ class _PortfolioMenuTitle extends StatelessWidget {
     );
     if (portfolios.isEmpty) return label;
     return PopupMenuButton<int>(
-      tooltip: 'Switch portfolio',
+      tooltip: 'Switch portfolio'.tr(context),
       position: PopupMenuPosition.under,
       onSelected: onSelect,
       itemBuilder: (BuildContext context) => <PopupMenuEntry<int>>[
@@ -208,7 +211,8 @@ class _PortfolioMenuTitle extends StatelessWidget {
           PopupMenuItem<int>(
             value: portfolio.id,
             child: Text(
-              portfolio.name + (portfolio.isDefault ? '  •  Default' : ''),
+              portfolio.name +
+                  (portfolio.isDefault ? '  •  ${'Default'.tr(context)}' : ''),
             ),
           ),
       ],

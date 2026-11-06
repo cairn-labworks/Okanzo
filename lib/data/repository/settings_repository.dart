@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../domain/model/app_language.dart';
 import '../../domain/model/app_theme.dart';
 import '../../domain/model/stock_exchange.dart';
 import '../../domain/model/theme_mode.dart';
@@ -18,6 +19,7 @@ class AppSettings {
     this.hideBalances = false,
     this.selectedPortfolioId,
     this.preferredExchanges = const <StockExchange>[StockExchange.us],
+    this.language = AppLanguage.system,
   });
 
   final AppThemeMode themeMode;
@@ -28,6 +30,7 @@ class AppSettings {
   final bool hideBalances;
   final int? selectedPortfolioId;
   final List<StockExchange> preferredExchanges;
+  final AppLanguage language;
 }
 
 /// Section names used when persisting a portfolio's custom category order.
@@ -51,6 +54,7 @@ class SettingsRepository {
   static const String _keyHideBalances = 'hide_balances';
   static const String _keySelectedPortfolio = 'selected_portfolio_id';
   static const String _keyPreferredExchanges = 'preferred_stock_exchanges';
+  static const String _keyLanguage = 'app_language';
 
   final SharedPreferences _prefs;
   final StreamController<AppSettings> _controller =
@@ -72,6 +76,7 @@ class SettingsRepository {
     hideBalances: _prefs.getBool(_keyHideBalances) ?? false,
     selectedPortfolioId: _selectedPortfolioId,
     preferredExchanges: _preferredExchanges,
+    language: AppLanguage.fromName(_prefs.getString(_keyLanguage)),
   );
 
   List<StockExchange> get _preferredExchanges {
@@ -93,6 +98,21 @@ class SettingsRepository {
       ],
     );
     if (!saved) throw StateError('Exchange preferences could not be saved');
+    _emit();
+  }
+
+  Future<void> setLanguage(AppLanguage language) async {
+    bool saved = false;
+    try {
+      saved = language == AppLanguage.system
+          ? await _prefs.remove(_keyLanguage)
+          : await _prefs.setString(_keyLanguage, language.storageName);
+      if (!saved) {
+        throw StateError('App language preference could not be saved');
+      }
+    } finally {
+      if (!saved) await _prefs.reload();
+    }
     _emit();
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../asset/asset_edit_screen.dart';
 import '../home/home_screen.dart';
 import '../liability/liability_edit_screen.dart';
@@ -97,7 +98,7 @@ class _AppShellState extends State<AppShell> {
               NavigationDestination(
                 icon: Icon(destination.unselectedIcon),
                 selectedIcon: Icon(destination.selectedIcon),
-                label: destination.label,
+                label: destination.label.tr(context),
               ),
           ],
         ),
@@ -117,7 +118,7 @@ class _AppShellState extends State<AppShell> {
                 NavigationRailDestination(
                   icon: Icon(destination.unselectedIcon),
                   selectedIcon: Icon(destination.selectedIcon),
-                  label: Text(destination.label),
+                  label: Text(destination.label.tr(context)),
                 ),
             ],
           ),
