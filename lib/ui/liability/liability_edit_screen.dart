@@ -54,8 +54,9 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
       case AssetEditEventType.deleted:
         Navigator.of(context).pop();
       case AssetEditEventType.error:
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text((event.message ?? '').tr)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text((event.message ?? '').tr(context))),
+        );
     }
   }
 
@@ -88,18 +89,18 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
         return Scaffold(
           appBar: AppBar(
             title: Text(
-              (form.isEditing ? 'Edit liability' : 'New liability').tr,
+              (form.isEditing ? 'Edit liability' : 'New liability').tr(context),
             ),
             actions: <Widget>[
               if (form.isEditing)
                 IconButton(
-                  tooltip: 'Delete'.tr,
+                  tooltip: 'Delete'.tr(context),
                   onPressed: viewModel.delete,
                   icon: const Icon(Icons.delete),
                 ),
               TextButton(
                 onPressed: form.isSaving ? null : viewModel.save,
-                child: Text('Save'.tr),
+                child: Text('Save'.tr(context)),
               ),
             ],
           ),
@@ -112,18 +113,18 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                   ),
                   children: <Widget>[
                     DropdownSelector<LiabilityType>(
-                      label: 'Type'.tr,
+                      label: 'Type'.tr(context),
                       selected: form.type,
                       options: LiabilityType.values,
                       optionLabel: (LiabilityType type) =>
-                          type.displayName.tr,
+                          type.displayName.tr(context),
                       onSelected: viewModel.onTypeChange,
                     ),
                     const SizedBox(height: 16),
                     LabeledTextField(
                       controller: _name,
-                      label: 'Name'.tr,
-                      placeholder: 'e.g. Home loan'.tr,
+                      label: 'Name'.tr(context),
+                      placeholder: 'e.g. Home loan'.tr(context),
                       onChanged: viewModel.onNameChange,
                     ),
                     const SizedBox(height: 16),
@@ -132,7 +133,7 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                       child: InputDecorator(
                         decoration: InputDecoration(
                           border: const OutlineInputBorder(),
-                          labelText: 'Currency'.tr,
+                          labelText: 'Currency'.tr(context),
                         ),
                         child: Text(
                           '${form.currency} — '
@@ -143,7 +144,7 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                     const SizedBox(height: 16),
                     LabeledTextField(
                       controller: _amount,
-                      label: 'Outstanding amount'.tr,
+                      label: 'Outstanding amount'.tr(context),
                       prefix: CurrencyUtil.symbol(form.currency),
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
@@ -153,7 +154,7 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                     const SizedBox(height: 16),
                     LabeledTextField(
                       controller: _notes,
-                      label: 'Notes (optional)'.tr,
+                      label: 'Notes (optional)'.tr(context),
                       singleLine: false,
                       onChanged: viewModel.onNotesChange,
                     ),

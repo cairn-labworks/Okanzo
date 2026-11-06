@@ -34,13 +34,13 @@ class NetWorthCard extends StatelessWidget {
           Row(
             children: <Widget>[
               Text(
-                'Net worth'.tr,
+                'Net worth'.tr(context),
                 style: theme.textTheme.labelLarge?.copyWith(color: onHero),
               ),
               if (summary.hasApproximateConversions) ...<Widget>[
                 const SizedBox(width: 8),
                 Tooltip(
-                  message: 'Some values are approximate'.tr,
+                  message: 'Some values are approximate'.tr(context),
                   child: Icon(Icons.info_outlined, size: 16, color: onHero),
                 ),
               ],
@@ -65,7 +65,7 @@ class NetWorthCard extends StatelessWidget {
                   accent: onGradient ? onHero : finance.positive,
                   onGradient: onGradient,
                   onHero: onHero,
-                  label: 'Assets'.tr,
+                  label: 'Assets'.tr(context),
                   amount: hideBalances
                       ? CurrencyUtil.maskShort
                       : CurrencyUtil.format(
@@ -81,7 +81,7 @@ class NetWorthCard extends StatelessWidget {
                   accent: onGradient ? onHero : finance.negative,
                   onGradient: onGradient,
                   onHero: onHero,
-                  label: 'Liabilities'.tr,
+                  label: 'Liabilities'.tr(context),
                   amount: hideBalances
                       ? CurrencyUtil.maskShort
                       : CurrencyUtil.format(

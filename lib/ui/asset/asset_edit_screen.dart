@@ -59,8 +59,9 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
       case AssetEditEventType.deleted:
         Navigator.of(context).pop();
       case AssetEditEventType.error:
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text((event.message ?? '').tr)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text((event.message ?? '').tr(context))),
+        );
     }
   }
 
@@ -99,18 +100,18 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
         return Scaffold(
           appBar: AppBar(
             title: Text(
-              (form.isEditing ? 'Edit asset' : 'New asset').tr,
+              (form.isEditing ? 'Edit asset' : 'New asset').tr(context),
             ),
             actions: <Widget>[
               if (form.isEditing)
                 IconButton(
-                  tooltip: 'Delete'.tr,
+                  tooltip: 'Delete'.tr(context),
                   onPressed: viewModel.delete,
                   icon: const Icon(Icons.delete),
                 ),
               TextButton(
                 onPressed: form.isSaving ? null : viewModel.save,
-                child: Text('Save'.tr),
+                child: Text('Save'.tr(context)),
               ),
             ],
           ),
@@ -123,17 +124,18 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                   ),
                   children: <Widget>[
                     DropdownSelector<AssetType>(
-                      label: 'Type'.tr,
+                      label: 'Type'.tr(context),
                       selected: form.type,
                       options: AssetType.values,
-                      optionLabel: (AssetType type) => type.displayName.tr,
+                      optionLabel: (AssetType type) =>
+                          type.displayName.tr(context),
                       onSelected: viewModel.onTypeChange,
                     ),
                     const SizedBox(height: 16),
                     LabeledTextField(
                       controller: _name,
-                      label: 'Name'.tr,
-                      placeholder: 'e.g. Apple shares'.tr,
+                      label: 'Name'.tr(context),
+                      placeholder: 'e.g. Apple shares'.tr(context),
                       onChanged: viewModel.onNameChange,
                     ),
                     const SizedBox(height: 16),
@@ -146,7 +148,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                     const SizedBox(height: 16),
                     LabeledTextField(
                       controller: _notes,
-                      label: 'Notes (optional)'.tr,
+                      label: 'Notes (optional)'.tr(context),
                       singleLine: false,
                       onChanged: viewModel.onNotesChange,
                     ),
@@ -192,23 +194,30 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
           ],
           LabeledTextField(
             controller: _symbol,
-            label: 'Ticker symbol'.tr,
+            label: 'Ticker symbol'.tr(context),
             placeholder: form.usesStockExchange
-                ? 'e.g. ${form.exchange.example}'
-                : 'e.g. BTC-USD, ETH-USD',
+                ? 'e.g. {symbol}'
+                      .tr(context)
+                      .replaceAll('{symbol}', form.exchange.example)
+                : 'e.g. {symbol}'
+                      .tr(context)
+                      .replaceAll('{symbol}', 'BTC-USD, ETH-USD'),
             supportingText: !form.usesStockExchange
                 ? null
                 : form.exchange.suffix.isEmpty
                 ? 'Enter a Yahoo Finance ticker. Full exchange-qualified '
-                      'tickers are also accepted.'
-                : '${form.exchange.suffix} is added automatically. '
-                      'Full Yahoo Finance tickers are also accepted.',
+                          'tickers are also accepted.'
+                      .tr(context)
+                : '{suffix} is added automatically. '
+                          'Full Yahoo Finance tickers are also accepted.'
+                      .tr(context)
+                      .replaceAll('{suffix}', form.exchange.suffix),
             onChanged: viewModel.onSymbolChange,
           ),
           const SizedBox(height: 16),
           LabeledTextField(
             controller: _quantity,
-            label: 'Quantity'.tr,
+            label: 'Quantity'.tr(context),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: viewModel.onQuantityChange,
           ),
@@ -229,7 +238,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       ),
-                    Text('Fetch latest price'.tr),
+                    Text('Fetch latest price'.tr(context)),
                   ],
                 ),
               ),
@@ -240,7 +249,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
             child: form.lastPrice != null
                 ? Text(
                     'Last price: {price}'
-                        .tr
+                        .tr(context)
                         .replaceAll(
                           '{price}',
                           CurrencyUtil.format(form.lastPrice!, form.currency),
@@ -252,7 +261,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                 : Text(
                     'Fetch the latest closing price, or it will show as 0 '
                             'until refreshed.'
-                        .tr,
+                        .tr(context),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -263,7 +272,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
         return <Widget>[
           LabeledTextField(
             controller: _quantity,
-            label: 'Quantity'.tr,
+            label: 'Quantity'.tr(context),
             suffix: form.type.unitLabel,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: viewModel.onQuantityChange,
@@ -272,7 +281,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
           LabeledTextField(
             controller: _pricePerUnit,
             label: 'Price per {unit}'
-                .tr
+                .tr(context)
                 .replaceAll('{unit}', form.type.unitLabel ?? 'unit'),
             prefix: CurrencyUtil.symbol(form.currency),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -283,7 +292,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
         return <Widget>[
           LabeledTextField(
             controller: _manualValue,
-            label: 'Value'.tr,
+            label: 'Value'.tr(context),
             prefix: CurrencyUtil.symbol(form.currency),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: viewModel.onManualValueChange,
@@ -314,7 +323,7 @@ class _CurrencyField extends StatelessWidget {
       child: InputDecorator(
         decoration: InputDecoration(
           border: const OutlineInputBorder(),
-          labelText: 'Currency'.tr,
+          labelText: 'Currency'.tr(context),
         ),
         child: Text('$currency — ${CurrencyUtil.displayName(currency)}'),
       ),
@@ -339,7 +348,7 @@ class _EstimatedValueCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             Text(
-              'Estimated value'.tr,
+              'Estimated value'.tr(context),
               style: theme.textTheme.titleSmall?.copyWith(
                 color: theme.colorScheme.onSecondaryContainer,
               ),

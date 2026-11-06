@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/model/stock_exchange.dart';
+import '../../l10n/app_localizations.dart';
 
 enum _ExchangeAction { preferences }
 
@@ -26,14 +27,18 @@ class StockExchangeField extends StatefulWidget {
 }
 
 class _StockExchangeFieldState extends State<StockExchangeField> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.selected?.displayName ?? '',
-  );
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _controller.text = widget.selected?.displayName.tr(context) ?? '';
+  }
 
   @override
   void didUpdateWidget(StockExchangeField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _controller.text = widget.selected?.displayName ?? '';
+    _controller.text = widget.selected?.displayName.tr(context) ?? '';
   }
 
   @override
@@ -46,25 +51,28 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
   Widget build(BuildContext context) => DropdownMenu<Object>(
     controller: _controller,
     initialSelection: widget.selected,
-    label: const Text('Exchange'),
-    hintText: 'Choose preferred exchanges',
+    label: Text('Exchange'.tr(context)),
+    hintText: 'Choose preferred exchanges'.tr(context),
     expandedInsets: EdgeInsets.zero,
     requestFocusOnTap: false,
     enableSearch: false,
     dropdownMenuEntries: <DropdownMenuEntry<Object>>[
       for (final StockExchange exchange in widget.preferredExchanges)
-        DropdownMenuEntry<Object>(value: exchange, label: exchange.displayName),
-      const DropdownMenuEntry<Object>(
+        DropdownMenuEntry<Object>(
+          value: exchange,
+          label: exchange.displayName.tr(context),
+        ),
+      DropdownMenuEntry<Object>(
         value: _ExchangeAction.preferences,
-        label: StockExchangeField.manageLabel,
-        leadingIcon: Icon(Icons.tune),
+        label: StockExchangeField.manageLabel.tr(context),
+        leadingIcon: const Icon(Icons.tune),
       ),
     ],
     onSelected: (Object? value) async {
       if (value is StockExchange) {
         widget.onSelected(value);
       } else if (value == _ExchangeAction.preferences) {
-        _controller.text = widget.selected?.displayName ?? '';
+        _controller.text = widget.selected?.displayName.tr(context) ?? '';
         await showDialog<void>(
           context: context,
           builder: (_) => _PreferredExchangesDialog(
@@ -72,7 +80,9 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
             onSave: widget.onSavePreferences,
           ),
         );
-        if (mounted) _controller.text = widget.selected?.displayName ?? '';
+        if (context.mounted) {
+          _controller.text = widget.selected?.displayName.tr(context) ?? '';
+        }
       }
     },
   );
@@ -109,7 +119,7 @@ class _PreferredExchangesDialogState extends State<_PreferredExchangesDialog> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = "Couldn't save preferred exchanges: $error";
+        _error = '$error';
       });
     }
   }
@@ -118,15 +128,17 @@ class _PreferredExchangesDialogState extends State<_PreferredExchangesDialog> {
   Widget build(BuildContext context) => PopScope(
     canPop: !_saving,
     child: AlertDialog(
-      title: const Text('Preferred exchanges'),
+      title: Text('Preferred exchanges'.tr(context)),
       content: SizedBox(
         width: 440,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
-              'Choose the exchanges shown in stock and fund dropdowns.',
+            Text(
+              'Choose the exchanges shown in stock and fund dropdowns.'.tr(
+                context,
+              ),
             ),
             const SizedBox(height: 12),
             Flexible(
@@ -139,7 +151,7 @@ class _PreferredExchangesDialogState extends State<_PreferredExchangesDialog> {
                       CheckboxListTile(
                         key: ValueKey<StockExchange>(exchange),
                         contentPadding: EdgeInsets.zero,
-                        title: Text(exchange.displayName),
+                        title: Text(exchange.displayName.tr(context)),
                         value: _selected.contains(exchange),
                         onChanged: _saving
                             ? null
@@ -158,13 +170,21 @@ class _PreferredExchangesDialogState extends State<_PreferredExchangesDialog> {
             const SizedBox(height: 12),
             Text(
               _selected.isEmpty
-                  ? 'None selected. Use "${StockExchangeField.manageLabel}" '
-                        'to add exchanges later.'
-                  : '${_selected.length} selected',
+                  ? 'None selected. Use "{action}" to add exchanges later.'
+                        .tr(context)
+                        .replaceAll(
+                          '{action}',
+                          StockExchangeField.manageLabel.tr(context),
+                        )
+                  : '{count} selected'
+                        .tr(context)
+                        .replaceAll('{count}', '${_selected.length}'),
             ),
             if (_error != null)
               Text(
-                _error!,
+                "Couldn't save preferred exchanges: {error}"
+                    .tr(context)
+                    .replaceAll('{error}', _error!),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
           ],
@@ -173,11 +193,11 @@ class _PreferredExchangesDialogState extends State<_PreferredExchangesDialog> {
       actions: <Widget>[
         TextButton(
           onPressed: _saving ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text('Cancel'.tr(context)),
         ),
         TextButton(
           onPressed: _saving ? null : _save,
-          child: Text(_saving ? 'Saving...' : 'Save'),
+          child: Text((_saving ? 'Saving...' : 'Save').tr(context)),
         ),
       ],
     ),

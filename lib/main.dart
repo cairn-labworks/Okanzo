@@ -164,8 +164,8 @@ class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
     if (_prompting) return;
     _prompting = true;
     final String? error = await BiometricAuthenticator.authenticate(
-      title: 'Unlock Okanzo'.tr,
-      subtitle: "Confirm it's you to view your net worth".tr,
+      title: 'Unlock Okanzo'.tr(context),
+      subtitle: "Confirm it's you to view your net worth".tr(context),
     );
     _prompting = false;
     // Stay locked on failure; the user can retry from the lock screen.

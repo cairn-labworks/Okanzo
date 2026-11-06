@@ -27,7 +27,7 @@ A private, offline-first app for tracking your **net worth** — your assets min
   - **Hide balances** hides every monetary amount behind `••••` with one tap.
 - **Encrypted export / import** — back up selected portfolios (or all of them) to a password-protected file (AES-256-GCM with PBKDF2-HMAC-SHA256), and restore them on any device.
 - **Adaptive Material 3 UI** — light/dark/system themes, **Material You** dynamic color on Android 12+, a bottom navigation bar on phones and a navigation rail on tablets and larger windows.
-- **Localized UI** — English plus Spanish, Brazilian Portuguese, French, German, Japanese, Korean, Simplified Chinese, Italian, Hindi, Arabic, Indonesian, Turkish, Polish, Dutch, Vietnamese, Thai, Russian, Swedish, Danish and Norwegian Bokmål. Okanzo follows the device language and falls back to English when it is unsupported.
+- **Localized UI** — English plus Spanish, Brazilian Portuguese, French, German, Japanese, Korean, Simplified Chinese, Italian, Hindi, Arabic, Indonesian, Turkish, Polish, Dutch, Vietnamese, Thai, Russian, Swedish, Danish and Norwegian Bokmål. Okanzo uses the first supported language in the device's preferred-language list, updates when that list changes, and falls back to English if none is supported. Arabic uses right-to-left layout. Exchange selection and preference dialogs are localized too.
 
 ## Privacy
 
@@ -134,6 +134,13 @@ dart format .
 flutter analyze
 flutter test
 ```
+
+Localization tests cover all 21 locales, message placeholders, device-language
+changes, English fallback, Arabic layout, localized date labels and exchange
+preferences. On a device, also check text wrapping with a larger font size and
+the native app-lock and backup-file dialogs in your preferred language. On iOS,
+the supported languages are declared in `ios/Runner/Info.plist` so they are
+available to the system's app-language selection.
 
 For the live Android exchange smoke test, use a dedicated emulator:
 

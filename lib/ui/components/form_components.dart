@@ -145,7 +145,7 @@ class _CurrencyPickerDialogState extends State<_CurrencyPickerDialog> {
   Widget build(BuildContext context) {
     final List<String> results = _results;
     return AlertDialog(
-      title: Text('Choose currency'.tr),
+      title: Text('Choose currency'.tr(context)),
       content: SizedBox(
         width: 400,
         child: Column(
@@ -158,7 +158,7 @@ class _CurrencyPickerDialogState extends State<_CurrencyPickerDialog> {
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   border: const OutlineInputBorder(),
-                  labelText: 'Search'.tr,
+                  labelText: 'Search'.tr(context),
                 ),
               ),
             ),
@@ -192,7 +192,7 @@ class _CurrencyPickerDialogState extends State<_CurrencyPickerDialog> {
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text('Close'.tr),
+          child: Text('Close'.tr(context)),
         ),
       ],
     );

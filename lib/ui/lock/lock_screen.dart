@@ -46,7 +46,7 @@ class _LockScreenState extends State<LockScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 24),
                 child: Text(
-                  'Okanzo is locked'.tr,
+                  'Okanzo is locked'.tr(context),
                   textAlign: TextAlign.center,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w600,
@@ -58,7 +58,7 @@ class _LockScreenState extends State<LockScreen> {
                 child: Text(
                   'Unlock with your fingerprint or device PIN to view your '
                           'net worth.'
-                      .tr,
+                      .tr(context),
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
@@ -70,7 +70,7 @@ class _LockScreenState extends State<LockScreen> {
                 child: FilledButton.icon(
                   onPressed: () => widget.onUnlock(),
                   icon: const Icon(Icons.fingerprint, size: 20),
-                  label: Text('Unlock'.tr),
+                  label: Text('Unlock'.tr(context)),
                 ),
               ),
             ],

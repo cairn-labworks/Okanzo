@@ -98,7 +98,7 @@ class _AppShellState extends State<AppShell> {
               NavigationDestination(
                 icon: Icon(destination.unselectedIcon),
                 selectedIcon: Icon(destination.selectedIcon),
-                label: destination.label.tr,
+                label: destination.label.tr(context),
               ),
           ],
         ),
@@ -118,7 +118,7 @@ class _AppShellState extends State<AppShell> {
                 NavigationRailDestination(
                   icon: Icon(destination.unselectedIcon),
                   selectedIcon: Icon(destination.selectedIcon),
-                  label: Text(destination.label.tr),
+                  label: Text(destination.label.tr(context)),
                 ),
             ],
           ),

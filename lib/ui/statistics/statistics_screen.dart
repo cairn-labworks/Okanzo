@@ -65,7 +65,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           appBar: AppBar(
             title: _PortfolioMenuTitle(
               portfolios: state.portfolios,
-              activeName: state.activePortfolio?.name ?? 'Statistics'.tr,
+              activeName:
+                  state.activePortfolio?.name ?? 'Statistics'.tr(context),
               onSelect: viewModel.selectPortfolio,
             ),
           ),
@@ -73,11 +74,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               ? Center(
                   child: EmptyState(
                     icon: Icons.pie_chart,
-                    title: 'Nothing to chart yet'.tr,
+                    title: 'Nothing to chart yet'.tr(context),
                     subtitle:
                         'Add assets or liabilities to this portfolio to '
-                            'see its breakdown.'
-                        .tr,
+                                'see its breakdown.'
+                            .tr(context),
                   ),
                 )
               : GestureDetector(
@@ -92,23 +93,23 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ),
                     children: <Widget>[
                       _ChartCard(
-                        title: 'Overview'.tr,
-                        subtitle: 'Assets vs. liabilities'.tr,
+                        title: 'Overview'.tr(context),
+                        subtitle: 'Assets vs. liabilities'.tr(context),
                         slices: <PieSlice>[
                           if (state.totalAssets > 0)
                             PieSlice(
-                              'Assets'.tr,
+                              'Assets'.tr(context),
                               state.totalAssets,
                               finance.positive,
                             ),
                           if (state.totalLiabilities > 0)
                             PieSlice(
-                              'Liabilities'.tr,
+                              'Liabilities'.tr(context),
                               state.totalLiabilities,
                               finance.negative,
                             ),
                         ],
-                        defaultCenterLabel: 'Net worth'.tr,
+                        defaultCenterLabel: 'Net worth'.tr(context),
                         defaultCenterValue: state.netWorth,
                         baseCurrency: state.baseCurrency,
                         hideBalances: state.hideBalances,
@@ -119,17 +120,17 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       if (state.hasAssets) ...<Widget>[
                         const SizedBox(height: 16),
                         _ChartCard(
-                          title: 'Assets'.tr,
-                          subtitle: 'By type'.tr,
+                          title: 'Assets'.tr(context),
+                          subtitle: 'By type'.tr(context),
                           slices: <PieSlice>[
                             for (int i = 0; i < state.assetsByType.length; i++)
                               PieSlice(
-                                state.assetsByType[i].label.tr,
+                                state.assetsByType[i].label.tr(context),
                                 state.assetsByType[i].amount,
                                 chartColorAt(i),
                               ),
                           ],
-                          defaultCenterLabel: 'Assets'.tr,
+                          defaultCenterLabel: 'Assets'.tr(context),
                           defaultCenterValue: state.totalAssets,
                           baseCurrency: state.baseCurrency,
                           hideBalances: state.hideBalances,
@@ -141,8 +142,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       if (state.hasLiabilities) ...<Widget>[
                         const SizedBox(height: 16),
                         _ChartCard(
-                          title: 'Liabilities'.tr,
-                          subtitle: 'By type'.tr,
+                          title: 'Liabilities'.tr(context),
+                          subtitle: 'By type'.tr(context),
                           slices: <PieSlice>[
                             for (
                               int i = 0;
@@ -150,12 +151,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                               i++
                             )
                               PieSlice(
-                                state.liabilitiesByType[i].label.tr,
+                                state.liabilitiesByType[i].label.tr(context),
                                 state.liabilitiesByType[i].amount,
                                 chartColorAt(i),
                               ),
                           ],
-                          defaultCenterLabel: 'Liabilities'.tr,
+                          defaultCenterLabel: 'Liabilities'.tr(context),
                           defaultCenterValue: state.totalLiabilities,
                           baseCurrency: state.baseCurrency,
                           hideBalances: state.hideBalances,
@@ -202,7 +203,7 @@ class _PortfolioMenuTitle extends StatelessWidget {
     );
     if (portfolios.isEmpty) return label;
     return PopupMenuButton<int>(
-      tooltip: 'Switch portfolio'.tr,
+      tooltip: 'Switch portfolio'.tr(context),
       position: PopupMenuPosition.under,
       onSelected: onSelect,
       itemBuilder: (BuildContext context) => <PopupMenuEntry<int>>[
@@ -211,7 +212,7 @@ class _PortfolioMenuTitle extends StatelessWidget {
             value: portfolio.id,
             child: Text(
               portfolio.name +
-                  (portfolio.isDefault ? '  •  ${'Default'.tr}' : ''),
+                  (portfolio.isDefault ? '  •  ${'Default'.tr(context)}' : ''),
             ),
           ),
       ],
