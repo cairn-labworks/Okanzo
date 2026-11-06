@@ -81,6 +81,7 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
                 GlobalCupertinoLocalizations.delegate,
               ],
               supportedLocales: AppLocalizations.supportedLocales,
+              locale: AppLocalizations.localeForLanguage(settings.language),
               theme: buildTheme(
                 brightness: Brightness.light,
                 dynamicScheme: useDynamic ? lightDynamic : null,

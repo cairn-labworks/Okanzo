@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import '../domain/model/app_language.dart';
+
 class AppLocalizations {
   const AppLocalizations(this.locale);
 
@@ -36,6 +38,13 @@ class AppLocalizations {
   static AppLocalizations of(BuildContext context) =>
       Localizations.of<AppLocalizations>(context, AppLocalizations) ??
       const AppLocalizations(Locale('en'));
+
+  static Locale? localeForLanguage(AppLanguage language) =>
+      language == AppLanguage.system
+      ? null
+      : supportedLocales.singleWhere(
+          (Locale locale) => locale.toLanguageTag() == language.storageName,
+        );
 
   @visibleForTesting
   static Iterable<String> get messageKeys => _catalogs['es']!.keys;
@@ -1097,6 +1106,72 @@ const List<String> _translationLanguages = <String>[
 ];
 
 const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
+  'App language': <String>[
+    'Idioma de la aplicación',
+    'Idioma do aplicativo',
+    'Langue de l’application',
+    'App-Sprache',
+    'アプリの言語',
+    '앱 언어',
+    '应用语言',
+    'Lingua dell’app',
+    'ऐप की भाषा',
+    'لغة التطبيق',
+    'Bahasa aplikasi',
+    'Uygulama dili',
+    'Język aplikacji',
+    'App-taal',
+    'Ngôn ngữ ứng dụng',
+    'ภาษาของแอป',
+    'Язык приложения',
+    'Appens språk',
+    'Appens sprog',
+    'Appens språk',
+  ],
+  'Use device language': <String>[
+    'Usar el idioma del dispositivo',
+    'Usar o idioma do dispositivo',
+    'Utiliser la langue de l’appareil',
+    'Gerätesprache verwenden',
+    '端末の言語を使用',
+    '기기 언어 사용',
+    '使用设备语言',
+    'Usa la lingua del dispositivo',
+    'डिवाइस की भाषा का उपयोग करें',
+    'استخدام لغة الجهاز',
+    'Gunakan bahasa perangkat',
+    'Cihaz dilini kullan',
+    'Użyj języka urządzenia',
+    'Apparaattaal gebruiken',
+    'Dùng ngôn ngữ thiết bị',
+    'ใช้ภาษาของอุปกรณ์',
+    'Использовать язык устройства',
+    'Använd enhetens språk',
+    'Brug enhedens sprog',
+    'Bruk enhetens språk',
+  ],
+  "Couldn't save app language: {error}": <String>[
+    'No se pudo guardar el idioma de la aplicación: {error}',
+    'Não foi possível salvar o idioma do aplicativo: {error}',
+    'Impossible d’enregistrer la langue de l’application : {error}',
+    'App-Sprache konnte nicht gespeichert werden: {error}',
+    'アプリの言語を保存できませんでした: {error}',
+    '앱 언어를 저장하지 못했습니다: {error}',
+    '无法保存应用语言：{error}',
+    'Impossibile salvare la lingua dell’app: {error}',
+    'ऐप की भाषा सहेजी नहीं जा सकी: {error}',
+    'تعذر حفظ لغة التطبيق: {error}',
+    'Tidak dapat menyimpan bahasa aplikasi: {error}',
+    'Uygulama dili kaydedilemedi: {error}',
+    'Nie udało się zapisać języka aplikacji: {error}',
+    'Kan de app-taal niet opslaan: {error}',
+    'Không thể lưu ngôn ngữ ứng dụng: {error}',
+    'บันทึกภาษาของแอปไม่ได้: {error}',
+    'Не удалось сохранить язык приложения: {error}',
+    'Kunde inte spara appens språk: {error}',
+    'Kunne ikke gemme appens sprog: {error}',
+    'Kunne ikke lagre appens språk: {error}',
+  ],
   'Exchange': <String>[
     'Bolsa',
     'Bolsa',

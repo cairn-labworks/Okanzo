@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../data/backup/backup_models.dart';
 import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
+import '../../domain/model/app_language.dart';
 import '../../domain/model/app_theme.dart';
 import '../../domain/model/theme_mode.dart';
 import '../../l10n/app_localizations.dart';
@@ -78,6 +79,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           body: ListView(
             children: <Widget>[
               _SectionTitle('Appearance'.tr(context)),
+              _SettingRow(
+                title: 'App language'.tr(context),
+                subtitle: settings.language == AppLanguage.system
+                    ? 'Use device language'.tr(context)
+                    : settings.language.displayName,
+                onTap: () => _showLanguageDialog(settings.language),
+              ),
               _SettingRow(
                 title: 'App theme'.tr(context),
                 subtitle:
@@ -223,6 +231,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+
+  Future<void> _showLanguageDialog(AppLanguage selected) => showDialog<void>(
+    context: context,
+    builder: (_) =>
+        _LanguageDialog(selected: selected, onSave: _viewModel!.setLanguage),
+  );
 
   Future<void> _onAppLockChanged(bool enabled) async {
     final SettingsViewModel viewModel = _viewModel!;
@@ -379,6 +393,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
   }
+}
+
+class _LanguageDialog extends StatefulWidget {
+  const _LanguageDialog({required this.selected, required this.onSave});
+
+  final AppLanguage selected;
+  final Future<void> Function(AppLanguage) onSave;
+
+  @override
+  State<_LanguageDialog> createState() => _LanguageDialogState();
+}
+
+class _LanguageDialogState extends State<_LanguageDialog> {
+  bool _saving = false;
+  String? _error;
+
+  Future<void> _select(AppLanguage? language) async {
+    if (language == null || _saving) return;
+    if (language == widget.selected) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.onSave(language);
+      if (mounted) Navigator.of(context).pop();
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = '$error';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !_saving,
+    child: AlertDialog(
+      title: Text('App language'.tr(context)),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Flexible(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 420),
+                child: RadioGroup<AppLanguage>(
+                  groupValue: widget.selected,
+                  onChanged: _select,
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: <Widget>[
+                      for (final AppLanguage language in AppLanguage.values)
+                        RadioListTile<AppLanguage>(
+                          key: ValueKey<AppLanguage>(language),
+                          value: language,
+                          enabled: !_saving,
+                          title: Text(
+                            language == AppLanguage.system
+                                ? 'Use device language'.tr(context)
+                                : language.displayName,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (_saving) const LinearProgressIndicator(),
+            if (_error != null)
+              Text(
+                "Couldn't save app language: {error}"
+                    .tr(context)
+                    .replaceAll('{error}', _error!),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
+          child: Text('Close'.tr(context)),
+        ),
+      ],
+    ),
+  );
 }
 
 class _SectionTitle extends StatelessWidget {

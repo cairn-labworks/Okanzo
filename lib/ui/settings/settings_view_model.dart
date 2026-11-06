@@ -8,6 +8,7 @@ import '../../data/local/entity/portfolio_entity.dart';
 import '../../data/repository/fx_repository.dart';
 import '../../data/repository/portfolio_repository.dart';
 import '../../data/repository/settings_repository.dart';
+import '../../domain/model/app_language.dart';
 import '../../domain/model/app_theme.dart';
 import '../../domain/model/theme_mode.dart';
 import '../../util/result.dart';
@@ -67,6 +68,9 @@ class SettingsViewModel extends ChangeNotifier {
 
   void setAppTheme(AppTheme theme) =>
       unawaited(_settingsRepository.setAppTheme(theme));
+
+  Future<void> setLanguage(AppLanguage language) =>
+      _settingsRepository.setLanguage(language);
 
   void setDynamicColor(bool enabled) =>
       unawaited(_settingsRepository.setDynamicColor(enabled));
