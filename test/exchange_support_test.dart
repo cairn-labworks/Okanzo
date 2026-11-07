@@ -22,6 +22,8 @@ import 'package:okanzo/util/currency_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
+import 'helpers/fx_test_helpers.dart';
+
 class _AssetDao extends Fake implements AssetDao {
   final List<AssetEntity> assets = <AssetEntity>[];
 
@@ -175,6 +177,7 @@ void main() {
           }),
         ),
       ),
+      fxRepositoryForTest(),
     );
   });
 
@@ -201,6 +204,7 @@ void main() {
         viewModel.onNameChange('Holding');
         viewModel.onQuantityChange('2');
         viewModel.onExchangeChange(exchange);
+        await viewModel.onCurrencyChange(exchange.currency!);
         viewModel.onSymbolChange(exchange.example);
 
         await viewModel.fetchPrice();
@@ -221,7 +225,7 @@ void main() {
   test(
     'editing a saved listing retains its exchange and full ticker',
     () async {
-      dao.assets.add(_holding(1, '0700.HK'));
+      dao.assets.add(_holding(1, '0700.HK').copyWith(currency: 'HKD'));
       final AssetEditViewModel viewModel = editor(assetId: 1);
       await Future<void>.delayed(Duration.zero);
 
@@ -237,11 +241,11 @@ void main() {
   );
 
   test(
-    'bulk refresh persists quote currencies and preserves failures',
+    'bulk refresh preserves selected currencies and failed prices',
     () async {
       dao.assets.addAll(<AssetEntity>[
-        _holding(1, '0700.HK'),
-        _holding(2, 'RELIANCE.BO'),
+        _holding(1, '0700.HK').copyWith(currency: 'HKD'),
+        _holding(2, 'RELIANCE.BO').copyWith(currency: 'INR'),
         _holding(3, 'DELISTED.BO'),
       ]);
 
@@ -262,7 +266,7 @@ void main() {
   );
 
   test(
-    'refresh without a quote currency retains the holding currency',
+    'refresh without a quote currency keeps the previous price and currency',
     () async {
       dao.assets.add(_holding(1, '0700.HK').copyWith(currency: 'HKD'));
       final AssetRepository noCurrency = AssetRepository(
@@ -270,12 +274,14 @@ void main() {
         StockPriceService(
           StockApi(client: MockClient((http.Request _) async => _quote(200))),
         ),
+        fxRepositoryForTest(),
       );
 
-      await noCurrency.refreshPrice(dao.assets.single);
+      final result = await noCurrency.refreshPrice(dao.assets.single);
 
+      expect(result.isFailure, isTrue);
       expect(dao.assets.single.currency, 'HKD');
-      expect(dao.assets.single.lastPrice, 200);
+      expect(dao.assets.single.lastPrice, 10);
     },
   );
 
@@ -292,10 +298,12 @@ void main() {
             }),
           ),
         ),
+        fxRepositoryForTest(),
       );
       final AssetEditViewModel viewModel = editor();
       viewModel.onNameChange('Vodafone');
       viewModel.onSymbolChange('VOD.L');
+      await viewModel.onCurrencyChange('GBP');
       viewModel.onQuantityChange('2');
 
       await viewModel.fetchPrice();
@@ -338,6 +346,7 @@ void main() {
       StockPriceService(
         StockApi(client: MockClient((http.Request _) => response.future)),
       ),
+      fxRepositoryForTest(),
     );
     final AssetEditViewModel viewModel = editor();
     viewModel.onExchangeChange(StockExchange.hongKong);
@@ -458,6 +467,56 @@ void main() {
       'BTC-USD',
     );
   });
+
+  testWidgets(
+    'currency picker converts the price and fetch preserves selection',
+    (WidgetTester tester) async {
+      dao.assets.add(_holding(1, 'AAPL'));
+      await tester.pumpWidget(
+        AppScope(
+          container: _Container(repository, settings),
+          child: const MaterialApp(
+            home: AssetEditScreen(portfolioId: 1, assetId: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final Finder currency = find.text(
+        'USD — ${CurrencyUtil.displayName('USD')}',
+      );
+      await tester.ensureVisible(currency);
+      await tester.tap(currency);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.text('EUR — ${CurrencyUtil.displayName('EUR')}').last,
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('EUR — ${CurrencyUtil.displayName('EUR')}'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Last price: ${CurrencyUtil.format(5, 'EUR')}'),
+        findsOneWidget,
+      );
+      final Finder fetch = find.text('Fetch latest price');
+      await tester.ensureVisible(fetch);
+      await tester.tap(fetch);
+      await tester.pumpAndSettle();
+
+      expect(requests, <String>['AAPL']);
+      expect(
+        find.text('Last price: ${CurrencyUtil.format(50, 'EUR')}'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('EUR — ${CurrencyUtil.displayName('EUR')}'),
+        findsOneWidget,
+      );
+      expect(find.text(CurrencyUtil.format(100, 'EUR')), findsOneWidget);
+    },
+  );
 
   Future<void> openEditor(WidgetTester tester, {int assetId = 0}) async {
     await tester.pumpWidget(

@@ -20,6 +20,34 @@ class FxRepository {
 
   Future<int?> latestTimestamp() => _dao.latestTimestamp();
 
+  /// Converts using cached rates, fetching them if either currency is missing.
+  /// Unlike approximate portfolio totals, a stored price must never use 1:1.
+  Future<Result<double>> convertAmount(
+    double amount,
+    String from,
+    String to,
+  ) async {
+    if (!amount.isFinite || from.isEmpty || to.isEmpty) {
+      return Result<double>.failure('Invalid currency conversion');
+    }
+    if (from == to) return Result<double>.success(amount);
+    CurrencyConverter rates = await currentConverter();
+    if (!rates.canConvert(from) || !rates.canConvert(to)) {
+      final Result<void> refreshed = await refreshRates();
+      if (refreshed.isFailure) {
+        return Result<double>.failure(refreshed.errorMessage!);
+      }
+      rates = await currentConverter();
+    }
+    if (!rates.canConvert(from) || !rates.canConvert(to)) {
+      return Result<double>.failure('Exchange rates unavailable for $from/$to');
+    }
+    final double converted = rates.convert(amount, from, to);
+    return converted.isFinite
+        ? Result<double>.success(converted)
+        : Result<double>.failure('Invalid currency conversion');
+  }
+
   /// Fetches and caches the latest USD-based exchange rates.
   Future<Result<void>> refreshRates() async {
     try {
