@@ -18,6 +18,7 @@ class AppSettings {
     required this.baseCurrency,
     this.appLockEnabled = false,
     this.hideBalances = false,
+    this.simpleNetWorth = false,
     this.selectedPortfolioId,
     this.preferredExchanges = const <StockExchange>[StockExchange.us],
     this.language = AppLanguage.system,
@@ -30,6 +31,7 @@ class AppSettings {
   final String baseCurrency;
   final bool appLockEnabled;
   final bool hideBalances;
+  final bool simpleNetWorth;
   final int? selectedPortfolioId;
   final List<StockExchange> preferredExchanges;
   final AppLanguage language;
@@ -47,7 +49,8 @@ class CategorySection {
 /// Reads and writes app preferences, mirroring the Android DataStore keys so an
 /// existing installation's semantics are preserved.
 class SettingsRepository {
-  SettingsRepository(this._prefs);
+  SettingsRepository(this._prefs)
+    : _simpleNetWorth = _prefs.getBool(_keySimpleNetWorth) ?? false;
 
   static const String _keyThemeMode = 'theme_mode';
   static const String _keyAppTheme = 'app_theme';
@@ -55,12 +58,15 @@ class SettingsRepository {
   static const String _keyBaseCurrency = 'base_currency';
   static const String _keyAppLock = 'app_lock_enabled';
   static const String _keyHideBalances = 'hide_balances';
+  static const String _keySimpleNetWorth = 'simple_net_worth';
   static const String _keySelectedPortfolio = 'selected_portfolio_id';
   static const String _keyPreferredExchanges = 'preferred_stock_exchanges';
   static const String _keyLanguage = 'app_language';
   static const String _keyLastSeenVersion = 'last_seen_version';
 
   final SharedPreferences _prefs;
+  // SharedPreferences updates its cache before confirming a write.
+  bool _simpleNetWorth;
   final StreamController<AppSettings> _controller =
       StreamController<AppSettings>.broadcast();
 
@@ -78,6 +84,7 @@ class SettingsRepository {
         _prefs.getString(_keyBaseCurrency) ?? CurrencyUtil.deviceCurrencyCode(),
     appLockEnabled: _prefs.getBool(_keyAppLock) ?? false,
     hideBalances: _prefs.getBool(_keyHideBalances) ?? false,
+    simpleNetWorth: _simpleNetWorth,
     selectedPortfolioId: _selectedPortfolioId,
     preferredExchanges: _preferredExchanges,
     language: AppLanguage.fromName(_prefs.getString(_keyLanguage)),
@@ -170,6 +177,20 @@ class SettingsRepository {
 
   Future<void> setHideBalances(bool hidden) async {
     await _prefs.setBool(_keyHideBalances, hidden);
+    _emit();
+  }
+
+  Future<void> setSimpleNetWorth(bool enabled) async {
+    bool saved = false;
+    try {
+      saved = await _prefs.setBool(_keySimpleNetWorth, enabled);
+      if (!saved) {
+        throw StateError('Simple net worth preference could not be saved');
+      }
+    } finally {
+      if (!saved) await _prefs.reload();
+    }
+    _simpleNetWorth = enabled;
     _emit();
   }
 

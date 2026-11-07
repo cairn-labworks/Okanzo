@@ -36,13 +36,19 @@ void main() {
   });
 
   group('formatCompact', () {
-    test('uses K above ten thousand', () {
+    test('uses K starting at one thousand', () {
+      expect(CurrencyUtil.formatCompact(1000.0, 'USD'), '\$1K');
+      expect(CurrencyUtil.formatCompact(7054.0, 'USD'), '\$7K');
+      expect(CurrencyUtil.formatCompact(-7054.0, 'USD'), '-\$7K');
+      expect(CurrencyUtil.formatCompact(7540.0, 'USD'), '\$7.5K');
+      expect(CurrencyUtil.formatCompact(9999.0, 'USD'), '\$9.9K');
       expect(CurrencyUtil.formatCompact(12345.0, 'USD'), '\$12.3K');
       expect(CurrencyUtil.formatCompact(10000.0, 'USD'), '\$10K');
     });
 
-    test('keeps the plain format below ten thousand', () {
-      expect(CurrencyUtil.formatCompact(9999.0, 'USD'), '\$9,999');
+    test('keeps the plain format below one thousand', () {
+      expect(CurrencyUtil.formatCompact(999.0, 'USD'), '\$999');
+      expect(CurrencyUtil.formatCompact(-999.0, 'USD'), '-\$999');
     });
 
     test('uses M and B for larger magnitudes', () {
@@ -52,6 +58,46 @@ void main() {
 
     test('truncates rather than rounds the single decimal', () {
       expect(CurrencyUtil.formatCompact(1290000.0, 'USD'), '\$1.2M');
+    });
+
+    test('uses lakh and crore for INR with up to two truncated decimals', () {
+      expect(CurrencyUtil.formatCompact(16534234, 'INR'), '₹1.65 Cr');
+      expect(CurrencyUtil.formatCompact(123456, 'INR'), '₹1.23 L');
+      expect(CurrencyUtil.formatCompact(19999999, 'INR'), '₹1.99 Cr');
+      expect(CurrencyUtil.formatCompact(1000000000, 'INR'), '₹100 Cr');
+      expect(CurrencyUtil.formatCompact(-16534234, 'INR'), '-₹1.65 Cr');
+      expect(CurrencyUtil.formatCompact(-123456, 'INR'), '-₹1.23 L');
+    });
+
+    test('keeps INR thresholds and small amounts consistent', () {
+      expect(CurrencyUtil.formatCompact(0, 'INR'), '₹0');
+      expect(CurrencyUtil.formatCompact(-0.5, 'INR'), '₹0');
+      expect(CurrencyUtil.formatCompact(999, 'INR'), '₹999');
+      expect(CurrencyUtil.formatCompact(1000, 'INR'), '₹1K');
+      expect(CurrencyUtil.formatCompact(7054, 'INR'), '₹7K');
+      expect(CurrencyUtil.formatCompact(9999, 'INR'), '₹9.9K');
+      expect(CurrencyUtil.formatCompact(10000, 'INR'), '₹10K');
+      expect(CurrencyUtil.formatCompact(99999, 'INR'), '₹99.9K');
+      expect(CurrencyUtil.formatCompact(100000, 'INR'), '₹1 L');
+      expect(CurrencyUtil.formatCompact(9999999, 'INR'), '₹99.99 L');
+      expect(CurrencyUtil.formatCompact(10000000, 'INR'), '₹1 Cr');
+    });
+
+    test('international units are selected by currency, not device locale', () {
+      final String? original = Intl.defaultLocale;
+      addTearDown(() => Intl.defaultLocale = original);
+      for (final String locale in <String>['en_US', 'en_IN', 'de_DE']) {
+        Intl.defaultLocale = locale;
+        expect(CurrencyUtil.formatCompact(16534234, 'INR'), '₹1.65 Cr');
+        expect(CurrencyUtil.formatCompact(16534234, 'USD'), '\$16.5M');
+        expect(CurrencyUtil.formatCompact(165342340, 'USD'), '\$165.3M');
+        expect(CurrencyUtil.formatCompact(165342340, 'EUR'), '€165.3M');
+        expect(CurrencyUtil.formatCompact(999999, 'USD'), '\$999.9K');
+        expect(CurrencyUtil.formatCompact(1000000, 'USD'), '\$1M');
+        expect(CurrencyUtil.formatCompact(999999999, 'USD'), '\$999.9M');
+        expect(CurrencyUtil.formatCompact(1000000000, 'USD'), '\$1B');
+        expect(CurrencyUtil.formatCompact(1000000, 'ZZZ'), 'ZZZ1M');
+      }
     });
   });
 

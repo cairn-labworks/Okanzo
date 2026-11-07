@@ -31,6 +31,7 @@ class HomeState {
     this.liabilityGroups = const <LiabilityCategoryGroup>[],
     this.isRefreshing = false,
     this.hideBalances = false,
+    this.simpleNetWorth = false,
   }) : _summary = summary;
 
   final bool loading;
@@ -42,6 +43,7 @@ class HomeState {
   final List<LiabilityCategoryGroup> liabilityGroups;
   final bool isRefreshing;
   final bool hideBalances;
+  final bool simpleNetWorth;
 
   NetWorthSummary get summary =>
       _summary ?? NetWorthSummary.empty(baseCurrency);
@@ -198,6 +200,7 @@ class HomeViewModel extends ChangeNotifier {
         baseCurrency: settings.baseCurrency,
         isRefreshing: _refreshing,
         hideBalances: settings.hideBalances,
+        simpleNetWorth: settings.simpleNetWorth,
       );
       notifyListeners();
       return;
@@ -220,6 +223,7 @@ class HomeViewModel extends ChangeNotifier {
       liabilityGroups: _buildLiabilityGroups(active.id, settings.baseCurrency),
       isRefreshing: _refreshing,
       hideBalances: settings.hideBalances,
+      simpleNetWorth: settings.simpleNetWorth,
     );
     notifyListeners();
   }

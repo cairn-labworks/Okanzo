@@ -316,6 +316,7 @@ class _HomeContent extends StatelessWidget {
           child: NetWorthCard(
             summary: state.summary,
             hideBalances: state.hideBalances,
+            simpleNetWorth: state.simpleNetWorth,
           ),
         ),
         SectionHeader(

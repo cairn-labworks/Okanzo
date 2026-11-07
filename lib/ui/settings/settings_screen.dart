@@ -127,6 +127,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     '${CurrencyUtil.displayName(settings.baseCurrency)}',
                 onTap: () => _showCurrencyPicker(settings.baseCurrency),
               ),
+              _SwitchRow(
+                title: 'Simple net worth'.tr(context),
+                subtitle:
+                    'Shorten the home net worth using currency-specific units'
+                        .tr(context),
+                value: settings.simpleNetWorth,
+                onChanged: viewModel.isSavingSimpleNetWorth
+                    ? null
+                    : viewModel.setSimpleNetWorth,
+              ),
               const Divider(height: 1),
               _SectionTitle('Security'.tr(context)),
               _SwitchRow(
