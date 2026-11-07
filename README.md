@@ -16,6 +16,7 @@ A private, offline-first app for tracking your **net worth** — your assets min
   - **Cash, property, vehicles, …**: enter a single value.
 - **Liabilities** — track loans, mortgages, credit cards, pending payments and taxes.
 - **Net worth at a glance** — the home screen shows total assets, total liabilities and your net worth, converted into a single base currency. Assets and liabilities are grouped into **collapsible cards per category** (tap to expand for individual items; the collapsed card shows the category total).
+  - **Simple net worth**: enable **Settings → Currency → Simple net worth** to shorten only the home headline. Thousands are abbreviated from 1,000 (e.g. `$7K` for `$7,054`); smaller amounts stay exact. INR uses lakh/crore for larger values (e.g. `₹1.65 Cr` for `₹1,65,34,234`); other currencies use M/B (e.g. `$165.3M`). The option is off by default and persists across restarts. Detailed totals stay exact, and **Hide balances** still masks the headline.
 - **Custom ordering** — long-press and drag to reorder category cards, or reorder items within a category (items stay within their own type). Your order is saved.
 - **Portfolios** — create multiple portfolios (e.g. *Personal*, *Family*, *Business*), set a **default** that powers the home screen, and switch between them at any time. Each portfolio has its own net worth.
 - **Statistics** — donut charts breaking down assets and liabilities by category, with per-slice percentages and totals in your base currency.
@@ -171,6 +172,35 @@ flutter test integration_test/exchange_support_test.dart -d <android-device-id> 
 ```
 
 This checks USD-to-EUR-to-GBP conversion for crypto, stocks and funds through the currency picker, encrypted storage, repeated quote fetches, portfolio refresh, base-currency totals and database reopening.
+
+To test simple net worth on an Android device (including wireless debugging):
+
+```bash
+flutter drive --driver test_driver/simple_net_worth.dart \
+  --target integration_test/simple_net_worth_test.dart \
+  --build-number <installed-debug-version-code-or-higher> -d <android-device-id>
+```
+
+This uses the separate debug app, creates temporary INR/USD portfolios, and
+checks the settings toggle, detailed totals, balance masking and persistence
+after relaunch. A 14-value matrix covers zero, fractions, small amounts, thousand
+boundaries, negatives, millions, billions and INR lakh/crore. Each matrix headline
+must match its expected text, fit on one line, and use at most eight characters;
+abbreviated amounts must also be shorter than the detailed format.
+It restores the original preferences and removes only portfolios created by the
+current test run when finished. Use `flutter drive` rather than `flutter test`
+to avoid uninstalling the debug app after testing. Check the installed debug
+version code first:
+
+```bash
+adb -s <android-device-id> shell dumpsys package com.cairnlabworks.okanzo.debug
+```
+
+Set `--build-number` to at least that version code to avoid a downgrade-triggered
+uninstall. If app lock is enabled, unlock the debug app when prompted.
+Keep the device awake and unlocked, with the debug app in the foreground,
+throughout testing. A sleeping device can stop Flutter frame pumping and stall
+both the test and its settings cleanup.
 
 The test suite covers the pieces where behaviour must be exact: currency formatting and rounding, net-worth and FX conversion, asset/liability form validation and entity mapping, category ordering, list labels, localization coverage, quote/FX response parsing, and — most importantly — the encrypted backup format, which is verified byte-for-byte against a file produced by the original Android implementation.
 

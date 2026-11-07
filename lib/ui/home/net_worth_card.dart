@@ -11,11 +11,13 @@ class NetWorthCard extends StatelessWidget {
   const NetWorthCard({
     required this.summary,
     required this.hideBalances,
+    this.simpleNetWorth = false,
     super.key,
   });
 
   final NetWorthSummary summary;
   final bool hideBalances;
+  final bool simpleNetWorth;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +52,13 @@ class NetWorthCard extends StatelessWidget {
           Text(
             hideBalances
                 ? CurrencyUtil.masked(summary.baseCurrency)
+                : simpleNetWorth
+                ? CurrencyUtil.formatCompact(
+                    summary.netWorth,
+                    summary.baseCurrency,
+                  )
                 : CurrencyUtil.format(summary.netWorth, summary.baseCurrency),
+            key: const ValueKey<String>('net-worth-headline'),
             style: theme.textTheme.displaySmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: onHero,

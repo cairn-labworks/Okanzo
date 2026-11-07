@@ -49,6 +49,8 @@ class SettingsViewModel extends ChangeNotifier {
   List<PortfolioEntity> _portfolios = const <PortfolioEntity>[];
   int? _fxUpdatedAt;
   String? _message;
+  bool _savingSimpleNetWorth = false;
+  bool _disposed = false;
 
   AppSettings get settings => _settings;
 
@@ -57,6 +59,8 @@ class SettingsViewModel extends ChangeNotifier {
   int? get fxUpdatedAt => _fxUpdatedAt;
 
   String? get message => _message;
+
+  bool get isSavingSimpleNetWorth => _savingSimpleNetWorth;
 
   Future<void> _loadFxTimestamp() async {
     _fxUpdatedAt = await _fxRepository.latestTimestamp();
@@ -80,6 +84,20 @@ class SettingsViewModel extends ChangeNotifier {
 
   void setBaseCurrency(String code) =>
       unawaited(_settingsRepository.setBaseCurrency(code));
+
+  Future<void> setSimpleNetWorth(bool enabled) async {
+    if (_savingSimpleNetWorth) return;
+    _savingSimpleNetWorth = true;
+    notifyListeners();
+    try {
+      await _settingsRepository.setSimpleNetWorth(enabled);
+    } on Object catch (error) {
+      _message = "Couldn't save simple net worth: $error";
+    } finally {
+      _savingSimpleNetWorth = false;
+      if (!_disposed) notifyListeners();
+    }
+  }
 
   void setAppLockEnabled(bool enabled) =>
       unawaited(_settingsRepository.setAppLockEnabled(enabled));
@@ -113,6 +131,7 @@ class SettingsViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _settingsSub?.cancel();
     _portfolioSub?.cancel();
     super.dispose();

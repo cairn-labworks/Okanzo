@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:intl/intl.dart';
 
 import 'currency_data.dart';
@@ -69,25 +71,34 @@ class CurrencyUtil {
   /// A masked placeholder for a hidden balance, e.g. "₹ ••••" or "US $ ••••".
   static String masked(String code) => '${symbol(code)} $maskShort';
 
-  /// Compact form for large headline figures, e.g. "US $1.2M".
+  /// Compact headline figures: lakh/crore for INR, K/M/B otherwise.
   static String formatCompact(double amount, String code) {
     final String currencySymbol = symbol(code);
     final double abs = amount.abs();
     final String sign = amount < 0 ? '-' : '';
+    if (code == 'INR') {
+      if (abs >= 10000000) {
+        return '$sign$currencySymbol${_round(abs / 10000000, decimalPlaces: 2)} Cr';
+      }
+      if (abs >= 100000) {
+        return '$sign$currencySymbol${_round(abs / 100000, decimalPlaces: 2)} L';
+      }
+    }
     if (abs >= 1000000000) {
       return '$sign$currencySymbol${_round(abs / 1000000000)}B';
     }
     if (abs >= 1000000) {
       return '$sign$currencySymbol${_round(abs / 1000000)}M';
     }
-    if (abs >= 10000) {
+    if (abs >= 1000) {
       return '$sign$currencySymbol${_round(abs / 1000)}K';
     }
     return format(amount, code);
   }
 
-  static String _round(double value) {
-    final double rounded = (value * 10).truncate() / 10.0;
+  static String _round(double value, {int decimalPlaces = 1}) {
+    final double scale = math.pow(10, decimalPlaces).toDouble();
+    final double rounded = (value * scale).truncate() / scale;
     return rounded % 1.0 == 0.0
         ? rounded.truncate().toString()
         : rounded.toString();
