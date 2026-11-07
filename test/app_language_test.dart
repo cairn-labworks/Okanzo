@@ -13,6 +13,7 @@ import 'package:okanzo/data/repository/portfolio_repository.dart';
 import 'package:okanzo/data/repository/settings_repository.dart';
 import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/app_language.dart';
+import 'package:okanzo/domain/model/release_notes.dart';
 import 'package:okanzo/l10n/app_localizations.dart';
 import 'package:okanzo/main.dart';
 import 'package:okanzo/ui/settings/settings_screen.dart';
@@ -79,8 +80,11 @@ class _RejectingPreferences extends Fake implements SharedPreferences {
   int reloads = 0;
 
   @override
-  String? getString(String key) =>
-      key == 'app_language' ? cachedLanguage : null;
+  String? getString(String key) => switch (key) {
+    'app_language' => cachedLanguage,
+    'last_seen_version' => AppReleaseNotes.currentVersion,
+    _ => null,
+  };
 
   @override
   bool? getBool(String key) => null;
@@ -134,6 +138,7 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'base_currency': 'JPY',
       'hide_balances': true,
+      'last_seen_version': AppReleaseNotes.currentVersion,
     });
     preferences = await SharedPreferences.getInstance();
     repository = SettingsRepository(preferences);

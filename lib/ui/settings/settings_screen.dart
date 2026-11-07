@@ -7,6 +7,7 @@ import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
 import '../../domain/model/app_language.dart';
 import '../../domain/model/app_theme.dart';
+import '../../domain/model/release_notes.dart';
 import '../../domain/model/theme_mode.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/biometric_authenticator.dart';
@@ -14,6 +15,7 @@ import '../../util/currency_util.dart';
 import '../../util/link_opener.dart';
 import '../../util/relative_time.dart';
 import '../components/form_components.dart';
+import '../components/whats_new_dialog.dart';
 import 'settings_view_model.dart';
 
 /// Appearance, currency, security, backup and about.
@@ -176,7 +178,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _SectionTitle('About'.tr(context)),
               _SettingRow(
                 title: 'Okanzo'.tr(context),
-                subtitle: 'Version 1.2.3 · Open source (MIT)'.tr(context),
+                subtitle: 'Version {version} · Open source (MIT)'
+                    .tr(context)
+                    .replaceAll('{version}', AppReleaseNotes.currentVersion),
+                onTap: _showWhatsNew,
+              ),
+              _SettingRow(
+                title: "What's new".tr(context),
+                subtitle: 'See the latest release highlights'.tr(context),
+                onTap: _showWhatsNew,
               ),
               _SettingRow(
                 title: 'Privacy policy'.tr(context),
@@ -204,6 +214,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
+  }
+
+  Future<void> _showWhatsNew() async {
+    await showWhatsNewDialog(context);
+    try {
+      await _viewModel?.markWhatsNewSeen(AppReleaseNotes.currentVersion);
+    } on Object {
+      // Ignore storage errors when viewing release highlights from Settings.
+    }
   }
 
   Future<void> _openPrivacyPolicy() async {

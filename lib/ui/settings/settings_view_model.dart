@@ -72,6 +72,9 @@ class SettingsViewModel extends ChangeNotifier {
   Future<void> setLanguage(AppLanguage language) =>
       _settingsRepository.setLanguage(language);
 
+  Future<void> markWhatsNewSeen(String version) =>
+      _settingsRepository.setLastSeenVersion(version);
+
   void setDynamicColor(bool enabled) =>
       unawaited(_settingsRepository.setDynamicColor(enabled));
 

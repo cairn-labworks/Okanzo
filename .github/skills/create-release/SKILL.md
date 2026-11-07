@@ -14,6 +14,7 @@ skill alone is not authorization to tag, push, or publish.
 Re-read the current configuration rather than assuming these values are fixed:
 
 - [Version and dependencies](../../../pubspec.yaml).
+- [In-app release highlights](../../../lib/domain/model/release_notes.dart).
 - [Signed release workflow](../../workflows/release.yml).
 - [Android application, ABI codes, and signing](../../../android/app/build.gradle.kts).
 - [Build and quality commands](../../../README.md).
@@ -60,9 +61,11 @@ or update F-Droid by itself. Google Play is outside this skill's scope.
 
 ## 2. Prepare and validate the release
 
-1. Update `pubspec.yaml` and directly coupled version declarations. Check all
-   intended APK codes against F-Droid's existing codes and Android's code limit.
-   Keep base AAB codes distinct from multiplied APK codes.
+1. Update `pubspec.yaml` and directly coupled version declarations (including
+   `AppReleaseNotes.currentVersion` and the new release's localized highlights in
+   `lib/domain/model/release_notes.dart` and `lib/l10n/app_localizations.dart`).
+   Check all intended APK codes against F-Droid's existing codes and Android's
+   code limit. Keep base AAB codes distinct from multiplied APK codes.
 2. Derive full release notes from the complete source range, including features,
    fixes, compatibility changes, and migrations. Review code and commit history;
    do not invent entries or expose private issue details.
