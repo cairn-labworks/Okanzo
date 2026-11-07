@@ -110,7 +110,9 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                   icon: const Icon(Icons.delete),
                 ),
               TextButton(
-                onPressed: form.isSaving ? null : viewModel.save,
+                onPressed: form.isSaving || form.isFetchingPrice
+                    ? null
+                    : viewModel.save,
                 child: Text('Save'.tr(context)),
               ),
             ],
@@ -306,7 +308,9 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
       context,
       selected: current,
     );
-    if (picked != null) _viewModel?.onCurrencyChange(picked);
+    if (picked != null && mounted) {
+      await _viewModel?.onCurrencyChange(picked);
+    }
   }
 }
 

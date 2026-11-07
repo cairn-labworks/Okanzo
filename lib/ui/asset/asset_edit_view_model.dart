@@ -42,6 +42,9 @@ class AssetEditViewModel extends ChangeNotifier {
 
   AssetFormState _form;
   AssetEditEvent? _event;
+  int _priceRequest = 0;
+  bool _convertingCurrency = false;
+  bool _disposed = false;
 
   AssetFormState get form => _form;
 
@@ -82,20 +85,71 @@ class AssetEditViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void onTypeChange(AssetType type) => _update(
-    _form.copyWith(
-      type: type,
-      exchange: _form.usesStockExchange
-          ? _form.exchange
-          : StockExchange.fromSymbol(_form.symbol),
-      clearLastPrice: type != _form.type,
-    ),
-  );
+  void _updateQuoteInput(AssetFormState next) {
+    _priceRequest++;
+    _convertingCurrency = false;
+    _update(next.copyWith(isFetchingPrice: false));
+  }
+
+  void onTypeChange(AssetType type) {
+    if (type == _form.type) return;
+    _updateQuoteInput(
+      _form.copyWith(
+        type: type,
+        exchange: _form.usesStockExchange
+            ? _form.exchange
+            : StockExchange.fromSymbol(_form.symbol),
+        clearLastPrice: true,
+      ),
+    );
+  }
 
   void onNameChange(String value) => _update(_form.copyWith(name: value));
 
-  void onCurrencyChange(String value) =>
-      _update(_form.copyWith(currency: value));
+  Future<void> onCurrencyChange(String value) async {
+    if (value == _form.currency) {
+      if (_convertingCurrency) {
+        _priceRequest++;
+        _convertingCurrency = false;
+        _update(_form.copyWith(isFetchingPrice: false));
+      }
+      return;
+    }
+    final int request = ++_priceRequest;
+    final double? price = _form.lastPrice;
+    if (!_form.type.isMarketLinked || price == null) {
+      _convertingCurrency = false;
+      _update(_form.copyWith(currency: value, isFetchingPrice: false));
+      return;
+    }
+    final String from = _form.currency;
+    _convertingCurrency = true;
+    _update(_form.copyWith(isFetchingPrice: true));
+    final Result<double> converted = await _assetRepository.convertPrice(
+      price,
+      from,
+      value,
+    );
+    if (_disposed || request != _priceRequest) return;
+    _convertingCurrency = false;
+    if (converted.isSuccess) {
+      _update(
+        _form.copyWith(
+          currency: value,
+          lastPrice: converted.value,
+          isFetchingPrice: false,
+        ),
+      );
+    } else {
+      _update(_form.copyWith(isFetchingPrice: false));
+      _emit(
+        AssetEditEvent(
+          AssetEditEventType.error,
+          "Couldn't convert currency: ${converted.errorMessage}",
+        ),
+      );
+    }
+  }
 
   void onQuantityChange(String value) =>
       _update(_form.copyWith(quantity: filterDecimal(value)));
@@ -103,10 +157,14 @@ class AssetEditViewModel extends ChangeNotifier {
   void onPricePerUnitChange(String value) =>
       _update(_form.copyWith(pricePerUnit: filterDecimal(value)));
 
-  void onSymbolChange(String value) => _update(_form.withSymbol(value));
+  void onSymbolChange(String value) =>
+      _updateQuoteInput(_form.withSymbol(value));
 
-  void onExchangeChange(StockExchange value) =>
-      _update(_form.withExchange(value));
+  void onExchangeChange(StockExchange value) {
+    if (value != _form.exchange) {
+      _updateQuoteInput(_form.withExchange(value));
+    }
+  }
 
   void onManualValueChange(String value) =>
       _update(_form.copyWith(manualValue: filterDecimal(value)));
@@ -117,6 +175,7 @@ class AssetEditViewModel extends ChangeNotifier {
     final String symbol = _form.quoteSymbol;
     final AssetType type = _form.type;
     final StockExchange exchange = _form.exchange;
+    final String currency = _form.currency;
     if (symbol.isEmpty) {
       _emit(
         const AssetEditEvent(
@@ -126,14 +185,19 @@ class AssetEditViewModel extends ChangeNotifier {
       );
       return;
     }
+    final int request = ++_priceRequest;
+    _convertingCurrency = false;
     _update(_form.copyWith(isFetchingPrice: true));
     final Result<StockQuote> result = await _assetRepository.fetchQuote(
       symbol,
+      currency: currency,
       isCrypto: type == AssetType.crypto,
     );
-    if (_form.type != type || _form.quoteSymbol != symbol) {
-      _update(_form.copyWith(isFetchingPrice: false));
-      if (_form.type == type && _form.exchange != exchange) {
+    if (_disposed) return;
+    if (request != _priceRequest) {
+      if (!_form.isFetchingPrice &&
+          _form.type == type &&
+          _form.exchange != exchange) {
         _emit(
           const AssetEditEvent(
             AssetEditEventType.error,
@@ -150,7 +214,6 @@ class AssetEditViewModel extends ChangeNotifier {
           isFetchingPrice: false,
           lastPrice: quote.price,
           lastPriceTimestamp: DateTime.now().millisecondsSinceEpoch,
-          currency: quote.currency ?? _form.currency,
         ),
       );
     } else {
@@ -165,6 +228,15 @@ class AssetEditViewModel extends ChangeNotifier {
   }
 
   Future<void> save() async {
+    if (_form.isFetchingPrice) {
+      _emit(
+        const AssetEditEvent(
+          AssetEditEventType.error,
+          'Wait for the price update to finish',
+        ),
+      );
+      return;
+    }
     final String? error = _form.validate();
     if (error != null) {
       _emit(AssetEditEvent(AssetEditEventType.error, error));
@@ -191,4 +263,10 @@ class AssetEditViewModel extends ChangeNotifier {
   }
 
   int get portfolioId => _portfolioId;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 }

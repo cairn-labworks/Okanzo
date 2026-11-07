@@ -3,6 +3,7 @@ import '../../util/result.dart';
 import '../local/dao/asset_dao.dart';
 import '../local/entity/asset_entity.dart';
 import '../remote/stock/stock_price_service.dart';
+import 'fx_repository.dart';
 
 /// Outcome of refreshing every market-linked price in a portfolio.
 class PriceRefreshResult {
@@ -18,10 +19,11 @@ class PriceRefreshResult {
 }
 
 class AssetRepository {
-  const AssetRepository(this._dao, this._stockPriceService);
+  const AssetRepository(this._dao, this._stockPriceService, this._fxRepository);
 
   final AssetDao _dao;
   final StockPriceService _stockPriceService;
+  final FxRepository _fxRepository;
 
   Stream<List<AssetEntity>> observeForPortfolio(int portfolioId) =>
       _dao.observeForPortfolio(portfolioId);
@@ -52,11 +54,47 @@ class AssetRepository {
   Future<void> updateOrder(List<int> orderedIds) =>
       _dao.updatePositions(orderedIds);
 
-  /// Looks up a live quote for a symbol without persisting anything.
+  /// Looks up a live quote in the selected holding currency without persisting.
   Future<Result<StockQuote>> fetchQuote(
     String symbol, {
+    required String currency,
     bool isCrypto = false,
-  }) => _stockPriceService.fetchQuote(symbol, isCrypto: isCrypto);
+  }) async {
+    final Result<StockQuote> result = await _stockPriceService.fetchQuote(
+      symbol,
+      isCrypto: isCrypto,
+    );
+    if (result.isFailure) return result;
+    final StockQuote quote = result.value;
+    final String? source = quote.currency;
+    if (source == null || source.trim().isEmpty) {
+      return Result<StockQuote>.failure(
+        'Quote currency unavailable for ${quote.symbol}',
+      );
+    }
+    final Result<double> converted = await convertPrice(
+      quote.price,
+      source,
+      currency,
+    );
+    if (converted.isFailure) {
+      return Result<StockQuote>.failure(converted.errorMessage!);
+    }
+    return Result<StockQuote>.success(
+      StockQuote(
+        symbol: quote.symbol,
+        price: converted.value,
+        currency: currency,
+      ),
+    );
+  }
+
+  Future<Result<double>> convertPrice(double price, String from, String to) =>
+      _fxRepository.convertAmount(
+        price,
+        from.trim().toUpperCase(),
+        to.trim().toUpperCase(),
+      );
 
   /// Refreshes the market price for a single asset (by symbol) and persists it.
   /// Returns the updated price on success.
@@ -65,8 +103,9 @@ class AssetRepository {
     if (!asset.type.isMarketLinked || symbol.isEmpty) {
       return Result<double>.failure('Asset has no market symbol');
     }
-    final Result<StockQuote> quote = await _stockPriceService.fetchQuote(
+    final Result<StockQuote> quote = await fetchQuote(
       symbol,
+      currency: asset.currency,
       isCrypto: asset.type == AssetType.crypto,
     );
     if (quote.isFailure) return Result<double>.failure(quote.errorMessage!);

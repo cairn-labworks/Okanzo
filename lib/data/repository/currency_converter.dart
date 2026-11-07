@@ -10,7 +10,10 @@ class CurrencyConverter {
 
   final Map<String, double> unitsPerUsd;
 
-  bool canConvert(String code) => code == _usd || unitsPerUsd.containsKey(code);
+  bool canConvert(String code) {
+    final double? rate = _rateFor(code);
+    return rate != null && rate.isFinite && rate > 0;
+  }
 
   double convert(double amount, String from, String to) {
     if (from == to) return amount;

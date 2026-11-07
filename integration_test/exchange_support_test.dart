@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:okanzo/data/local/entity/asset_entity.dart';
+import 'package:okanzo/data/repository/currency_converter.dart';
 import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/stock_exchange.dart';
 import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
+import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
 import 'package:okanzo/ui/asset/stock_exchange_field.dart';
 import 'package:okanzo/ui/home/home_screen.dart';
+import 'package:okanzo/ui/home/home_view_model.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -188,6 +191,50 @@ Future<void> _newAsset(WidgetTester tester) async {
 AppContainer _container(WidgetTester tester) =>
     AppScope.of(tester.element(find.byType(HomeScreen)));
 
+AssetEditViewModel _editor(WidgetTester tester) => tester
+    .widgetList<ListenableBuilder>(
+      find.descendant(
+        of: find.byType(AssetEditScreen),
+        matching: find.byType(ListenableBuilder),
+      ),
+    )
+    .map((ListenableBuilder builder) => builder.listenable)
+    .whereType<AssetEditViewModel>()
+    .single;
+
+Future<void> _pickCurrency(WidgetTester tester, String currency) async {
+  final String current = _editor(tester).form.currency;
+  if (current == currency) return;
+  FocusManager.instance.primaryFocus?.unfocus();
+  tester
+      .state<ScrollableState>(
+        find
+            .descendant(
+              of: find.byType(AssetEditScreen),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      )
+      .position
+      .jumpTo(0);
+  await tester.pumpAndSettle();
+  await _tap(
+    tester,
+    find.text('$current — ${CurrencyUtil.displayName(current)}'),
+  );
+  await _tap(
+    tester,
+    find.text('$currency — ${CurrencyUtil.displayName(currency)}').last,
+  );
+  await _waitUntil(
+    tester,
+    () => !_editor(tester).form.isFetchingPrice,
+    'conversion to $currency',
+  );
+  expect(_editor(tester).form.currency, currency);
+  expect(find.textContaining("Couldn't convert currency:"), findsNothing);
+}
+
 void _verifyHolding(AssetEntity asset, _Listing listing) {
   expect(asset.symbol, listing.symbol);
   expect(asset.currency, listing.currency);
@@ -275,6 +322,7 @@ void main() {
         await _enter(tester, 'Name', listing.name);
         await _enter(tester, 'Ticker symbol', listing.ticker);
         await _enter(tester, 'Quantity', '2');
+        await _pickCurrency(tester, listing.currency);
         if (_captureScreenshots && listing.exchange == StockExchange.bse) {
           FocusManager.instance.primaryFocus?.unfocus();
           await tester.pumpAndSettle();
@@ -499,5 +547,207 @@ void main() {
       debugPrint('ANDROID EXCHANGE SMOKE PASSED: ${_listings.length} holdings');
     },
     timeout: const Timeout(Duration(minutes: 8)),
+  );
+
+  testWidgets(
+    'market currency conversion survives saving, refresh and relaunch',
+    (WidgetTester tester) async {
+      await app.main();
+      await _waitUntil(
+        tester,
+        () => find.byType(FloatingActionButton).evaluate().isNotEmpty,
+        'home portfolio',
+      );
+      final AppContainer container = _container(tester);
+      final String portfolioName =
+          'Currency smoke ${DateTime.now().millisecondsSinceEpoch}';
+      final int portfolioId = await container.portfolioRepository.create(
+        portfolioName,
+      );
+      await container.settingsRepository.setBaseCurrency('EUR');
+      await container.settingsRepository.setSelectedPortfolioId(portfolioId);
+      await _waitUntil(
+        tester,
+        () => find.text(portfolioName).evaluate().isNotEmpty,
+        'currency test portfolio',
+      );
+      final ratesResult = await container.fxRepository.ensureFreshRates();
+      expect(ratesResult.isSuccess, isTrue, reason: ratesResult.errorMessage);
+      final CurrencyConverter rates = await container.fxRepository
+          .currentConverter();
+      expect(rates.canConvert('EUR'), isTrue);
+      expect(rates.canConvert('GBP'), isTrue);
+      final double eurRate = rates.unitsPerUsd['EUR']!;
+      final double gbpRate = rates.unitsPerUsd['GBP']!;
+      final List<Map<String, Object?>> cipher = await container.database.db
+          .rawQuery('PRAGMA cipher_version');
+      expect(cipher.first.values.single, isNotEmpty);
+      const List<(AssetType, String, String)> holdings =
+          <(AssetType, String, String)>[
+            (AssetType.crypto, 'BTC-USD', 'Bitcoin currency test'),
+            (AssetType.stock, 'AAPL', 'Apple currency test'),
+            (AssetType.mutualFund, 'VTI', 'Fund currency test'),
+          ];
+      final Map<int, AssetEntity> saved = <int, AssetEntity>{};
+      for (final (AssetType type, String symbol, String name) in holdings) {
+        await _newAsset(tester);
+        if (type != AssetType.stock) {
+          await _select<AssetType>(tester, type.displayName);
+        }
+        await _enter(tester, 'Name', name);
+        await _enter(tester, 'Ticker symbol', symbol);
+        await _enter(tester, 'Quantity', '2');
+        await _pickCurrency(tester, 'USD');
+        await _tap(tester, find.text('Fetch latest price'));
+        await _waitUntil(
+          tester,
+          () => !_editor(tester).form.isFetchingPrice,
+          'USD quote for $symbol',
+        );
+        expect(_editor(tester).form.lastPrice, greaterThan(0));
+        final double usdPrice = _editor(tester).form.lastPrice!;
+
+        await _pickCurrency(tester, 'EUR');
+        final double expectedEur = usdPrice * eurRate;
+        expect(
+          _editor(tester).form.lastPrice,
+          closeTo(expectedEur, expectedEur * 1e-12),
+        );
+        expect(_editor(tester).form.estimatedValue, expectedEur * 2);
+        expect(
+          find.text('Last price: ${CurrencyUtil.format(expectedEur, 'EUR')}'),
+          findsOneWidget,
+        );
+        await _tap(tester, find.text('Fetch latest price'));
+        await _waitUntil(
+          tester,
+          () => !_editor(tester).form.isFetchingPrice,
+          'repeat quote for $symbol',
+        );
+        expect(_editor(tester).form.currency, 'EUR');
+        expect(_editor(tester).form.lastPrice, greaterThan(0));
+        final double fetchedEur = _editor(tester).form.lastPrice!;
+        await _tap(tester, find.widgetWithText(TextButton, 'Save'));
+        await _waitUntil(
+          tester,
+          () => find.byType(AssetEditScreen).evaluate().isEmpty,
+          'saving $symbol in EUR',
+        );
+        final AssetEntity asset =
+            (await container.assetRepository.getForPortfolio(portfolioId))
+                .singleWhere((AssetEntity row) => row.name == name);
+        expect(asset.currency, 'EUR');
+        expect(asset.lastPrice, fetchedEur);
+        expect(asset.symbol, symbol);
+        expect(asset.quantity, 2);
+
+        if (find.text(name).evaluate().isEmpty) {
+          await _tap(tester, find.text(type.displayName));
+        }
+        await _tap(tester, find.text(name));
+        await _waitUntil(
+          tester,
+          () => !_editor(tester).form.loading,
+          'reopening $symbol',
+        );
+        expect(_editor(tester).form.currency, 'EUR');
+        expect(_editor(tester).form.lastPrice, fetchedEur);
+        await _pickCurrency(tester, 'GBP');
+        final double expectedGbp = fetchedEur / eurRate * gbpRate;
+        expect(
+          _editor(tester).form.lastPrice,
+          closeTo(expectedGbp, expectedGbp * 1e-12),
+        );
+        await _tap(tester, find.widgetWithText(TextButton, 'Save'));
+        await _waitUntil(
+          tester,
+          () => find.byType(AssetEditScreen).evaluate().isEmpty,
+          'saving $symbol in GBP',
+        );
+        final AssetEntity updated = (await container.assetRepository.getById(
+          asset.id,
+        ))!;
+        expect(updated.currency, 'GBP');
+        expect(updated.lastPrice, closeTo(expectedGbp, expectedGbp * 1e-12));
+        saved[updated.id] = updated;
+        debugPrint(
+          'ANDROID CURRENCY SAVED $symbol USD=$usdPrice GBP=$expectedGbp',
+        );
+      }
+
+      await _tap(tester, find.byTooltip('Refresh prices'));
+      await _waitUntil(
+        tester,
+        () => find.text('Updated 3 price(s)').evaluate().isNotEmpty,
+        'refreshing converted market holdings',
+        timeout: const Duration(minutes: 3),
+      );
+      final List<AssetEntity> refreshed = await container.assetRepository
+          .getForPortfolio(portfolioId);
+      expect(refreshed, hasLength(3));
+      for (final AssetEntity asset in refreshed) {
+        expect(asset.currency, 'GBP');
+        expect(asset.lastPrice, greaterThan(0));
+        expect(
+          asset.lastPriceTimestamp,
+          greaterThan(saved[asset.id]!.lastPriceTimestamp!),
+        );
+      }
+      final CurrencyConverter refreshedRates = await container.fxRepository
+          .currentConverter();
+      final double expectedTotal = refreshed.fold<double>(
+        0,
+        (double total, AssetEntity asset) =>
+            total +
+            asset.lastPrice! /
+                refreshedRates.unitsPerUsd['GBP']! *
+                refreshedRates.unitsPerUsd['EUR']! *
+                asset.quantity!,
+      );
+      final HomeViewModel home = tester
+          .widgetList<ListenableBuilder>(find.byType(ListenableBuilder))
+          .map((ListenableBuilder builder) => builder.listenable)
+          .whereType<HomeViewModel>()
+          .single;
+      expect(home.state.baseCurrency, 'EUR');
+      expect(
+        home.state.summary.totalAssets,
+        closeTo(expectedTotal, expectedTotal * 1e-12),
+      );
+      expect(home.state.summary.hasApproximateConversions, isFalse);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await container.settingsRepository.dispose();
+      await container.database.close();
+      await app.main();
+      await _waitUntil(
+        tester,
+        () => find.text(portfolioName).evaluate().isNotEmpty,
+        'relaunching the currency portfolio',
+      );
+      final List<AssetEntity> reopened = await _container(tester)
+          .assetRepository
+          .getForPortfolio(portfolioId);
+      expect(reopened, hasLength(3));
+      for (final AssetEntity asset in reopened) {
+        final AssetEntity previous = refreshed.singleWhere(
+          (AssetEntity row) => row.id == asset.id,
+        );
+        expect(asset.currency, 'GBP');
+        expect(asset.lastPrice, previous.lastPrice);
+        expect(asset.lastPriceTimestamp, previous.lastPriceTimestamp);
+      }
+      binding.reportData = <String, Object?>{
+        ...?binding.reportData,
+        'convertedMarketHoldings': 3,
+        'currencies': <String>['USD', 'EUR', 'GBP'],
+        'baseCurrencyTotalVerified': true,
+        'databaseReopened': true,
+        'sqlcipherVersion': cipher.first.values.single,
+      };
+      debugPrint('ANDROID CURRENCY SMOKE PASSED: crypto, stock and fund');
+    },
+    timeout: const Timeout(Duration(minutes: 6)),
   );
 }

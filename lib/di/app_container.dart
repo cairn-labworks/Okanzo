@@ -56,6 +56,10 @@ class AppContainer {
     final AssetDao assetDao = AssetDao(database);
     final LiabilityDao liabilityDao = LiabilityDao(database);
     final FxRateDao fxRateDao = FxRateDao(database);
+    final FxRepository fxRepository = FxRepository(
+      fxRateDao,
+      FxApi(client: client),
+    );
 
     return AppContainer._(
       database: database,
@@ -63,9 +67,13 @@ class AppContainer {
         await SharedPreferences.getInstance(),
       ),
       portfolioRepository: PortfolioRepository(portfolioDao),
-      assetRepository: AssetRepository(assetDao, stockPriceService),
+      assetRepository: AssetRepository(
+        assetDao,
+        stockPriceService,
+        fxRepository,
+      ),
       liabilityRepository: LiabilityRepository(liabilityDao),
-      fxRepository: FxRepository(fxRateDao, FxApi(client: client)),
+      fxRepository: fxRepository,
       backupRepository: BackupRepository(portfolioDao, assetDao, liabilityDao),
     );
   }
