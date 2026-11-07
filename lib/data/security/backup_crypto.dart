@@ -62,9 +62,7 @@ class BackupCrypto {
   static Uint8List decrypt(Uint8List data, String password) {
     const int header = 4 + 1 + _saltLength + _ivLength;
     if (data.length < header) {
-      throw const InvalidBackupException(
-        'File is not a valid Okanzo backup.',
-      );
+      throw const InvalidBackupException('File is not a valid Okanzo backup.');
     }
     int offset = 0;
     final Uint8List magic = Uint8List.sublistView(data, 0, _magic.length);

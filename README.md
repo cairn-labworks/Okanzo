@@ -127,6 +127,16 @@ needs these repository secrets:
 | `ANDROID_KEY_ALIAS` | Key alias, for example `upload` |
 | `ANDROID_KEY_PASSWORD` | Key password |
 
+### Creating a release
+
+Invoke `/create-release` in Copilot, or ask to release the latest `main` and publish
+to F-Droid. The [release skill](.github/skills/create-release/SKILL.md) includes all
+merged changes since the previous release, validates signed artifacts, and publishes
+the GitHub release using F-Droid's expected APK filenames. It preserves uncommitted
+work and uses your authorized GitLab account if the F-Droid build recipe needs an
+update. Official F-Droid availability depends on its source build, reproducibility
+verification, and index publication; Google Play is not part of this workflow.
+
 ## Quality checks
 
 ```bash

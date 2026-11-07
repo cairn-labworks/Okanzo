@@ -79,7 +79,12 @@ class AppContainer {
     String currentPath,
   ) async {
     if (await File(currentPath).exists()) return;
-    for (final String suffix in const <String>['', '-wal', '-shm', '-journal']) {
+    for (final String suffix in const <String>[
+      '',
+      '-wal',
+      '-shm',
+      '-journal',
+    ]) {
       final File legacy = File(
         p.join(directory, '${AppDatabase.legacyDatabaseName}$suffix'),
       );

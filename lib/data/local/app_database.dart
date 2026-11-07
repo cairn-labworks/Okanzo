@@ -56,10 +56,8 @@ class AppDatabase {
   /// `PRAGMA user_version`.
   static Future<void> _migrate(Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
-    final int currentVersion = Sqflite.firstIntValue(
-          await db.rawQuery('PRAGMA user_version'),
-        ) ??
-        0;
+    final int currentVersion =
+        Sqflite.firstIntValue(await db.rawQuery('PRAGMA user_version')) ?? 0;
 
     if (currentVersion == schemaVersion) return;
 

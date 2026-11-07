@@ -1,0 +1,4 @@
+Choose from 21 app languages in Settings or follow your device language.
+Select stock exchanges across the US, China, Europe, Japan, Hong Kong, and India, and save your preferred exchanges.
+Use full Yahoo tickers for other markets.
+Fix crypto price fetching, keep refreshed quote currencies, normalize subunit prices, and clear stale quotes when ticker or exchange changes.

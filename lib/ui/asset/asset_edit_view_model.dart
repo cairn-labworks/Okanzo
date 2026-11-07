@@ -74,13 +74,7 @@ class AssetEditViewModel extends ChangeNotifier {
     final String base = _settingsRepository.current.baseCurrency;
     final StockExchange exchange =
         preferredExchanges.firstOrNull ?? StockExchange.other;
-    _update(
-      _form.copyWith(
-        currency: base,
-        exchange: exchange,
-        loading: false,
-      ),
-    );
+    _update(_form.copyWith(currency: base, exchange: exchange, loading: false));
   }
 
   void _update(AssetFormState next) {

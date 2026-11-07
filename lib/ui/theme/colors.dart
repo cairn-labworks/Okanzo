@@ -144,4 +144,3 @@ const List<Color> categoryPalette = <Color>[
 
 Color categoryColorAt(int index) =>
     categoryPalette[index % categoryPalette.length];
-
