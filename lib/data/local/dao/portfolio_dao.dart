@@ -8,6 +8,8 @@ class PortfolioDao {
 
   final AppDatabase _database;
 
+  AppDatabase get database => _database;
+
   Database get _db => _database.db;
 
   static const String _order = 'isDefault DESC, name COLLATE NOCASE ASC';
@@ -56,7 +58,7 @@ class PortfolioDao {
       portfolio.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    _notify();
+    _notifyPortfolios();
     return id;
   }
 
@@ -67,7 +69,7 @@ class PortfolioDao {
       where: 'id = ?',
       whereArgs: <Object?>[portfolio.id],
     );
-    _notify();
+    _notifyPortfolios();
   }
 
   Future<void> deleteById(int id) async {
@@ -76,7 +78,11 @@ class PortfolioDao {
       where: 'id = ?',
       whereArgs: <Object?>[id],
     );
-    _notify();
+    _database.notify(<String>{
+      Tables.portfolios,
+      Tables.assets,
+      Tables.liabilities,
+    });
   }
 
   /// Atomically make [id] the one and only default portfolio.
@@ -88,12 +94,8 @@ class PortfolioDao {
         <Object?>[id],
       );
     });
-    _notify();
+    _notifyPortfolios();
   }
 
-  void _notify() => _database.notify(<String>{
-    Tables.portfolios,
-    Tables.assets,
-    Tables.liabilities,
-  });
+  void _notifyPortfolios() => _database.notify(<String>{Tables.portfolios});
 }

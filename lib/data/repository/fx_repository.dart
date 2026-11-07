@@ -5,18 +5,20 @@ import '../remote/fx/fx_api.dart';
 import 'currency_converter.dart';
 
 class FxRepository {
-  const FxRepository(this._dao, this._api);
+  FxRepository(this._dao, this._api);
 
   static const int _defaultMaxAgeMillis = 12 * 60 * 60 * 1000; // 12 hours
 
   final FxRateDao _dao;
   final FxApi _api;
+  CurrencyConverter? _cachedConverter;
+  Future<Result<void>>? _inFlightRefresh;
 
   Stream<CurrencyConverter> get converter =>
       _dao.observeAll().map(_toConverter);
 
   Future<CurrencyConverter> currentConverter() async =>
-      _toConverter(await _dao.getAll());
+      _cachedConverter ?? _toConverter(await _dao.getAll());
 
   Future<int?> latestTimestamp() => _dao.latestTimestamp();
 
@@ -49,7 +51,19 @@ class FxRepository {
   }
 
   /// Fetches and caches the latest USD-based exchange rates.
-  Future<Result<void>> refreshRates() async {
+  Future<Result<void>> refreshRates() {
+    final Future<Result<void>>? existing = _inFlightRefresh;
+    if (existing != null) return existing;
+    final Future<Result<void>> future = _doRefreshRates();
+    _inFlightRefresh = future;
+    return future.whenComplete(() {
+      if (identical(_inFlightRefresh, future)) {
+        _inFlightRefresh = null;
+      }
+    });
+  }
+
+  Future<Result<void>> _doRefreshRates() async {
     try {
       final FxResponse response = await _api.getLatest('USD');
       final Map<String, double>? rates = response.rates;
@@ -57,14 +71,17 @@ class FxRepository {
         return Result<void>.failure('Exchange rates unavailable');
       }
       final int now = DateTime.now().millisecondsSinceEpoch;
-      await _dao.upsertAll(<FxRateEntity>[
+      final List<FxRateEntity> entities = <FxRateEntity>[
         for (final MapEntry<String, double> rate in rates.entries)
           FxRateEntity(
             currency: rate.key,
             unitsPerUsd: rate.value,
             timestamp: now,
           ),
-      ]);
+      ];
+      _cachedConverter = null;
+      await _dao.upsertAll(entities);
+      _cachedConverter = _toConverter(entities);
       return Result<void>.success(null);
     } on Object catch (error) {
       return Result<void>.failure(error.toString());
@@ -75,6 +92,8 @@ class FxRepository {
   Future<Result<void>> ensureFreshRates([
     int maxAgeMillis = _defaultMaxAgeMillis,
   ]) async {
+    final Future<Result<void>>? existing = _inFlightRefresh;
+    if (existing != null) return existing;
     final int? latest = await _dao.latestTimestamp();
     final bool fresh =
         latest != null &&
@@ -83,7 +102,7 @@ class FxRepository {
   }
 
   CurrencyConverter _toConverter(List<FxRateEntity> rates) =>
-      CurrencyConverter(<String, double>{
+      _cachedConverter = CurrencyConverter(<String, double>{
         for (final FxRateEntity rate in rates) rate.currency: rate.unitsPerUsd,
       });
 }

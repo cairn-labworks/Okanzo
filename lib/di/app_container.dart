@@ -37,14 +37,18 @@ class AppContainer {
   });
 
   static Future<AppContainer> create() async {
-    final DatabaseKeyProvider keyProvider = const DatabaseKeyProvider();
-    final String passphrase = await keyProvider.getOrCreatePassphrase();
-    final String databasesDir = await getDatabasesPath();
+    const DatabaseKeyProvider keyProvider = DatabaseKeyProvider();
+    final Future<SharedPreferences> prefsFuture =
+        SharedPreferences.getInstance();
+    final Future<String> passphraseFuture = keyProvider.getOrCreatePassphrase();
+    final Future<String> databasesDirFuture = getDatabasesPath();
+
+    final String databasesDir = await databasesDirFuture;
     final String path = p.join(databasesDir, AppDatabase.databaseName);
     await _migrateLegacyDatabase(databasesDir, path);
     final AppDatabase database = await AppDatabase.open(
       path: path,
-      password: passphrase,
+      password: await passphraseFuture,
     );
 
     final ApiClient client = ApiClient();
@@ -63,9 +67,7 @@ class AppContainer {
 
     return AppContainer._(
       database: database,
-      settingsRepository: SettingsRepository(
-        await SharedPreferences.getInstance(),
-      ),
+      settingsRepository: SettingsRepository(await prefsFuture),
       portfolioRepository: PortfolioRepository(portfolioDao),
       assetRepository: AssetRepository(
         assetDao,

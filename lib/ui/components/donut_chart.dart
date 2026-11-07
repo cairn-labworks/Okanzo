@@ -1,14 +1,27 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 /// One wedge of a [DonutChart].
+@immutable
 class PieSlice {
   const PieSlice(this.label, this.value, this.color);
 
   final String label;
   final double value;
   final Color color;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PieSlice &&
+          other.label == label &&
+          other.value == value &&
+          other.color == color;
+
+  @override
+  int get hashCode => Object.hash(label, value, color);
 }
 
 /// A dependency-free donut chart. Tapping a wedge reports its index through
@@ -73,14 +86,16 @@ class DonutChart extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTapDown: (TapDownDetails details) =>
             _handleTap(details.localPosition),
-        child: CustomPaint(
-          painter: _DonutPainter(
-            slices: slices,
-            selectedIndex: selectedIndex,
-            thicknessRatio: thicknessRatio,
-            gapDegrees: _gapDegrees,
+        child: RepaintBoundary(
+          child: CustomPaint(
+            painter: _DonutPainter(
+              slices: slices,
+              selectedIndex: selectedIndex,
+              thicknessRatio: thicknessRatio,
+              gapDegrees: _gapDegrees,
+            ),
+            child: Center(child: child),
           ),
-          child: Center(child: child),
         ),
       ),
     );
@@ -139,6 +154,7 @@ class _DonutPainter extends CustomPainter {
   @override
   bool shouldRepaint(_DonutPainter oldDelegate) =>
       oldDelegate.selectedIndex != selectedIndex ||
-      oldDelegate.slices != slices ||
-      oldDelegate.thicknessRatio != thicknessRatio;
+      oldDelegate.thicknessRatio != thicknessRatio ||
+      oldDelegate.gapDegrees != gapDegrees ||
+      !listEquals(oldDelegate.slices, slices);
 }

@@ -30,6 +30,7 @@ class _AssetDao implements AssetDao {
   final List<AssetEntity> assets;
   final Map<int, double> updatedPrices = <int, double>{};
   final Map<int, String?> updatedCurrencies = <int, String?>{};
+  int batchUpdateCalls = 0;
 
   @override
   Future<AssetEntity?> getById(int id) async =>
@@ -74,6 +75,22 @@ class _AssetDao implements AssetDao {
       );
     }
     expect(timestamp, greaterThan(0));
+  }
+
+  @override
+  Future<void> updatePrices(
+    List<({int id, double price, int timestamp, String? currency})> updates,
+  ) async {
+    batchUpdateCalls++;
+    for (final ({int id, double price, int timestamp, String? currency}) update
+        in updates) {
+      await updatePrice(
+        update.id,
+        update.price,
+        update.timestamp,
+        currency: update.currency,
+      );
+    }
   }
 
   @override
@@ -637,12 +654,41 @@ void main() {
       expect(result.total, 5);
       expect(result.updated, 4);
       expect(result.failed, 1);
+      expect(dao.batchUpdateCalls, 1);
       expect(dao.updatedPrices, <int, double>{1: 90000, 2: 36, 3: 36, 4: 36});
       expect(dao.updatedCurrencies, <int, String?>{
         1: 'USD',
         2: 'USD',
         3: 'USD',
         4: 'USD',
+      });
+    },
+  );
+
+  test(
+    'bulk refresh deduplicates identical tickers across multiple holdings',
+    () async {
+      dao.assets
+        ..clear()
+        ..addAll(<AssetEntity>[
+          _asset(1, AssetType.stock, 'AAPL'),
+          _asset(2, AssetType.stock, ' aapl ').copyWith(currency: 'EUR'),
+          _asset(3, AssetType.crypto, 'BTC'),
+          _asset(4, AssetType.crypto, 'btc').copyWith(currency: 'GBP'),
+        ]);
+
+      final PriceRefreshResult result = await repository.refreshAllPrices(1);
+
+      expect(requestedSymbols, <String>['AAPL', 'BTC-USD']);
+      expect(result.total, 4);
+      expect(result.updated, 4);
+      expect(result.failed, 0);
+      expect(dao.batchUpdateCalls, 1);
+      expect(dao.updatedPrices, <int, double>{
+        1: 36,
+        2: 18,
+        3: 90000,
+        4: 67500,
       });
     },
   );

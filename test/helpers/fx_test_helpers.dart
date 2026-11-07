@@ -18,16 +18,29 @@ class FakeFxRateDao extends Fake implements FxRateDao {
       };
 
   final Map<String, FxRateEntity> _rates;
+  int getAllCalls = 0;
+  int upsertCalls = 0;
 
   @override
-  Future<List<FxRateEntity>> getAll() async => _rates.values.toList();
+  Future<List<FxRateEntity>> getAll() async {
+    getAllCalls++;
+    return _rates.values.toList();
+  }
 
   @override
   Future<void> upsertAll(List<FxRateEntity> rates) async {
+    upsertCalls++;
     for (final FxRateEntity rate in rates) {
       _rates[rate.currency] = rate;
     }
   }
+
+  @override
+  Future<int?> latestTimestamp() async => _rates.isEmpty
+      ? null
+      : _rates.values
+            .map((FxRateEntity r) => r.timestamp)
+            .reduce((int a, int b) => a > b ? a : b);
 }
 
 FxRepository fxRepositoryForTest({

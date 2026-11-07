@@ -47,10 +47,12 @@ class AppLocalizations {
         );
 
   @visibleForTesting
-  static Iterable<String> get messageKeys => _catalogs['es']!.keys;
+  static Iterable<String> get messageKeys => _catalogFor('es')!.keys;
+
+  static final RegExp _localeSeparator = RegExp('[_-]');
 
   static AppLocalizations fromLocaleName(String name) {
-    final List<String> parts = name.split(RegExp('[_-]'));
+    final List<String> parts = name.split(_localeSeparator);
     final String language = parts.first;
     final String? script = parts.length > 1 && parts[1].length == 4
         ? parts[1]
@@ -71,10 +73,12 @@ class AppLocalizations {
 
   String text(String source) {
     final String language = locale.languageCode;
-    final String? exact = _catalogs[language]?[source];
+    if (language == 'en') return source;
+    final Map<String, String>? catalog = _catalogFor(language);
+    if (catalog == null) return source;
+    final String? exact = catalog[source];
     if (exact != null) return exact;
-    for (final _TranslationTemplate template
-        in _templates[language] ?? const <_TranslationTemplate>[]) {
+    for (final _TranslationTemplate template in _templatesFor(language)) {
       final String? result = template.translate(source);
       if (result != null) return result;
     }
@@ -82,31 +86,40 @@ class AppLocalizations {
   }
 
   static final Map<String, Map<String, String>> _catalogs =
-      <String, Map<String, String>>{
-        for (int i = 0; i < _translationLanguages.length; i++)
-          _translationLanguages[i]: <String, String>{
-            for (final MapEntry<String, List<String>> entry
-                in _sharedTranslations.entries)
-              entry.key: entry.value[i],
-            ..._translations[_translationLanguages[i]]!,
-          },
-      };
+      <String, Map<String, String>>{};
 
   static final Map<String, List<_TranslationTemplate>> _templates =
-      <String, List<_TranslationTemplate>>{
-        for (final MapEntry<String, Map<String, String>> catalog
-            in _catalogs.entries)
-          catalog.key:
-              <_TranslationTemplate>[
-                for (final MapEntry<String, String> entry
-                    in catalog.value.entries)
-                  if (_TranslationTemplate.tokens.hasMatch(entry.key))
-                    _TranslationTemplate(entry.key, entry.value),
-              ]..sort(
-                (_TranslationTemplate a, _TranslationTemplate b) =>
-                    b.literalLength.compareTo(a.literalLength),
-              ),
-      };
+      <String, List<_TranslationTemplate>>{};
+
+  static Map<String, String>? _catalogFor(String language) {
+    final Map<String, String>? cached = _catalogs[language];
+    if (cached != null) return cached;
+    final int index = _translationLanguages.indexOf(language);
+    if (index < 0) return null;
+    return _catalogs[language] = <String, String>{
+      for (final MapEntry<String, List<String>> entry
+          in _sharedTranslations.entries)
+        entry.key: entry.value[index],
+      ..._translations[language]!,
+    };
+  }
+
+  static List<_TranslationTemplate> _templatesFor(String language) {
+    final List<_TranslationTemplate>? cached = _templates[language];
+    if (cached != null) return cached;
+    final Map<String, String>? catalog = _catalogFor(language);
+    if (catalog == null) return const <_TranslationTemplate>[];
+    final List<_TranslationTemplate> built =
+        <_TranslationTemplate>[
+          for (final MapEntry<String, String> entry in catalog.entries)
+            if (_TranslationTemplate.tokens.hasMatch(entry.key))
+              _TranslationTemplate(entry.key, entry.value),
+        ]..sort(
+          (_TranslationTemplate a, _TranslationTemplate b) =>
+              b.literalLength.compareTo(a.literalLength),
+        );
+    return _templates[language] = built;
+  }
 }
 
 class _TranslationTemplate {

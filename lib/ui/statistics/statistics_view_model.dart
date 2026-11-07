@@ -102,7 +102,14 @@ class StatisticsViewModel extends ChangeNotifier {
 
   void _start() {
     _settingsSub = _settingsRepository.settings.listen((AppSettings settings) {
+      final AppSettings? previous = _settings;
       _settings = settings;
+      if (previous != null &&
+          previous.selectedPortfolioId == settings.selectedPortfolioId &&
+          previous.baseCurrency == settings.baseCurrency &&
+          previous.hideBalances == settings.hideBalances) {
+        return;
+      }
       _rebuild();
     });
     _portfolioSub = _portfolioRepository.observeAll().listen((

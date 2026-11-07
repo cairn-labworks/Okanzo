@@ -120,6 +120,28 @@ void main() {
         throwsA(isA<InvalidBackupException>()),
       );
     });
+
+    test(
+      'encryptAsync and decryptAsync round-trip on a background isolate',
+      () async {
+        final Uint8List payload = Uint8List.fromList(
+          utf8.encode('isolate backup payload'),
+        );
+        final Uint8List encrypted = await BackupCrypto.encryptAsync(
+          payload,
+          'swordfish',
+        );
+        final Uint8List decrypted = await BackupCrypto.decryptAsync(
+          encrypted,
+          'swordfish',
+        );
+        expect(utf8.decode(decrypted), 'isolate backup payload');
+        await expectLater(
+          BackupCrypto.decryptAsync(encrypted, 'wrong'),
+          throwsA(isA<InvalidBackupException>()),
+        );
+      },
+    );
   });
 
   group('Android compatibility', () {

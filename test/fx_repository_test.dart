@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:okanzo/data/remote/fx/fx_api.dart';
 import 'package:okanzo/data/repository/fx_repository.dart';
+import 'package:okanzo/util/result.dart';
 
 import 'helpers/fx_test_helpers.dart';
 
@@ -84,6 +87,61 @@ void main() {
 
       expect(result.isFailure, isTrue);
       expect(result.errorMessage, 'Exchange rates unavailable for USD/EUR');
+    },
+  );
+
+  test(
+    'caches CurrencyConverter in memory across repeated conversions',
+    () async {
+      final FakeFxRateDao dao = FakeFxRateDao(const <String, double>{
+        'EUR': 0.5,
+        'GBP': 0.75,
+      });
+      final FxRepository repository = FxRepository(
+        dao,
+        FxApi(client: MockClient((_) async => throw StateError('No network'))),
+      );
+
+      expect((await repository.convertAmount(100, 'USD', 'EUR')).value, 50);
+      expect((await repository.convertAmount(50, 'EUR', 'GBP')).value, 75);
+      expect((await repository.convertAmount(75, 'GBP', 'USD')).value, 100);
+      expect(dao.getAllCalls, 1);
+    },
+  );
+
+  test(
+    'deduplicates concurrent refreshRates and ensureFreshRates calls',
+    () async {
+      int requests = 0;
+      final Completer<http.Response> gate = Completer<http.Response>();
+      final FakeFxRateDao dao = FakeFxRateDao(const <String, double>{});
+      final FxRepository repository = FxRepository(
+        dao,
+        FxApi(
+          client: MockClient((_) {
+            requests++;
+            return gate.future;
+          }),
+        ),
+      );
+
+      final Future<Result<void>> first = repository.ensureFreshRates();
+      final Future<Result<void>> second = repository.ensureFreshRates();
+      final Future<Result<void>> third = repository.refreshRates();
+
+      gate.complete(
+        http.Response(
+          '{"result":"success","rates":{"EUR":0.5,"GBP":0.75}}',
+          200,
+        ),
+      );
+      final List<Result<void>> results = await Future.wait(
+        <Future<Result<void>>>[first, second, third],
+      );
+
+      expect(results.every((Result<void> r) => r.isSuccess), isTrue);
+      expect(requests, 1);
+      expect(dao.upsertCalls, 1);
     },
   );
 }

@@ -103,7 +103,16 @@ class HomeViewModel extends ChangeNotifier {
 
   Future<void> _start() async {
     _settingsSub = _settingsRepository.settings.listen((AppSettings settings) {
+      final AppSettings? previous = _settings;
       _settings = settings;
+      if (previous != null &&
+          previous.selectedPortfolioId == settings.selectedPortfolioId &&
+          previous.baseCurrency == settings.baseCurrency &&
+          previous.hideBalances == settings.hideBalances &&
+          previous.simpleNetWorth == settings.simpleNetWorth &&
+          !_categoryOrderChanged(settings.selectedPortfolioId)) {
+        return;
+      }
       _rebuild();
     });
     _portfolioSub = _portfolioRepository.observeAll().listen((
@@ -119,6 +128,25 @@ class HomeViewModel extends ChangeNotifier {
     });
     unawaited(_portfolioRepository.ensureDefaultPortfolio());
     unawaited(_fxRepository.ensureFreshRates());
+  }
+
+  List<String> _lastAssetCategoryOrder = const <String>[];
+  List<String> _lastLiabilityCategoryOrder = const <String>[];
+
+  bool _categoryOrderChanged(int? selectedPortfolioId) {
+    final int? portfolioId = selectedPortfolioId ?? _state.activePortfolio?.id;
+    if (portfolioId == null) return false;
+    return !listEquals(
+          _lastAssetCategoryOrder,
+          _settingsRepository.categoryOrder(portfolioId, CategorySection.asset),
+        ) ||
+        !listEquals(
+          _lastLiabilityCategoryOrder,
+          _settingsRepository.categoryOrder(
+            portfolioId,
+            CategorySection.liability,
+          ),
+        );
   }
 
   void selectPortfolio(int id) =>
@@ -254,11 +282,16 @@ class HomeViewModel extends ChangeNotifier {
     int portfolioId,
     String baseCurrency,
   ) {
+    final List<String> savedOrder = _settingsRepository.categoryOrder(
+      portfolioId,
+      CategorySection.asset,
+    );
+    _lastAssetCategoryOrder = savedOrder;
     final Map<AssetType, List<AssetEntity>> byType =
         groupBy<AssetType, AssetEntity>(_assets, (AssetEntity a) => a.type);
     final List<AssetType> ordered = orderTypes<AssetType>(
       byType.keys,
-      _settingsRepository.categoryOrder(portfolioId, CategorySection.asset),
+      savedOrder,
       AssetType.fromName,
     );
     return <AssetCategoryGroup>[
@@ -283,6 +316,11 @@ class HomeViewModel extends ChangeNotifier {
     int portfolioId,
     String baseCurrency,
   ) {
+    final List<String> savedOrder = _settingsRepository.categoryOrder(
+      portfolioId,
+      CategorySection.liability,
+    );
+    _lastLiabilityCategoryOrder = savedOrder;
     final Map<LiabilityType, List<LiabilityEntity>> byType =
         groupBy<LiabilityType, LiabilityEntity>(
           _liabilities,
@@ -290,7 +328,7 @@ class HomeViewModel extends ChangeNotifier {
         );
     final List<LiabilityType> ordered = orderTypes<LiabilityType>(
       byType.keys,
-      _settingsRepository.categoryOrder(portfolioId, CategorySection.liability),
+      savedOrder,
       LiabilityType.fromName,
     );
     return <LiabilityCategoryGroup>[

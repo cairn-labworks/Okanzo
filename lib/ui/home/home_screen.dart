@@ -37,7 +37,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   HomeViewModel? _viewModel;
-  final Map<String, bool> _expanded = <String, bool>{};
+  final ValueNotifier<Set<String>> _expanded = ValueNotifier<Set<String>>(
+    <String>{},
+  );
 
   @override
   void didChangeDependencies() {
@@ -62,10 +64,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _toggleExpanded(String key) {
+    final Set<String> next = Set<String>.of(_expanded.value);
+    if (!next.remove(key)) next.add(key);
+    _expanded.value = next;
+  }
+
   @override
   void dispose() {
     _viewModel?.removeListener(_onViewModelChanged);
     _viewModel?.dispose();
+    _expanded.dispose();
     super.dispose();
   }
 
@@ -98,10 +107,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: state.isRefreshing ? null : viewModel.refresh,
                 tooltip: 'Refresh prices'.tr(context),
                 icon: state.isRefreshing
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                    ? const RepaintBoundary(
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                       )
                     : const Icon(Icons.refresh),
               ),
@@ -120,9 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
               : _HomeContent(
                   state: state,
                   expanded: _expanded,
-                  onToggleExpanded: (String key) => setState(() {
-                    _expanded[key] = !(_expanded[key] ?? false);
-                  }),
+                  onToggleExpanded: _toggleExpanded,
                   onOpenAsset: (AssetEntity asset) =>
                       widget.onOpenAssetEditor(asset.portfolioId, asset.id),
                   onOpenLiability: (LiabilityEntity liability) =>
@@ -299,7 +308,7 @@ class _HomeContent extends StatelessWidget {
   });
 
   final HomeState state;
-  final Map<String, bool> expanded;
+  final ValueNotifier<Set<String>> expanded;
   final ValueChanged<String> onToggleExpanded;
   final ValueChanged<AssetEntity> onOpenAsset;
   final ValueChanged<LiabilityEntity> onOpenLiability;
@@ -354,46 +363,59 @@ class _HomeContent extends StatelessWidget {
                   bool dragging,
                 ) {
                   final String key = 'asset-${group.type.storageName}';
-                  return _CategoryCardShell(
-                    icon: assetTypeIcon(group.type),
-                    accent: colorful ? categoryColorAt(group.type.index) : null,
-                    title: group.type.displayName.tr(context),
-                    count: group.items.length,
-                    totalText: state.hideBalances
-                        ? CurrencyUtil.maskShort
-                        : CurrencyUtil.format(group.total, group.baseCurrency),
-                    isExpanded: expanded[key] ?? false,
-                    isDragging: dragging,
-                    onToggle: () => onToggleExpanded(key),
-                    expandedContent: DragReorderColumn<AssetLine>(
-                      items: group.items,
-                      keyOf: (AssetLine line) => line.asset.id,
-                      onReordered: (List<AssetLine> items) =>
-                          viewModel.onAssetItemsReordered(
-                            items.map((AssetLine l) => l.asset.id).toList(),
-                          ),
-                      itemBuilder:
-                          (
-                            BuildContext context,
-                            AssetLine line,
-                            bool itemDragging,
-                          ) => _HoldingItemRow(
-                            title: line.asset.name,
-                            subtitle: assetSubtitle(
-                              line.asset,
-                              group.baseCurrency,
-                              unitsLabel: 'units'.tr(context),
-                            ),
-                            amount: state.hideBalances
-                                ? CurrencyUtil.maskShort
-                                : CurrencyUtil.format(
-                                    line.convertedValue,
-                                    group.baseCurrency,
+                  return ValueListenableBuilder<Set<String>>(
+                    valueListenable: expanded,
+                    builder:
+                        (BuildContext context, Set<String> expandedKeys, _) =>
+                            _CategoryCardShell(
+                              icon: assetTypeIcon(group.type),
+                              accent: colorful
+                                  ? categoryColorAt(group.type.index)
+                                  : null,
+                              title: group.type.displayName.tr(context),
+                              count: group.items.length,
+                              totalText: state.hideBalances
+                                  ? CurrencyUtil.maskShort
+                                  : CurrencyUtil.format(
+                                      group.total,
+                                      group.baseCurrency,
+                                    ),
+                              isExpanded: expandedKeys.contains(key),
+                              isDragging: dragging,
+                              onToggle: () => onToggleExpanded(key),
+                              expandedContentBuilder: () =>
+                                  DragReorderColumn<AssetLine>(
+                                    items: group.items,
+                                    keyOf: (AssetLine line) => line.asset.id,
+                                    onReordered: (List<AssetLine> items) =>
+                                        viewModel.onAssetItemsReordered(
+                                          items
+                                              .map((AssetLine l) => l.asset.id)
+                                              .toList(),
+                                        ),
+                                    itemBuilder:
+                                        (
+                                          BuildContext context,
+                                          AssetLine line,
+                                          bool itemDragging,
+                                        ) => _HoldingItemRow(
+                                          title: line.asset.name,
+                                          subtitle: assetSubtitle(
+                                            line.asset,
+                                            group.baseCurrency,
+                                            unitsLabel: 'units'.tr(context),
+                                          ),
+                                          amount: state.hideBalances
+                                              ? CurrencyUtil.maskShort
+                                              : CurrencyUtil.format(
+                                                  line.convertedValue,
+                                                  group.baseCurrency,
+                                                ),
+                                          isDragging: itemDragging,
+                                          onOpen: () => onOpenAsset(line.asset),
+                                        ),
                                   ),
-                            isDragging: itemDragging,
-                            onOpen: () => onOpenAsset(line.asset),
-                          ),
-                    ),
+                            ),
                   );
                 },
           ),
@@ -432,49 +454,63 @@ class _HomeContent extends StatelessWidget {
                   bool dragging,
                 ) {
                   final String key = 'liability-${group.type.storageName}';
-                  return _CategoryCardShell(
-                    icon: liabilityTypeIcon(group.type),
-                    accent: colorful
-                        ? categoryColorAt(group.type.index + 5)
-                        : null,
-                    title: group.type.displayName.tr(context),
-                    count: group.items.length,
-                    totalText: state.hideBalances
-                        ? CurrencyUtil.maskShort
-                        : CurrencyUtil.format(group.total, group.baseCurrency),
-                    isExpanded: expanded[key] ?? false,
-                    isDragging: dragging,
-                    onToggle: () => onToggleExpanded(key),
-                    expandedContent: DragReorderColumn<LiabilityLine>(
-                      items: group.items,
-                      keyOf: (LiabilityLine line) => line.liability.id,
-                      onReordered: (List<LiabilityLine> items) =>
-                          viewModel.onLiabilityItemsReordered(
-                            items
-                                .map((LiabilityLine l) => l.liability.id)
-                                .toList(),
-                          ),
-                      itemBuilder:
-                          (
-                            BuildContext context,
-                            LiabilityLine line,
-                            bool itemDragging,
-                          ) => _HoldingItemRow(
-                            title: line.liability.name,
-                            subtitle: currencyNote(
-                              line.liability.currency,
-                              group.baseCurrency,
-                            ),
-                            amount: state.hideBalances
-                                ? CurrencyUtil.maskShort
-                                : CurrencyUtil.format(
-                                    line.convertedValue,
-                                    group.baseCurrency,
+                  return ValueListenableBuilder<Set<String>>(
+                    valueListenable: expanded,
+                    builder:
+                        (BuildContext context, Set<String> expandedKeys, _) =>
+                            _CategoryCardShell(
+                              icon: liabilityTypeIcon(group.type),
+                              accent: colorful
+                                  ? categoryColorAt(group.type.index + 5)
+                                  : null,
+                              title: group.type.displayName.tr(context),
+                              count: group.items.length,
+                              totalText: state.hideBalances
+                                  ? CurrencyUtil.maskShort
+                                  : CurrencyUtil.format(
+                                      group.total,
+                                      group.baseCurrency,
+                                    ),
+                              isExpanded: expandedKeys.contains(key),
+                              isDragging: dragging,
+                              onToggle: () => onToggleExpanded(key),
+                              expandedContentBuilder: () =>
+                                  DragReorderColumn<LiabilityLine>(
+                                    items: group.items,
+                                    keyOf: (LiabilityLine line) =>
+                                        line.liability.id,
+                                    onReordered: (List<LiabilityLine> items) =>
+                                        viewModel.onLiabilityItemsReordered(
+                                          items
+                                              .map(
+                                                (LiabilityLine l) =>
+                                                    l.liability.id,
+                                              )
+                                              .toList(),
+                                        ),
+                                    itemBuilder:
+                                        (
+                                          BuildContext context,
+                                          LiabilityLine line,
+                                          bool itemDragging,
+                                        ) => _HoldingItemRow(
+                                          title: line.liability.name,
+                                          subtitle: currencyNote(
+                                            line.liability.currency,
+                                            group.baseCurrency,
+                                          ),
+                                          amount: state.hideBalances
+                                              ? CurrencyUtil.maskShort
+                                              : CurrencyUtil.format(
+                                                  line.convertedValue,
+                                                  group.baseCurrency,
+                                                ),
+                                          isDragging: itemDragging,
+                                          onOpen: () =>
+                                              onOpenLiability(line.liability),
+                                        ),
                                   ),
-                            isDragging: itemDragging,
-                            onOpen: () => onOpenLiability(line.liability),
-                          ),
-                    ),
+                            ),
                   );
                 },
           ),
@@ -539,7 +575,7 @@ class _CategoryCardShell extends StatelessWidget {
     required this.isExpanded,
     required this.isDragging,
     required this.onToggle,
-    required this.expandedContent,
+    required this.expandedContentBuilder,
     this.accent,
   });
 
@@ -550,7 +586,7 @@ class _CategoryCardShell extends StatelessWidget {
   final bool isExpanded;
   final bool isDragging;
   final VoidCallback onToggle;
-  final Widget expandedContent;
+  final Widget Function() expandedContentBuilder;
 
   /// Per-category accent colour used by the Midnight theme. Null keeps the
   /// neutral Material look.
@@ -577,7 +613,11 @@ class _CategoryCardShell extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  itemCountLabel(count).tr(context),
+                  count == 1
+                      ? '1 item'.tr(context)
+                      : '{count} items'
+                            .tr(context)
+                            .replaceAll('{count}', '$count'),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -621,7 +661,7 @@ class _CategoryCardShell extends StatelessWidget {
           if (isExpanded) ...<Widget>[
             Divider(height: 1, color: theme.colorScheme.outlineVariant),
             const SizedBox(height: 4),
-            expandedContent,
+            expandedContentBuilder(),
             const SizedBox(height: 4),
           ],
         ],

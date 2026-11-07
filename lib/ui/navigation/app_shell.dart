@@ -146,8 +146,12 @@ class _AppShellState extends State<AppShell> {
               _select(TopLevelDestination.portfolios.index),
           onOpenSettings: _openSettings,
         ),
-        const StatisticsScreen(),
-        const PortfolioScreen(),
+        _index == TopLevelDestination.statistics.index
+            ? const StatisticsScreen()
+            : const SizedBox.shrink(),
+        _index == TopLevelDestination.portfolios.index
+            ? const PortfolioScreen()
+            : const SizedBox.shrink(),
       ],
     );
 

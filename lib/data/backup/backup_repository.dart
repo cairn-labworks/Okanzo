@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:sqflite_sqlcipher/sqflite.dart';
+
+import '../local/app_database.dart';
 import '../local/dao/asset_dao.dart';
 import '../local/dao/liability_dao.dart';
 import '../local/dao/portfolio_dao.dart';
@@ -51,11 +54,13 @@ class BackupRepository {
     final Uint8List json = Uint8List.fromList(
       utf8.encode(jsonEncode(backup.toJson())),
     );
-    return BackupCrypto.encrypt(json, password);
+    return BackupCrypto.encryptAsync(json, password);
   }
 
   Future<ImportResult> import(Uint8List data, String password) async {
-    final String json = utf8.decode(BackupCrypto.decrypt(data, password));
+    final String json = utf8.decode(
+      await BackupCrypto.decryptAsync(data, password),
+    );
     BackupFile? backup;
     try {
       final Object? decoded = jsonDecode(json);
@@ -73,47 +78,79 @@ class BackupRepository {
       throw const InvalidBackupException('Backup file contains no portfolios.');
     }
 
-    final Set<String> existingNames = <String>{
-      for (final PortfolioEntity portfolio in await _portfolioDao.getAll())
-        portfolio.name,
-    };
+    final AppDatabase appDb = _portfolioDao.database;
     int assetCount = 0;
     int liabilityCount = 0;
 
-    for (final BackupPortfolio portfolio in portfolios) {
-      final String name = uniqueName(
-        portfolio.name.trim().isEmpty ? 'Imported portfolio' : portfolio.name,
-        existingNames,
+    await appDb.db.transaction((Transaction txn) async {
+      final List<Map<String, Object?>> existingRows = await txn.query(
+        Tables.portfolios,
+        orderBy: 'isDefault DESC, name COLLATE NOCASE ASC',
       );
-      existingNames.add(name);
-      final int now = DateTime.now().millisecondsSinceEpoch;
-      final int portfolioId = await _portfolioDao.insert(
-        PortfolioEntity(
-          name: name,
-          isDefault: false,
-          createdAt: now,
-          updatedAt: now,
-        ),
+      final List<PortfolioEntity> existingPortfolios = existingRows
+          .map(PortfolioEntity.fromMap)
+          .toList(growable: false);
+      final Set<String> existingNames = <String>{
+        for (final PortfolioEntity portfolio in existingPortfolios)
+          portfolio.name,
+      };
+      bool hasDefault = existingPortfolios.any(
+        (PortfolioEntity portfolio) => portfolio.isDefault,
       );
-      for (final BackupAsset asset
-          in portfolio.assets ?? const <BackupAsset>[]) {
-        await _assetDao.insert(backupToAsset(asset, portfolioId, now));
-        assetCount++;
-      }
-      for (final BackupLiability liability
-          in portfolio.liabilities ?? const <BackupLiability>[]) {
-        await _liabilityDao.insert(
-          backupToLiability(liability, portfolioId, now),
-        );
-        liabilityCount++;
-      }
-    }
+      int? firstExistingId = existingPortfolios.firstOrNull?.id;
 
-    // Guarantee a default portfolio exists after import.
-    if (await _portfolioDao.getDefault() == null) {
-      final List<PortfolioEntity> all = await _portfolioDao.getAll();
-      if (all.isNotEmpty) await _portfolioDao.setDefault(all.first.id);
-    }
+      for (final BackupPortfolio portfolio in portfolios) {
+        final String name = uniqueName(
+          portfolio.name.trim().isEmpty ? 'Imported portfolio' : portfolio.name,
+          existingNames,
+        );
+        existingNames.add(name);
+        final int now = DateTime.now().millisecondsSinceEpoch;
+        final bool makeDefault = !hasDefault && firstExistingId == null;
+        if (makeDefault) hasDefault = true;
+        final int portfolioId = await txn.insert(
+          Tables.portfolios,
+          PortfolioEntity(
+            name: name,
+            isDefault: makeDefault,
+            createdAt: now,
+            updatedAt: now,
+          ).toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        for (final BackupAsset asset
+            in portfolio.assets ?? const <BackupAsset>[]) {
+          await txn.insert(
+            Tables.assets,
+            backupToAsset(asset, portfolioId, now).toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+          assetCount++;
+        }
+        for (final BackupLiability liability
+            in portfolio.liabilities ?? const <BackupLiability>[]) {
+          await txn.insert(
+            Tables.liabilities,
+            backupToLiability(liability, portfolioId, now).toMap(),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+          liabilityCount++;
+        }
+      }
+
+      if (!hasDefault && firstExistingId != null) {
+        await txn.rawUpdate(
+          'UPDATE ${Tables.portfolios} SET isDefault = 1 WHERE id = ?',
+          <Object?>[firstExistingId],
+        );
+      }
+    });
+
+    appDb.notify(<String>{
+      Tables.portfolios,
+      Tables.assets,
+      Tables.liabilities,
+    });
 
     return ImportResult(
       portfolios: portfolios.length,

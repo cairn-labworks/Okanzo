@@ -59,39 +59,72 @@ class PortfolioListViewModel extends ChangeNotifier {
   StreamSubscription<CurrencyConverter>? _converterSub;
 
   List<PortfolioEntity> _portfolios = const <PortfolioEntity>[];
+  final Map<int, List<AssetEntity>> _assetsByPortfolio =
+      <int, List<AssetEntity>>{};
+  final Map<int, List<LiabilityEntity>> _liabilitiesByPortfolio =
+      <int, List<LiabilityEntity>>{};
+  String? _baseCurrency;
   CurrencyConverter _converter = const CurrencyConverter.empty();
   List<PortfolioRow> _rows = const <PortfolioRow>[];
   String? _message;
+  bool _disposed = false;
 
   List<PortfolioRow> get rows => _rows;
 
   String? get message => _message;
 
   void _start() {
+    _baseCurrency = _settingsRepository.current.baseCurrency;
     _portfolioSub = _portfolioRepository.observeAll().listen((
       List<PortfolioEntity> portfolios,
     ) {
       _portfolios = portfolios;
-      unawaited(_recompute());
+      unawaited(_reloadHoldingsAndRecompute());
     });
-    _settingsSub = _settingsRepository.settings.listen(
-      (_) => unawaited(_recompute()),
-    );
+    _settingsSub = _settingsRepository.settings.listen((AppSettings settings) {
+      if (settings.baseCurrency == _baseCurrency) return;
+      _baseCurrency = settings.baseCurrency;
+      _recomputeFromCache();
+    });
     _converterSub = _fxRepository.converter.listen((CurrencyConverter value) {
       _converter = value;
-      unawaited(_recompute());
+      _recomputeFromCache();
     });
   }
 
-  Future<void> _recompute() async {
-    final String baseCurrency = _settingsRepository.current.baseCurrency;
-    final List<PortfolioRow> rows = <PortfolioRow>[];
-    for (final PortfolioEntity portfolio in _portfolios) {
-      final List<AssetEntity> assets = await _assetRepository.getForPortfolio(
+  Future<void> _reloadHoldingsAndRecompute() async {
+    final List<PortfolioEntity> snapshot = _portfolios;
+    final Map<int, List<AssetEntity>> assetsMap = <int, List<AssetEntity>>{};
+    final Map<int, List<LiabilityEntity>> liabilitiesMap =
+        <int, List<LiabilityEntity>>{};
+    for (final PortfolioEntity portfolio in snapshot) {
+      assetsMap[portfolio.id] = await _assetRepository.getForPortfolio(
         portfolio.id,
       );
-      final List<LiabilityEntity> liabilities = await _liabilityRepository
-          .getForPortfolio(portfolio.id);
+      liabilitiesMap[portfolio.id] = await _liabilityRepository.getForPortfolio(
+        portfolio.id,
+      );
+      if (_disposed) return;
+    }
+    _assetsByPortfolio
+      ..clear()
+      ..addAll(assetsMap);
+    _liabilitiesByPortfolio
+      ..clear()
+      ..addAll(liabilitiesMap);
+    _recomputeFromCache();
+  }
+
+  void _recomputeFromCache() {
+    if (_disposed) return;
+    final String baseCurrency =
+        _baseCurrency ?? _settingsRepository.current.baseCurrency;
+    final List<PortfolioRow> rows = <PortfolioRow>[];
+    for (final PortfolioEntity portfolio in _portfolios) {
+      final List<AssetEntity> assets =
+          _assetsByPortfolio[portfolio.id] ?? const <AssetEntity>[];
+      final List<LiabilityEntity> liabilities =
+          _liabilitiesByPortfolio[portfolio.id] ?? const <LiabilityEntity>[];
       final NetWorthSummary summary = _calculator.calculate(
         assets: assets,
         liabilities: liabilities,
@@ -138,6 +171,7 @@ class PortfolioListViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _portfolioSub?.cancel();
     _settingsSub?.cancel();
     _converterSub?.cancel();

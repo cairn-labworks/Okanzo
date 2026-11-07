@@ -205,13 +205,12 @@ class AssetFormState {
 String filterDecimal(String input) {
   final StringBuffer buffer = StringBuffer();
   bool seenDot = false;
-  for (final String char in input.split('')) {
-    final bool isDigit =
-        char.codeUnitAt(0) >= 0x30 && char.codeUnitAt(0) <= 0x39;
-    if (isDigit) {
-      buffer.write(char);
-    } else if (char == '.' && !seenDot) {
-      buffer.write(char);
+  for (int i = 0; i < input.length; i++) {
+    final int unit = input.codeUnitAt(i);
+    if (unit >= 0x30 && unit <= 0x39) {
+      buffer.writeCharCode(unit);
+    } else if (unit == 0x2E && !seenDot) {
+      buffer.writeCharCode(unit);
       seenDot = true;
     }
   }

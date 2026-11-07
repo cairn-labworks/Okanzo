@@ -31,6 +31,11 @@ class LabeledTextField extends StatelessWidget {
   final String? supportingText;
   final bool isError;
 
+  static final List<TextInputFormatter> _decimalFormatters =
+      <TextInputFormatter>[
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\-]')),
+      ];
+
   @override
   Widget build(BuildContext context) {
     return TextField(
@@ -40,9 +45,7 @@ class LabeledTextField extends StatelessWidget {
       keyboardType: keyboardType,
       inputFormatters:
           keyboardType == const TextInputType.numberWithOptions(decimal: true)
-          ? <TextInputFormatter>[
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\-]')),
-            ]
+          ? _decimalFormatters
           : null,
       decoration: InputDecoration(
         border: const OutlineInputBorder(),
@@ -114,6 +117,16 @@ class _CurrencyPickerDialog extends StatefulWidget {
 }
 
 class _CurrencyPickerDialogState extends State<_CurrencyPickerDialog> {
+  static final Set<String> _commonSet = CurrencyUtil.commonCurrencies.toSet();
+  static final List<String> _orderedCurrencies = List<String>.unmodifiable(
+    <String>[
+      ...CurrencyUtil.commonCurrencies,
+      ...CurrencyUtil.allCurrencies.where(
+        (String code) => !_commonSet.contains(code),
+      ),
+    ],
+  );
+
   final TextEditingController _query = TextEditingController();
 
   @override
@@ -124,15 +137,8 @@ class _CurrencyPickerDialogState extends State<_CurrencyPickerDialog> {
 
   List<String> get _results {
     final String query = _query.text.trim().toUpperCase();
-    final List<String> common = CurrencyUtil.commonCurrencies;
-    final List<String> ordered = <String>[
-      ...common,
-      ...CurrencyUtil.allCurrencies.where(
-        (String code) => !common.contains(code),
-      ),
-    ];
-    if (query.isEmpty) return ordered;
-    return ordered
+    if (query.isEmpty) return _orderedCurrencies;
+    return _orderedCurrencies
         .where(
           (String code) =>
               code.contains(query) ||

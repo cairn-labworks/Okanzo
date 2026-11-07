@@ -23,19 +23,37 @@ class CurrencyUtil {
     growable: false,
   )..sort();
 
+  static final RegExp _localeSeparator = RegExp('[_-]');
+  static final RegExp _letterCurrencyPattern = RegExp(
+    r'(\p{L})(\p{Sc})',
+    unicode: true,
+  );
+  static final Map<String, String> _symbolCache = <String, String>{};
+  static String? _cachedDeviceLocale;
+  static String? _cachedDeviceCurrency;
+
   /// Every ISO-4217 currency code known to the app, sorted.
   static List<String> get allCurrencies => _allCurrencies;
 
   /// The currency of the current locale's country, falling back to USD.
   static String deviceCurrencyCode() {
     final String locale = Intl.defaultLocale ?? Intl.systemLocale;
-    final List<String> parts = locale.split(RegExp('[_-]'));
+    if (_cachedDeviceLocale == locale && _cachedDeviceCurrency != null) {
+      return _cachedDeviceCurrency!;
+    }
+    final List<String> parts = locale.split(_localeSeparator);
+    String resolved = 'USD';
     for (final String part in parts.reversed) {
       final String candidate = part.toUpperCase();
       final String? code = kCountryCurrencies[candidate];
-      if (code != null) return code;
+      if (code != null) {
+        resolved = code;
+        break;
+      }
     }
-    return 'USD';
+    _cachedDeviceLocale = locale;
+    _cachedDeviceCurrency = resolved;
+    return resolved;
   }
 
   static String displayName(String code) =>
@@ -50,12 +68,13 @@ class CurrencyUtil {
 
   /// The currency symbol, with a space inserted between letter prefixes and the
   /// currency sign so codes like USD read as "US $" instead of "US$".
-  static String symbol(String code) => _spaceSymbol(_rawSymbol(code));
+  static String symbol(String code) =>
+      _symbolCache.putIfAbsent(code, () => _spaceSymbol(_rawSymbol(code)));
 
   static String _rawSymbol(String code) => kCurrencies[code]?.symbol ?? code;
 
   static String _spaceSymbol(String symbol) => symbol.replaceAllMapped(
-    RegExp(r'(\p{L})(\p{Sc})', unicode: true),
+    _letterCurrencyPattern,
     (Match match) => '${match[1]} ${match[2]}',
   );
 

@@ -66,9 +66,24 @@ class _AssetDao extends Fake implements AssetDao {
     assets[index] = assets[index].copyWith(
       lastPrice: price,
       lastPriceTimestamp: timestamp,
-      updatedAt: timestamp,
       currency: currency,
+      updatedAt: timestamp,
     );
+  }
+
+  @override
+  Future<void> updatePrices(
+    List<({int id, double price, int timestamp, String? currency})> updates,
+  ) async {
+    for (final ({int id, double price, int timestamp, String? currency}) update
+        in updates) {
+      await updatePrice(
+        update.id,
+        update.price,
+        update.timestamp,
+        currency: update.currency,
+      );
+    }
   }
 }
 

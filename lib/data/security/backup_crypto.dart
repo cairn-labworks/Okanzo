@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -39,6 +40,16 @@ class BackupCrypto {
   static const int _keyLengthBytes = 32;
 
   static final Random _random = Random.secure();
+
+  /// Runs [encrypt] on a background isolate so the 210,000-iteration PBKDF2 key
+  /// derivation never blocks the UI thread.
+  static Future<Uint8List> encryptAsync(Uint8List plaintext, String password) =>
+      Isolate.run(() => encrypt(plaintext, password));
+
+  /// Runs [decrypt] on a background isolate so the 210,000-iteration PBKDF2 key
+  /// derivation never blocks the UI thread.
+  static Future<Uint8List> decryptAsync(Uint8List data, String password) =>
+      Isolate.run(() => decrypt(data, password));
 
   static Uint8List encrypt(Uint8List plaintext, String password) {
     final Uint8List salt = randomBytes(_saltLength);

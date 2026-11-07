@@ -92,6 +92,32 @@ class AssetDao {
     _notify();
   }
 
+  /// Updates multiple asset prices in a single transaction and notifies once.
+  Future<void> updatePrices(
+    List<({int id, double price, int timestamp, String? currency})> updates,
+  ) async {
+    if (updates.isEmpty) return;
+    await _db.transaction((Transaction txn) async {
+      for (final ({int id, double price, int timestamp, String? currency})
+          update
+          in updates) {
+        await txn.update(
+          Tables.assets,
+          <String, Object?>{
+            'lastPrice': update.price,
+            'lastPriceTimestamp': update.timestamp,
+            'updatedAt': update.timestamp,
+            if (update.currency != null && update.currency!.isNotEmpty)
+              'currency': update.currency,
+          },
+          where: 'id = ?',
+          whereArgs: <Object?>[update.id],
+        );
+      }
+    });
+    _notify();
+  }
+
   Future<int> maxPosition(int portfolioId, AssetType type) async =>
       Sqflite.firstIntValue(
         await _db.rawQuery(

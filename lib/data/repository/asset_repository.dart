@@ -119,7 +119,13 @@ class AssetRepository {
     return Result<double>.success(quote.value.price);
   }
 
+  static const int _maxConcurrentQuoteRequests = 4;
+
   /// Refreshes prices for all market-linked assets in a portfolio.
+  ///
+  /// Deduplicates identical ticker lookups, fetches quotes with bounded
+  /// concurrency, and persists all updated prices in a single database
+  /// transaction so watchers only rebuild once.
   Future<PriceRefreshResult> refreshAllPrices(int portfolioId) async {
     final List<AssetEntity> assets = (await _dao.getForPortfolio(portfolioId))
         .where((AssetEntity asset) {
@@ -129,15 +135,81 @@ class AssetRepository {
               symbol.trim().isNotEmpty;
         })
         .toList(growable: false);
-    int updated = 0;
-    int failed = 0;
+    if (assets.isEmpty) {
+      return const PriceRefreshResult(updated: 0, failed: 0, total: 0);
+    }
+
+    final List<(String, bool)> uniqueKeys = <(String, bool)>[];
+    final Set<(String, bool)> seenKeys = <(String, bool)>{};
     for (final AssetEntity asset in assets) {
-      if ((await refreshPrice(asset)).isSuccess) {
-        updated++;
-      } else {
-        failed++;
+      final (String, bool) key = (
+        asset.symbol!.trim().toUpperCase(),
+        asset.type == AssetType.crypto,
+      );
+      if (seenKeys.add(key)) uniqueKeys.add(key);
+    }
+
+    final Map<(String, bool), Result<StockQuote>> rawQuotes =
+        <(String, bool), Result<StockQuote>>{};
+    int nextIndex = 0;
+    Future<void> worker() async {
+      while (nextIndex < uniqueKeys.length) {
+        final (String symbol, bool isCrypto) key = uniqueKeys[nextIndex++];
+        rawQuotes[key] = await _stockPriceService.fetchQuote(
+          key.$1,
+          isCrypto: key.$2,
+        );
       }
     }
+
+    final int workerCount = uniqueKeys.length < _maxConcurrentQuoteRequests
+        ? uniqueKeys.length
+        : _maxConcurrentQuoteRequests;
+    await Future.wait(<Future<void>>[
+      for (int i = 0; i < workerCount; i++) worker(),
+    ]);
+
+    int updated = 0;
+    int failed = 0;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    final List<({int id, double price, int timestamp, String? currency})>
+    updates = <({int id, double price, int timestamp, String? currency})>[];
+
+    for (final AssetEntity asset in assets) {
+      final (String, bool) key = (
+        asset.symbol!.trim().toUpperCase(),
+        asset.type == AssetType.crypto,
+      );
+      final Result<StockQuote>? raw = rawQuotes[key];
+      if (raw == null || raw.isFailure) {
+        failed++;
+        continue;
+      }
+      final StockQuote quote = raw.value;
+      final String? source = quote.currency;
+      if (source == null || source.trim().isEmpty) {
+        failed++;
+        continue;
+      }
+      final Result<double> converted = await convertPrice(
+        quote.price,
+        source,
+        asset.currency,
+      );
+      if (converted.isFailure) {
+        failed++;
+        continue;
+      }
+      updates.add((
+        id: asset.id,
+        price: converted.value,
+        timestamp: now,
+        currency: asset.currency,
+      ));
+      updated++;
+    }
+
+    await _dao.updatePrices(updates);
     return PriceRefreshResult(
       updated: updated,
       failed: failed,

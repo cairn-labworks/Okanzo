@@ -59,15 +59,17 @@ class AppDatabase {
     final int currentVersion =
         Sqflite.firstIntValue(await db.rawQuery('PRAGMA user_version')) ?? 0;
 
-    if (currentVersion == schemaVersion) return;
-
     if (currentVersion == 0) {
       await db.transaction((Transaction txn) async {
         for (final String statement in _createStatements) {
           await txn.execute(statement);
         }
       });
-    } else if (currentVersion < 2) {
+      await db.execute('PRAGMA user_version = $schemaVersion');
+      return;
+    }
+
+    if (currentVersion < 2) {
       await db.transaction((Transaction txn) async {
         await txn.execute(
           'ALTER TABLE assets ADD COLUMN position INTEGER NOT NULL DEFAULT 0',
@@ -79,7 +81,13 @@ class AppDatabase {
       });
     }
 
-    await db.execute('PRAGMA user_version = $schemaVersion');
+    for (final String statement in _orderingIndexStatements) {
+      await db.execute(statement);
+    }
+
+    if (currentVersion != schemaVersion) {
+      await db.execute('PRAGMA user_version = $schemaVersion');
+    }
   }
 
   /// Emits the set of tables touched by the most recent write.
@@ -132,6 +140,8 @@ class AppDatabase {
         'ON UPDATE NO ACTION ON DELETE CASCADE)',
     'CREATE INDEX IF NOT EXISTS index_assets_portfolioId '
         'ON assets (portfolioId)',
+    'CREATE INDEX IF NOT EXISTS index_assets_portfolioId_position_updatedAt '
+        'ON assets (portfolioId, position ASC, updatedAt DESC)',
     'CREATE TABLE IF NOT EXISTS liabilities ('
         'id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, '
         'portfolioId INTEGER NOT NULL, '
@@ -147,10 +157,21 @@ class AppDatabase {
         'ON UPDATE NO ACTION ON DELETE CASCADE)',
     'CREATE INDEX IF NOT EXISTS index_liabilities_portfolioId '
         'ON liabilities (portfolioId)',
+    'CREATE INDEX IF NOT EXISTS '
+        'index_liabilities_portfolioId_position_updatedAt '
+        'ON liabilities (portfolioId, position ASC, updatedAt DESC)',
     'CREATE TABLE IF NOT EXISTS fx_rates ('
         'currency TEXT NOT NULL, '
         'unitsPerUsd REAL NOT NULL, '
         'timestamp INTEGER NOT NULL, '
         'PRIMARY KEY(currency))',
+  ];
+
+  static const List<String> _orderingIndexStatements = <String>[
+    'CREATE INDEX IF NOT EXISTS index_assets_portfolioId_position_updatedAt '
+        'ON assets (portfolioId, position ASC, updatedAt DESC)',
+    'CREATE INDEX IF NOT EXISTS '
+        'index_liabilities_portfolioId_position_updatedAt '
+        'ON liabilities (portfolioId, position ASC, updatedAt DESC)',
   ];
 }

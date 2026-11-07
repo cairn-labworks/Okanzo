@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/model/app_language.dart';
@@ -49,8 +50,7 @@ class CategorySection {
 /// Reads and writes app preferences, mirroring the Android DataStore keys so an
 /// existing installation's semantics are preserved.
 class SettingsRepository {
-  SettingsRepository(this._prefs)
-    : _simpleNetWorth = _prefs.getBool(_keySimpleNetWorth) ?? false;
+  SettingsRepository(this._prefs);
 
   static const String _keyThemeMode = 'theme_mode';
   static const String _keyAppTheme = 'app_theme';
@@ -66,7 +66,9 @@ class SettingsRepository {
 
   final SharedPreferences _prefs;
   // SharedPreferences updates its cache before confirming a write.
-  bool _simpleNetWorth;
+  bool? _simpleNetWorth;
+  List<String>? _cachedExchangeNames;
+  List<StockExchange>? _cachedPreferredExchanges;
   final StreamController<AppSettings> _controller =
       StreamController<AppSettings>.broadcast();
 
@@ -84,7 +86,8 @@ class SettingsRepository {
         _prefs.getString(_keyBaseCurrency) ?? CurrencyUtil.deviceCurrencyCode(),
     appLockEnabled: _prefs.getBool(_keyAppLock) ?? false,
     hideBalances: _prefs.getBool(_keyHideBalances) ?? false,
-    simpleNetWorth: _simpleNetWorth,
+    simpleNetWorth: _simpleNetWorth ??=
+        _prefs.getBool(_keySimpleNetWorth) ?? false,
     selectedPortfolioId: _selectedPortfolioId,
     preferredExchanges: _preferredExchanges,
     language: AppLanguage.fromName(_prefs.getString(_keyLanguage)),
@@ -111,7 +114,12 @@ class SettingsRepository {
   List<StockExchange> get _preferredExchanges {
     final List<String>? stored = _prefs.getStringList(_keyPreferredExchanges);
     if (stored == null) return const <StockExchange>[StockExchange.us];
-    return List<StockExchange>.unmodifiable(
+    if (_cachedPreferredExchanges != null &&
+        listEquals(stored, _cachedExchangeNames)) {
+      return _cachedPreferredExchanges!;
+    }
+    _cachedExchangeNames = List<String>.of(stored, growable: false);
+    return _cachedPreferredExchanges = List<StockExchange>.unmodifiable(
       StockExchange.values.where(
         (StockExchange exchange) => stored.contains(exchange.name),
       ),
