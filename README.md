@@ -28,6 +28,7 @@ A private, offline-first app for tracking your **net worth** — your assets min
 - **Encrypted export / import** — back up selected portfolios (or all of them) to a password-protected file (AES-256-GCM with PBKDF2-HMAC-SHA256), and restore them on any device.
 - **Adaptive Material 3 UI** — light/dark/system themes, **Material You** dynamic color on Android 12+, a bottom navigation bar on phones and a navigation rail on tablets and larger windows.
 - **Localized UI** — English plus Spanish, Brazilian Portuguese, French, German, Japanese, Korean, Simplified Chinese, Italian, Hindi, Arabic, Indonesian, Turkish, Polish, Dutch, Vietnamese, Thai, Russian, Swedish, Danish and Norwegian Bokmål. By default, Okanzo uses the first supported language in the device's preferred-language list and falls back to English if none is supported. Choose **Settings → App language** to override it; the choice takes effect immediately and persists across restarts. Select **Use device language** to return to automatic selection. Arabic uses right-to-left layout. Exchange selection and preference dialogs are localized too. Changing app language does not change your base currency or device-based number formatting.
+- **What's new highlights** — a pop-up summarizes the key highlights of the latest release the first time you open Okanzo after installing or updating to a new version (after unlocking if app lock is enabled). You can also reopen the release highlights anytime from **Settings → About → What's new**.
 
 ## Privacy
 

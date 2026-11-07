@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../domain/model/app_language.dart';
 import '../../domain/model/app_theme.dart';
+import '../../domain/model/release_notes.dart';
 import '../../domain/model/stock_exchange.dart';
 import '../../domain/model/theme_mode.dart';
 import '../../util/currency_util.dart';
@@ -20,6 +21,7 @@ class AppSettings {
     this.selectedPortfolioId,
     this.preferredExchanges = const <StockExchange>[StockExchange.us],
     this.language = AppLanguage.system,
+    this.lastSeenVersion,
   });
 
   final AppThemeMode themeMode;
@@ -31,6 +33,7 @@ class AppSettings {
   final int? selectedPortfolioId;
   final List<StockExchange> preferredExchanges;
   final AppLanguage language;
+  final String? lastSeenVersion;
 }
 
 /// Section names used when persisting a portfolio's custom category order.
@@ -55,6 +58,7 @@ class SettingsRepository {
   static const String _keySelectedPortfolio = 'selected_portfolio_id';
   static const String _keyPreferredExchanges = 'preferred_stock_exchanges';
   static const String _keyLanguage = 'app_language';
+  static const String _keyLastSeenVersion = 'last_seen_version';
 
   final SharedPreferences _prefs;
   final StreamController<AppSettings> _controller =
@@ -77,7 +81,25 @@ class SettingsRepository {
     selectedPortfolioId: _selectedPortfolioId,
     preferredExchanges: _preferredExchanges,
     language: AppLanguage.fromName(_prefs.getString(_keyLanguage)),
+    lastSeenVersion: _prefs.getString(_keyLastSeenVersion),
   );
+
+  Future<void> setLastSeenVersion(String version) async {
+    final String normalized = AppReleaseNotes.normalizeVersion(version);
+    if (normalized.isEmpty) {
+      throw ArgumentError.value(version, 'version', 'Must not be empty');
+    }
+    bool saved = false;
+    try {
+      saved = await _prefs.setString(_keyLastSeenVersion, normalized);
+      if (!saved) {
+        throw StateError('Last seen version could not be saved');
+      }
+    } finally {
+      if (!saved) await _prefs.reload();
+    }
+    _emit();
+  }
 
   List<StockExchange> get _preferredExchanges {
     final List<String>? stored = _prefs.getStringList(_keyPreferredExchanges);

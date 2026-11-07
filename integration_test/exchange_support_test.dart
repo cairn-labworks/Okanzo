@@ -258,6 +258,9 @@ void main() {
         () => find.byType(FloatingActionButton).evaluate().isNotEmpty,
         'home portfolio',
       );
+      if (find.text('Got it').evaluate().isNotEmpty) {
+        await _tap(tester, find.text('Got it'));
+      }
       final AppContainer container = _container(tester);
       final String portfolioName = _captureScreenshots
           ? 'Global demo'
@@ -558,6 +561,9 @@ void main() {
         () => find.byType(FloatingActionButton).evaluate().isNotEmpty,
         'home portfolio',
       );
+      if (find.text('Got it').evaluate().isNotEmpty) {
+        await _tap(tester, find.text('Got it'));
+      }
       final AppContainer container = _container(tester);
       final String portfolioName =
           'Currency smoke ${DateTime.now().millisecondsSinceEpoch}';

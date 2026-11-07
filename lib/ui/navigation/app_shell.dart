@@ -1,7 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../data/repository/settings_repository.dart';
+import '../../di/app_container.dart';
+import '../../domain/model/release_notes.dart';
 import '../../l10n/app_localizations.dart';
 import '../asset/asset_edit_screen.dart';
+import '../components/whats_new_dialog.dart';
 import '../home/home_screen.dart';
 import '../liability/liability_edit_screen.dart';
 import '../portfolio/portfolio_screen.dart';
@@ -28,7 +34,12 @@ enum TopLevelDestination {
 /// Adaptive shell: a navigation bar on compact widths and a navigation rail
 /// from medium widths up, hosting the three top-level destinations.
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  const AppShell({
+    this.installedVersion = AppReleaseNotes.currentVersion,
+    super.key,
+  });
+
+  final String installedVersion;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -36,6 +47,60 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _index = 0;
+  bool _whatsNewChecked = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleWhatsNewIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(AppShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.installedVersion != widget.installedVersion) {
+      _whatsNewChecked = false;
+      _scheduleWhatsNewIfNeeded();
+    }
+  }
+
+  void _scheduleWhatsNewIfNeeded() {
+    if (_whatsNewChecked) return;
+    _whatsNewChecked = true;
+    final SettingsRepository settingsRepository = AppScope.of(context)
+        .settingsRepository;
+    final String version = widget.installedVersion;
+    if (!AppReleaseNotes.shouldShowWhatsNew(
+      lastSeenVersion: settingsRepository.current.lastSeenVersion,
+      installedVersion: version,
+    )) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_presentWhatsNew(settingsRepository, version));
+    });
+  }
+
+  Future<void> _presentWhatsNew(
+    SettingsRepository settingsRepository,
+    String version,
+  ) async {
+    if (!mounted) return;
+    if (!AppReleaseNotes.shouldShowWhatsNew(
+      lastSeenVersion: settingsRepository.current.lastSeenVersion,
+      installedVersion: version,
+    )) {
+      return;
+    }
+    final ReleaseNotes? release = AppReleaseNotes.forVersion(version);
+    if (release == null) return;
+    await showWhatsNewDialog(context, releaseNotes: release);
+    try {
+      await settingsRepository.setLastSeenVersion(release.version);
+    } on Object {
+      // Ignore storage errors so startup remains non-fatal.
+    }
+  }
 
   void _select(int index) => setState(() => _index = index);
 
