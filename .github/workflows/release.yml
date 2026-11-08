@@ -37,8 +37,10 @@ jobs:
         with:
           channel: stable
           flutter-version: '3.47.5'
-          cache-path: /home/vagrant/build/srclib/flutter
+          cache-path: /home/vagrant/build/srclib
           pub-cache-path: /home/vagrant/build/com.cairnlabworks.okanzo/.pub-cache
+      - name: Set Flutter SDK ownership
+        run: chown -R "$(id -u):$(id -g)" "$FLUTTER_ROOT"
       - run: flutter config --android-sdk "$ANDROID_SDK_ROOT" --no-analytics
       - run: flutter pub get --enforce-lockfile
 
