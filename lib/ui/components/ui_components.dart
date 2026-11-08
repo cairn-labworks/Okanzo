@@ -1,5 +1,17 @@
 import 'package:flutter/material.dart';
 
+class PageHeading extends StatelessWidget {
+  const PageHeading(this.title, {super.key});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    header: true,
+    child: Text(title, style: Theme.of(context).textTheme.headlineLarge),
+  );
+}
+
 /// A left-aligned section title with an optional trailing value.
 class SectionHeader extends StatelessWidget {
   const SectionHeader({required this.title, this.trailing, super.key});
@@ -15,17 +27,22 @@ class SectionHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          Text(
-            title,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          Flexible(
+            child: Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           if (trailing != null)
-            Text(
-              trailing!,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurface,
+            Flexible(
+              child: Text(
+                trailing!,
+                textAlign: TextAlign.end,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
             ),
         ],
@@ -34,11 +51,12 @@ class SectionHeader extends StatelessWidget {
   }
 }
 
-/// Round icon badge used in front of holdings and category headers.
+/// Quiet rounded-square badge used for holdings and settings categories.
 class TypeAvatar extends StatelessWidget {
-  const TypeAvatar(this.icon, {this.accent, super.key});
+  const TypeAvatar(this.icon, {this.accent, this.size = 40, super.key});
 
   final IconData icon;
+  final double size;
 
   /// When set, tints the avatar with this colour (Midnight theme) instead of
   /// the default `secondaryContainer`.
@@ -50,23 +68,23 @@ class TypeAvatar extends StatelessWidget {
     final Color? accent = this.accent;
     if (accent != null) {
       return Container(
-        width: 40,
-        height: 40,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.20),
-          borderRadius: BorderRadius.circular(12),
+          color: accent.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(size * 0.3),
         ),
-        child: Icon(icon, size: 22, color: accent),
+        child: Icon(icon, size: size * 0.55, color: accent),
       );
     }
     return Container(
-      width: 40,
-      height: 40,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: colors.secondaryContainer,
-        shape: BoxShape.circle,
+        color: colors.secondaryContainer.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(size * 0.3),
       ),
-      child: Icon(icon, size: 22, color: colors.onSecondaryContainer),
+      child: Icon(icon, size: size * 0.5, color: colors.primary),
     );
   }
 }
@@ -134,6 +152,7 @@ class EmptyState extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Icon(icon, size: 48, color: theme.colorScheme.primary),
           const SizedBox(height: 16),

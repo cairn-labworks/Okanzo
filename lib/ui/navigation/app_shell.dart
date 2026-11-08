@@ -158,18 +158,28 @@ class _AppShellState extends State<AppShell> {
     if (!useRail) {
       return Scaffold(
         body: body,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: _select,
-          destinations: <Widget>[
-            for (final TopLevelDestination destination
-                in TopLevelDestination.values)
-              NavigationDestination(
-                icon: Icon(destination.unselectedIcon),
-                selectedIcon: Icon(destination.selectedIcon),
-                label: destination.label.tr(context),
+        bottomNavigationBar: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant,
+                width: 0.5,
               ),
-          ],
+            ),
+          ),
+          child: NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: _select,
+            destinations: <Widget>[
+              for (final TopLevelDestination destination
+                  in TopLevelDestination.values)
+                NavigationDestination(
+                  icon: Icon(destination.unselectedIcon),
+                  selectedIcon: Icon(destination.selectedIcon),
+                  label: destination.label.tr(context),
+                ),
+            ],
+          ),
         ),
       );
     }

@@ -12,12 +12,10 @@ class AppStyle extends ThemeExtension<AppStyle> {
     required this.colorfulCategories,
   });
 
-  /// Gradient painted behind the net-worth card. When null the card falls back
-  /// to a flat `primaryContainer` fill.
+  /// Legacy hero gradient token. Quiet overview uses an unboxed headline.
   final List<Color>? heroGradient;
 
-  /// Text/icon colour used on top of [heroGradient]. Null when there is no
-  /// gradient (the card then uses `onPrimaryContainer`).
+  /// Foreground paired with the legacy [heroGradient] treatment.
   final Color? heroForeground;
 
   /// Gradient painted behind the "Add" FAB. Null keeps the default fill.
@@ -34,15 +32,11 @@ class AppStyle extends ThemeExtension<AppStyle> {
     colorfulCategories: false,
   );
 
-  /// The dark, colourful look: gradient hero, gradient FAB, tinted categories.
+  /// Deep-green tonal gradients with quiet, per-category accents.
   static const AppStyle midnight = AppStyle(
-    heroGradient: <Color>[
-      Color(0xFF12B5A6),
-      Color(0xFF4F46E5),
-      Color(0xFF7C3AED),
-    ],
-    heroForeground: Colors.white,
-    fabGradient: <Color>[Color(0xFF7C3AED), Color(0xFFEC4899)],
+    heroGradient: <Color>[Color(0xFF24382D), Color(0xFF20302A)],
+    heroForeground: Color(0xFFC1E1BD),
+    fabGradient: <Color>[Color(0xFFC1E1BD), Color(0xFFB2D0AE)],
     colorfulCategories: true,
   );
 

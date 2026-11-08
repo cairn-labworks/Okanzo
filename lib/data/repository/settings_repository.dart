@@ -37,6 +37,10 @@ class AppSettings {
   final List<StockExchange> preferredExchanges;
   final AppLanguage language;
   final String? lastSeenVersion;
+
+  /// Midnight was previously selectable independently of light/dark mode.
+  AppThemeMode get appearanceMode =>
+      appTheme == AppTheme.midnight ? AppThemeMode.dark : themeMode;
 }
 
 /// Section names used when persisting a portfolio's custom category order.
@@ -165,6 +169,44 @@ class SettingsRepository {
 
   Future<void> setAppTheme(AppTheme theme) async {
     await _prefs.setString(_keyAppTheme, theme.storageName);
+    _emit();
+  }
+
+  Future<void> setAppearanceMode(AppThemeMode mode) async {
+    final Map<String, String?> original = <String, String?>{
+      _keyThemeMode: _prefs.getString(_keyThemeMode),
+      _keyAppTheme: _prefs.getString(_keyAppTheme),
+    };
+    bool saved = false;
+    try {
+      if (!await _prefs.setString(_keyThemeMode, mode.storageName) ||
+          !await _prefs.setString(
+            _keyAppTheme,
+            (mode == AppThemeMode.dark ? AppTheme.midnight : AppTheme.classic)
+                .storageName,
+          )) {
+        throw StateError('Theme preference could not be saved');
+      }
+      saved = true;
+    } finally {
+      if (!saved) {
+        try {
+          for (final MapEntry<String, String?> entry in original.entries) {
+            final String? value = entry.value;
+            final bool restored = value == null
+                ? await _prefs.remove(entry.key)
+                : await _prefs.setString(entry.key, value);
+            if (!restored) {
+              throw StateError(
+                'Theme preference could not be saved or restored',
+              );
+            }
+          }
+        } finally {
+          await _prefs.reload();
+        }
+      }
+    }
     _emit();
   }
 

@@ -6,7 +6,6 @@ import '../../data/backup/backup_models.dart';
 import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
 import '../../domain/model/app_language.dart';
-import '../../domain/model/app_theme.dart';
 import '../../domain/model/release_notes.dart';
 import '../../domain/model/theme_mode.dart';
 import '../../l10n/app_localizations.dart';
@@ -15,6 +14,7 @@ import '../../util/currency_util.dart';
 import '../../util/link_opener.dart';
 import '../../util/relative_time.dart';
 import '../components/form_components.dart';
+import '../components/ui_components.dart';
 import '../components/whats_new_dialog.dart';
 import 'settings_view_model.dart';
 
@@ -30,6 +30,15 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   SettingsViewModel? _viewModel;
+  int? _selectedCategory;
+
+  void _back() {
+    if (_selectedCategory != null) {
+      setState(() => _selectedCategory = null);
+    } else {
+      widget.onClose();
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -69,62 +78,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (BuildContext context, _) {
         final settings = viewModel.settings;
         final int? fxUpdatedAt = viewModel.fxUpdatedAt;
-        return Scaffold(
-          appBar: AppBar(
-            title: Text('Settings'.tr(context)),
-            leading: IconButton(
-              tooltip: 'Back'.tr(context),
-              onPressed: widget.onClose,
-              icon: const Icon(Icons.arrow_back),
-            ),
-          ),
-          body: ListView(
+        final List<_SettingsSection> categories = <_SettingsSection>[
+          _SettingsSection(
+            title: 'Appearance'.tr(context),
+            description: 'Language, theme & colour'.tr(context),
+            icon: Icons.contrast,
             children: <Widget>[
-              _SectionTitle('Appearance'.tr(context)),
               _SettingRow(
                 title: 'App language'.tr(context),
-                subtitle: settings.language == AppLanguage.system
-                    ? 'Use device language'.tr(context)
+                subtitle: 'Use device language'.tr(context),
+                value: settings.language == AppLanguage.system
+                    ? 'System default'.tr(context)
                     : settings.language.displayName,
                 onTap: () => _showLanguageDialog(settings.language),
               ),
               _SettingRow(
-                title: 'App theme'.tr(context),
-                subtitle:
-                    '${settings.appTheme.displayName.tr(context)} — '
-                    '${settings.appTheme.description.tr(context)}',
-                onTap: () => _showAppThemeDialog(settings.appTheme),
-              ),
-              _SettingRow(
-                title: 'Light / dark'.tr(context),
-                subtitle: settings.appTheme == AppTheme.midnight
-                    ? 'Always dark on Midnight'.tr(context)
-                    : settings.themeMode.displayName.tr(context),
-                onTap: settings.appTheme == AppTheme.midnight
-                    ? null
-                    : () => _showThemeDialog(settings.themeMode),
+                title: 'Theme'.tr(context),
+                subtitle: 'Light or Midnight dark'.tr(context),
+                value: settings.appearanceMode.displayName.tr(context),
+                onTap: () => _showThemeDialog(settings.appearanceMode),
               ),
               _SwitchRow(
                 title: 'Dynamic color'.tr(context),
-                subtitle: settings.appTheme == AppTheme.midnight
-                    ? 'Not used on Midnight'.tr(context)
-                    : 'Use colors from your wallpaper (Android 12+)'.tr(
+                subtitle: settings.appearanceMode == AppThemeMode.dark
+                    ? 'Not used in dark mode'.tr(context)
+                    : 'Use wallpaper colors in light mode (Android 12+)'.tr(
                         context,
                       ),
                 value:
                     settings.dynamicColor &&
-                    settings.appTheme == AppTheme.classic,
-                onChanged: settings.appTheme == AppTheme.midnight
+                    settings.appearanceMode != AppThemeMode.dark,
+                onChanged: settings.appearanceMode == AppThemeMode.dark
                     ? null
                     : viewModel.setDynamicColor,
               ),
-              const Divider(height: 1),
-              _SectionTitle('Currency'.tr(context)),
+            ],
+          ),
+          _SettingsSection(
+            title: 'Currency'.tr(context),
+            description: 'Base currency & number display'.tr(context),
+            icon: Icons.monetization_on_outlined,
+            children: <Widget>[
               _SettingRow(
                 title: 'Base currency'.tr(context),
-                subtitle:
-                    '${settings.baseCurrency} — '
-                    '${CurrencyUtil.displayName(settings.baseCurrency)}',
+                subtitle: CurrencyUtil.displayName(settings.baseCurrency),
+                value: settings.baseCurrency,
                 onTap: () => _showCurrencyPicker(settings.baseCurrency),
               ),
               _SwitchRow(
@@ -137,8 +135,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ? null
                     : viewModel.setSimpleNetWorth,
               ),
-              const Divider(height: 1),
-              _SectionTitle('Security'.tr(context)),
+            ],
+          ),
+          _SettingsSection(
+            title: 'Security'.tr(context),
+            description: 'App lock & device authentication'.tr(context),
+            icon: Icons.lock_outline,
+            children: <Widget>[
               _SwitchRow(
                 title: 'App lock'.tr(context),
                 subtitle: 'Require fingerprint or device PIN to open Okanzo'.tr(
@@ -147,8 +150,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: settings.appLockEnabled,
                 onChanged: _onAppLockChanged,
               ),
-              const Divider(height: 1),
-              _SectionTitle('Data'.tr(context)),
+            ],
+          ),
+          _SettingsSection(
+            title: 'Data'.tr(context),
+            description: 'Exchange rates, export & import'.tr(context),
+            icon: Icons.cloud_upload_outlined,
+            children: <Widget>[
               _SettingRow(
                 title: 'Exchange rates'.tr(context),
                 subtitle: fxUpdatedAt == null
@@ -184,8 +192,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: 'Restore from an encrypted backup file'.tr(context),
                 onTap: _startImport,
               ),
-              const Divider(height: 1),
-              _SectionTitle('About'.tr(context)),
+            ],
+          ),
+          _SettingsSection(
+            title: 'About'.tr(context),
+            description: 'Release notes & privacy'.tr(context),
+            icon: Icons.info_outline,
+            children: <Widget>[
               _SettingRow(
                 title: 'Okanzo'.tr(context),
                 subtitle: 'Version {version} · Open source (MIT)'
@@ -200,7 +213,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               _SettingRow(
                 title: 'Privacy policy'.tr(context),
-                subtitle: 'cairn-labworks.github.io/Okanzo/privacy',
                 onTap: _openPrivacyPolicy,
               ),
               Padding(
@@ -218,8 +230,122 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
             ],
+          ),
+        ];
+        final _SettingsSection? category = _selectedCategory == null
+            ? null
+            : categories[_selectedCategory!];
+        return PopScope(
+          canPop: _selectedCategory == null,
+          onPopInvokedWithResult: (bool didPop, Object? result) {
+            if (!didPop) _back();
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              toolbarHeight: 48,
+              leading: IconButton(
+                tooltip: 'Back'.tr(context),
+                onPressed: _back,
+                icon: const Icon(Icons.arrow_back),
+              ),
+              actions: <Widget>[
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 26),
+                  child: Center(
+                    child: Text(
+                      'OKANZO',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        letterSpacing: 1.2,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            body: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
+              children: <Widget>[
+                PageHeading(category?.title ?? 'Settings'.tr(context)),
+                const SizedBox(height: 28),
+                if (category != null)
+                  ...category.children
+                else ...<Widget>[
+                  Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: <Widget>[
+                        for (int i = 0; i < categories.length; i++) ...<Widget>[
+                          if (i > 0) const Divider(indent: 16, endIndent: 16),
+                          ListTile(
+                            key: ValueKey<String>('settings-category-$i'),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                            ),
+                            minVerticalPadding: 16,
+                            horizontalTitleGap: 12,
+                            leading: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.secondaryContainer,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                categories[i].icon,
+                                size: 20,
+                                color: theme.colorScheme.secondary,
+                              ),
+                            ),
+                            title: Text(
+                              categories[i].title,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            subtitle: Text(
+                              categories[i].description,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            trailing: Icon(
+                              Icons.chevron_right,
+                              size: 18,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            onTap: () => setState(() => _selectedCategory = i),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.lock_outline,
+                        size: 14,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Private by design. Stored on your device.'.tr(
+                            context,
+                          ),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         );
       },
@@ -287,66 +413,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _showThemeDialog(AppThemeMode selected) async {
-    final AppThemeMode? mode = await showDialog<AppThemeMode>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: Text('Theme'.tr(context)),
-        content: RadioGroup<AppThemeMode>(
-          groupValue: selected,
-          onChanged: (AppThemeMode? value) => Navigator.of(context).pop(value),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              for (final AppThemeMode mode in AppThemeMode.values)
-                RadioListTile<AppThemeMode>(
-                  value: mode,
-                  title: Text(mode.displayName.tr(context)),
-                ),
-            ],
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Close'.tr(context)),
-          ),
-        ],
-      ),
-    );
-    if (mode != null) _viewModel?.setThemeMode(mode);
-  }
-
-  Future<void> _showAppThemeDialog(AppTheme selected) async {
-    final AppTheme? theme = await showDialog<AppTheme>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: Text('App theme'.tr(context)),
-        content: RadioGroup<AppTheme>(
-          groupValue: selected,
-          onChanged: (AppTheme? value) => Navigator.of(context).pop(value),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              for (final AppTheme option in AppTheme.values)
-                RadioListTile<AppTheme>(
-                  value: option,
-                  title: Text(option.displayName.tr(context)),
-                  subtitle: Text(option.description.tr(context)),
-                ),
-            ],
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Close'.tr(context)),
-          ),
-        ],
-      ),
-    );
-    if (theme != null) _viewModel?.setAppTheme(theme);
-  }
+  Future<void> _showThemeDialog(AppThemeMode selected) => showDialog<void>(
+    context: context,
+    builder: (_) =>
+        _ThemeDialog(selected: selected, onSave: _viewModel!.setAppearanceMode),
+  );
 
   Future<void> _showCurrencyPicker(String selected) async {
     final String? code = await showCurrencyPickerDialog(
@@ -422,6 +493,90 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
   }
+}
+
+class _ThemeDialog extends StatefulWidget {
+  const _ThemeDialog({required this.selected, required this.onSave});
+
+  final AppThemeMode selected;
+  final Future<void> Function(AppThemeMode) onSave;
+
+  @override
+  State<_ThemeDialog> createState() => _ThemeDialogState();
+}
+
+class _ThemeDialogState extends State<_ThemeDialog> {
+  bool _saving = false;
+  String? _error;
+
+  Future<void> _select(AppThemeMode? mode) async {
+    if (mode == null || _saving) return;
+    if (mode == widget.selected) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.onSave(mode);
+      if (mounted) Navigator.of(context).pop();
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = '$error';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !_saving,
+    child: AlertDialog(
+      title: Text('Theme'.tr(context)),
+      scrollable: true,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          RadioGroup<AppThemeMode>(
+            groupValue: widget.selected,
+            onChanged: _select,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                for (final AppThemeMode mode in AppThemeMode.values)
+                  RadioListTile<AppThemeMode>(
+                    key: ValueKey<AppThemeMode>(mode),
+                    value: mode,
+                    enabled: !_saving,
+                    title: Text(mode.displayName.tr(context)),
+                    subtitle: mode == AppThemeMode.dark
+                        ? Text('Midnight'.tr(context))
+                        : null,
+                  ),
+              ],
+            ),
+          ),
+          if (_saving) const LinearProgressIndicator(),
+          if (_error != null)
+            Text(
+              "Couldn't save theme: {error}"
+                  .tr(context)
+                  .replaceAll('{error}', _error!),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
+          child: Text('Close'.tr(context)),
+        ),
+      ],
+    ),
+  );
 }
 
 class _LanguageDialog extends StatefulWidget {
@@ -516,65 +671,76 @@ class _LanguageDialogState extends State<_LanguageDialog> {
   );
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
+class _SettingsSection {
+  const _SettingsSection({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.children,
+  });
 
   final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(left: 20, right: 20, top: 16, bottom: 4),
-      child: Text(
-        title,
-        style: theme.textTheme.titleSmall?.copyWith(
-          color: theme.colorScheme.primary,
-        ),
-      ),
-    );
-  }
+  final String description;
+  final IconData icon;
+  final List<Widget> children;
 }
 
 class _SettingRow extends StatelessWidget {
   const _SettingRow({
     required this.title,
-    required this.subtitle,
+    this.subtitle,
+    this.value,
     this.onTap,
     this.trailing,
   });
 
   final String title;
-  final String subtitle;
+  final String? subtitle;
+  final String? value;
   final VoidCallback? onTap;
   final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Widget row = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(title, style: theme.textTheme.bodyLarge),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant,
+            width: 0.5,
           ),
-          ?trailing,
-        ],
+        ),
+      ),
+      child: ListTile(
+        title: Text(title),
+        subtitle: subtitle == null ? null : Text(subtitle!),
+        titleTextStyle: theme.textTheme.bodyMedium,
+        subtitleTextStyle: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        contentPadding: EdgeInsets.zero,
+        minVerticalPadding: 16,
+        onTap: onTap,
+        trailing:
+            trailing ??
+            (value != null
+                ? ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 120),
+                    child: onTap == null
+                        ? Text(
+                            value!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          )
+                        : PickerChip(label: value!),
+                  )
+                : onTap == null
+                ? null
+                : const Icon(Icons.chevron_right, size: 18)),
       ),
     );
-    return onTap == null ? row : InkWell(onTap: onTap, child: row);
   }
 }
 
@@ -594,30 +760,26 @@ class _SwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final ValueChanged<bool>? onChanged = this.onChanged;
-    return InkWell(
-      onTap: onChanged == null ? null : () => onChanged(!value),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(title, style: theme.textTheme.bodyLarge),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Switch(value: value, onChanged: onChanged),
-          ],
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant,
+            width: 0.5,
+          ),
         ),
+      ),
+      child: SwitchListTile(
+        title: Text(title, style: theme.textTheme.bodyMedium),
+        subtitle: Text(
+          subtitle,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        contentPadding: EdgeInsets.zero,
+        value: value,
+        onChanged: onChanged,
       ),
     );
   }
@@ -827,7 +989,6 @@ class _PasswordField extends StatelessWidget {
       textCapitalization: TextCapitalization.none,
       keyboardType: visible ? TextInputType.visiblePassword : null,
       decoration: InputDecoration(
-        border: const OutlineInputBorder(),
         labelText: label,
         helperText: isError ? null : supportingText,
         errorText: isError ? supportingText : null,

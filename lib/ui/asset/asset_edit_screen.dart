@@ -6,7 +6,7 @@ import '../../domain/model/stock_exchange.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../components/form_components.dart';
-import '../theme/theme.dart';
+import '../components/ui_components.dart';
 import 'asset_edit_view_model.dart';
 import 'asset_form_state.dart';
 import 'stock_exchange_field.dart';
@@ -99,67 +99,125 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
         if (!form.loading) _primeControllers(form);
         return Scaffold(
           appBar: AppBar(
-            title: Text(
-              (form.isEditing ? 'Edit asset' : 'New asset').tr(context),
-            ),
+            toolbarHeight: 48,
             actions: <Widget>[
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: 16),
+                child: Center(
+                  child: Text(
+                    'OKANZO',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      letterSpacing: 1.2,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
               if (form.isEditing)
                 IconButton(
                   tooltip: 'Delete'.tr(context),
                   onPressed: viewModel.delete,
-                  icon: const Icon(Icons.delete),
+                  icon: const Icon(Icons.delete_outline),
                 ),
-              TextButton(
-                onPressed: form.isSaving || form.isFetchingPrice
-                    ? null
-                    : viewModel.save,
-                child: Text('Save'.tr(context)),
-              ),
             ],
           ),
           body: form.loading
               ? const Center(child: CircularProgressIndicator())
               : ListView(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 8,
+                    horizontal: 26,
+                    vertical: 12,
                   ),
                   children: <Widget>[
-                    DropdownSelector<AssetType>(
-                      label: 'Type'.tr(context),
-                      selected: form.type,
-                      options: AssetType.values,
-                      optionLabel: (AssetType type) =>
-                          type.displayName.tr(context),
-                      onSelected: viewModel.onTypeChange,
+                    PageHeading(
+                      (form.isEditing ? 'Edit asset' : 'Add asset').tr(context),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
+                    if (form.valuationMode == ValuationMode.flat)
+                      LabeledTextField(
+                        controller: _manualValue,
+                        label: 'Value'.tr(context),
+                        prefix: CurrencyUtil.symbol(form.currency),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        prominent: true,
+                        onChanged: viewModel.onManualValueChange,
+                      )
+                    else
+                      _EstimatedValueSummary(
+                        amount: CurrencyUtil.format(
+                          form.estimatedValue,
+                          form.currency,
+                        ),
+                        caption: form.valuationMode == ValuationMode.market
+                            ? form.lastPrice == null
+                                  ? null
+                                  : '${form.quantity.isEmpty ? '0' : form.quantity} × '
+                                        '${CurrencyUtil.format(form.lastPrice!, form.currency)}'
+                            : '${form.quantity.isEmpty ? '0' : form.quantity} × '
+                                  '${CurrencyUtil.format(double.tryParse(form.pricePerUnit) ?? 0, form.currency)}',
+                      ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: <Widget>[
+                        DropdownSelector<AssetType>(
+                          label: 'Type'.tr(context),
+                          selected: form.type,
+                          options: AssetType.values,
+                          optionLabel: (AssetType type) =>
+                              type.displayName.tr(context),
+                          onSelected: viewModel.onTypeChange,
+                          compact: true,
+                        ),
+                        CurrencySelector(
+                          currency: form.currency,
+                          compact: true,
+                          onTap: () => _pickCurrency(form.currency),
+                        ),
+                        if (form.usesStockExchange)
+                          StockExchangeField(
+                            selected:
+                                form.isEditing ||
+                                    form.symbol.trim().isNotEmpty ||
+                                    viewModel.preferredExchanges.contains(
+                                      form.exchange,
+                                    )
+                                ? form.exchange
+                                : null,
+                            preferredExchanges: viewModel.preferredExchanges,
+                            onSavePreferences: viewModel.savePreferredExchanges,
+                            compact: true,
+                            onSelected: (StockExchange exchange) {
+                              viewModel.onExchangeChange(exchange);
+                              _symbol.text = viewModel.form.symbol;
+                            },
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     LabeledTextField(
                       controller: _name,
                       label: 'Name'.tr(context),
                       placeholder: 'e.g. Apple shares'.tr(context),
                       onChanged: viewModel.onNameChange,
                     ),
-                    const SizedBox(height: 16),
-                    _CurrencyField(
-                      currency: form.currency,
-                      onTap: () => _pickCurrency(form.currency),
-                    ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     ..._valuationFields(form, viewModel),
-                    const SizedBox(height: 16),
-                    LabeledTextField(
+                    const SizedBox(height: 8),
+                    OptionalNotesField(
+                      key: const ValueKey<String>('asset-notes'),
                       controller: _notes,
-                      label: 'Notes (optional)'.tr(context),
-                      singleLine: false,
                       onChanged: viewModel.onNotesChange,
                     ),
-                    const SizedBox(height: 16),
-                    _EstimatedValueCard(
-                      amount: CurrencyUtil.format(
-                        form.estimatedValue,
-                        form.currency,
-                      ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: form.isSaving || form.isFetchingPrice
+                          ? null
+                          : viewModel.save,
+                      child: Text('Save asset'.tr(context)),
                     ),
                     const SizedBox(height: 24),
                   ],
@@ -177,129 +235,93 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     switch (form.valuationMode) {
       case ValuationMode.market:
         return <Widget>[
-          if (form.usesStockExchange) ...<Widget>[
-            StockExchangeField(
-              selected:
-                  form.isEditing ||
-                      form.symbol.trim().isNotEmpty ||
-                      viewModel.preferredExchanges.contains(form.exchange)
-                  ? form.exchange
-                  : null,
-              preferredExchanges: viewModel.preferredExchanges,
-              onSavePreferences: viewModel.savePreferredExchanges,
-              onSelected: (StockExchange exchange) {
-                viewModel.onExchangeChange(exchange);
-                _symbol.text = viewModel.form.symbol;
-              },
+          FormFieldPair(
+            first: LabeledTextField(
+              controller: _symbol,
+              label: 'Ticker symbol'.tr(context),
+              placeholder: form.usesStockExchange
+                  ? 'e.g. {symbol}'
+                        .tr(context)
+                        .replaceAll('{symbol}', form.exchange.example)
+                  : 'e.g. {symbol}'
+                        .tr(context)
+                        .replaceAll('{symbol}', 'BTC-USD, ETH-USD'),
+              onChanged: viewModel.onSymbolChange,
             ),
-            const SizedBox(height: 16),
-          ],
-          LabeledTextField(
-            controller: _symbol,
-            label: 'Ticker symbol'.tr(context),
-            placeholder: form.usesStockExchange
-                ? 'e.g. {symbol}'
-                      .tr(context)
-                      .replaceAll('{symbol}', form.exchange.example)
-                : 'e.g. {symbol}'
-                      .tr(context)
-                      .replaceAll('{symbol}', 'BTC-USD, ETH-USD'),
-            supportingText: !form.usesStockExchange
-                ? null
-                : form.exchange.suffix.isEmpty
-                ? 'Enter a Yahoo Finance ticker. Full exchange-qualified '
-                          'tickers are also accepted.'
-                      .tr(context)
-                : '{suffix} is added automatically. '
-                          'Full Yahoo Finance tickers are also accepted.'
-                      .tr(context)
-                      .replaceAll('{suffix}', form.exchange.suffix),
-            onChanged: viewModel.onSymbolChange,
+            second: LabeledTextField(
+              controller: _quantity,
+              label: 'Quantity'.tr(context),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              onChanged: viewModel.onQuantityChange,
+            ),
           ),
-          const SizedBox(height: 16),
-          LabeledTextField(
-            controller: _quantity,
-            label: 'Quantity'.tr(context),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: viewModel.onQuantityChange,
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(
+              onPressed: form.isFetchingPrice ? null : viewModel.fetchPrice,
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                alignment: AlignmentDirectional.centerStart,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (form.isFetchingPrice)
+                    const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    const Icon(Icons.refresh, size: 16),
+                  const SizedBox(width: 6),
+                  Flexible(child: Text('Fetch latest price'.tr(context))),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              OutlinedButton(
-                onPressed: form.isFetchingPrice ? null : viewModel.fetchPrice,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    if (form.isFetchingPrice)
-                      const Padding(
-                        padding: EdgeInsets.only(right: 8),
-                        child: SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                    Text('Fetch latest price'.tr(context)),
-                  ],
+          if (form.lastPrice == null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Fetch the latest closing price, or it will show as 0 '
+                        'until refreshed.'
+                    .tr(context),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: form.lastPrice != null
-                ? Text(
-                    'Last price: {price}'
-                        .tr(context)
-                        .replaceAll(
-                          '{price}',
-                          CurrencyUtil.format(form.lastPrice!, form.currency),
-                        ),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  )
-                : Text(
-                    'Fetch the latest closing price, or it will show as 0 '
-                            'until refreshed.'
-                        .tr(context),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-          ),
+            ),
         ];
       case ValuationMode.quantity:
         return <Widget>[
-          LabeledTextField(
-            controller: _quantity,
-            label: 'Quantity'.tr(context),
-            suffix: form.type.unitLabel,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: viewModel.onQuantityChange,
-          ),
-          const SizedBox(height: 16),
-          LabeledTextField(
-            controller: _pricePerUnit,
-            label: 'Price per {unit}'
-                .tr(context)
-                .replaceAll('{unit}', form.type.unitLabel ?? 'unit'),
-            prefix: CurrencyUtil.symbol(form.currency),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: viewModel.onPricePerUnitChange,
+          FormFieldPair(
+            first: LabeledTextField(
+              controller: _quantity,
+              label: 'Quantity'.tr(context),
+              suffix: form.type.unitLabel,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              onChanged: viewModel.onQuantityChange,
+            ),
+            second: LabeledTextField(
+              controller: _pricePerUnit,
+              label: 'Price per {unit}'
+                  .tr(context)
+                  .replaceAll('{unit}', form.type.unitLabel ?? 'unit'),
+              prefix: CurrencyUtil.symbol(form.currency),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              onChanged: viewModel.onPricePerUnitChange,
+            ),
           ),
         ];
       case ValuationMode.flat:
-        return <Widget>[
-          LabeledTextField(
-            controller: _manualValue,
-            label: 'Value'.tr(context),
-            prefix: CurrencyUtil.symbol(form.currency),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: viewModel.onManualValueChange,
-          ),
-        ];
+        return const <Widget>[];
     }
   }
 
@@ -314,61 +336,44 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
   }
 }
 
-class _CurrencyField extends StatelessWidget {
-  const _CurrencyField({required this.currency, required this.onTap});
-
-  final String currency;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: InputDecorator(
-        decoration: InputDecoration(
-          border: const OutlineInputBorder(),
-          labelText: 'Currency'.tr(context),
-        ),
-        child: Text('$currency — ${CurrencyUtil.displayName(currency)}'),
-      ),
-    );
-  }
-}
-
-class _EstimatedValueCard extends StatelessWidget {
-  const _EstimatedValueCard({required this.amount});
+class _EstimatedValueSummary extends StatelessWidget {
+  const _EstimatedValueSummary({required this.amount, this.caption});
 
   final String amount;
+  final String? caption;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.secondaryContainer,
-      borderRadius: BorderRadius.circular(shapeLarge),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Text(
-              'Estimated value'.tr(context),
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: theme.colorScheme.onSecondaryContainer,
-              ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Estimated value'.tr(context),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
-            Flexible(
-              child: Text(
-                amount,
-                textAlign: TextAlign.end,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSecondaryContainer,
-                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            amount,
+            style: theme.textTheme.displaySmall?.copyWith(
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          if (caption != null) ...<Widget>[
+            const SizedBox(height: 6),
+            Text(
+              caption!,
+              key: const ValueKey<String>('asset-valuation-caption'),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }

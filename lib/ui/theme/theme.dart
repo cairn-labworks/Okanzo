@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 
 import '../../domain/model/app_theme.dart';
@@ -56,29 +57,35 @@ const TextTheme appTypography = TextTheme(
     height: 52 / 45,
   ),
   displaySmall: TextStyle(
-    fontWeight: FontWeight.w400,
-    fontSize: 36,
-    height: 44 / 36,
+    fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
+    fontWeight: FontWeight.w500,
+    fontSize: 38,
+    height: 1.2,
+    letterSpacing: -1.7,
   ),
   headlineLarge: TextStyle(
     fontWeight: FontWeight.w600,
-    fontSize: 32,
-    height: 40 / 32,
+    fontSize: 31,
+    height: 1.2,
+    letterSpacing: -1,
   ),
   headlineMedium: TextStyle(
     fontWeight: FontWeight.w600,
     fontSize: 28,
     height: 36 / 28,
+    letterSpacing: -0.8,
   ),
   headlineSmall: TextStyle(
     fontWeight: FontWeight.w600,
     fontSize: 24,
     height: 32 / 24,
+    letterSpacing: -0.6,
   ),
   titleLarge: TextStyle(
-    fontWeight: FontWeight.w500,
+    fontWeight: FontWeight.w600,
     fontSize: 22,
     height: 28 / 22,
+    letterSpacing: -0.4,
   ),
   titleMedium: TextStyle(
     fontWeight: FontWeight.w500,
@@ -96,19 +103,19 @@ const TextTheme appTypography = TextTheme(
     fontWeight: FontWeight.w400,
     fontSize: 16,
     height: 24 / 16,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   ),
   bodyMedium: TextStyle(
     fontWeight: FontWeight.w400,
     fontSize: 14,
     height: 20 / 14,
-    letterSpacing: 0.25,
+    letterSpacing: 0,
   ),
   bodySmall: TextStyle(
     fontWeight: FontWeight.w400,
     fontSize: 12,
     height: 16 / 12,
-    letterSpacing: 0.4,
+    letterSpacing: 0,
   ),
   labelLarge: TextStyle(
     fontWeight: FontWeight.w500,
@@ -130,16 +137,16 @@ const TextTheme appTypography = TextTheme(
   ),
 );
 
-// Slightly rounded, friendly shapes consistent with Material 3.
+// Shared geometry for quiet inset surfaces and compact controls.
 const double shapeExtraSmall = 4;
 const double shapeSmall = 8;
-const double shapeMedium = 16;
-const double shapeLarge = 24;
+const double shapeMedium = 20;
+const double shapeLarge = 20;
 const double shapeExtraLarge = 28;
 
 /// Builds the app theme for the selected [appTheme]. [AppTheme.classic] adapts
 /// to [brightness] and an optional platform [dynamicScheme] (Material You),
-/// while [AppTheme.midnight] is always a fixed dark, colourful scheme.
+/// while [AppTheme.midnight] keeps the fixed deep-green palette.
 ThemeData buildTheme({
   required Brightness brightness,
   ColorScheme? dynamicScheme,
@@ -151,36 +158,114 @@ ThemeData buildTheme({
       ? midnightColors
       : (dynamicScheme ?? (dark ? darkColors : lightColors));
   final AppStyle appStyle = midnight ? AppStyle.midnight : AppStyle.classic;
+  final Typography typography = Typography.material2021(
+    platform: defaultTargetPlatform,
+  );
+  final TextTheme textTheme = (dark ? typography.white : typography.black)
+      .apply(bodyColor: scheme.onSurface, displayColor: scheme.onSurface)
+      .merge(appTypography);
   return ThemeData(
     useMaterial3: true,
     brightness: dark ? Brightness.dark : Brightness.light,
     colorScheme: scheme,
-    textTheme: appTypography,
+    scaffoldBackgroundColor: scheme.surface,
+    textTheme: textTheme,
     extensions: <ThemeExtension<dynamic>>[
       dark ? FinanceColors.dark : FinanceColors.light,
       appStyle,
     ],
     cardTheme: CardThemeData(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      color: scheme.surfaceContainerLow,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(shapeMedium),
       ),
     ),
     dialogTheme: DialogThemeData(
+      backgroundColor: scheme.surfaceContainerLow,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(shapeExtraLarge),
       ),
     ),
-    bottomSheetTheme: const BottomSheetThemeData(
-      shape: RoundedRectangleBorder(
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: scheme.surfaceContainerLow,
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(shapeExtraLarge),
         ),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(shapeExtraSmall),
+      border: UnderlineInputBorder(
+        borderSide: BorderSide(color: scheme.outlineVariant),
       ),
+      enabledBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      focusedBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: scheme.primary, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+      floatingLabelBehavior: FloatingLabelBehavior.always,
+      labelStyle: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+      helperMaxLines: 3,
+      errorMaxLines: 3,
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: scheme.surface,
+      foregroundColor: scheme.onSurface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      toolbarHeight: 72,
+      titleTextStyle: textTheme.headlineSmall?.copyWith(
+        color: scheme.onSurface,
+      ),
+      iconTheme: IconThemeData(color: scheme.onSurfaceVariant, size: 22),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: scheme.primary,
+      foregroundColor: scheme.onPrimary,
+      elevation: 0,
+      highlightElevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(shapeMedium),
+      ),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: scheme.surface,
+      surfaceTintColor: Colors.transparent,
+      indicatorColor: scheme.secondaryContainer,
+      elevation: 0,
+    ),
+    navigationRailTheme: NavigationRailThemeData(
+      backgroundColor: scheme.surface,
+      indicatorColor: scheme.secondaryContainer,
+      useIndicator: true,
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: scheme.surfaceContainerLow,
+      side: BorderSide.none,
+      shape: const StadiumBorder(),
+      labelStyle: textTheme.labelMedium?.copyWith(
+        color: scheme.onSurfaceVariant,
+      ),
+    ),
+    dividerTheme: DividerThemeData(
+      color: scheme.outlineVariant,
+      thickness: 0.5,
+      space: 1,
     ),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
   );

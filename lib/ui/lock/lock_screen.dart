@@ -25,55 +25,57 @@ class _LockScreenState extends State<LockScreen> {
     final ThemeData theme = Theme.of(context);
     return Scaffold(
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.lock_outlined,
-                  size: 44,
-                  color: theme.colorScheme.onPrimaryContainer,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 24),
-                child: Text(
-                  'Okanzo is locked'.tr(context),
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  child: Icon(
+                    Icons.lock_outlined,
+                    size: 44,
+                    color: theme.colorScheme.primary,
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Unlock with your fingerprint or device PIN to view your '
-                          'net worth.'
-                      .tr(context),
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                Padding(
+                  padding: const EdgeInsets.only(top: 24),
+                  child: Text(
+                    'Okanzo is locked'.tr(context),
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 32),
-                child: FilledButton.icon(
-                  onPressed: () => widget.onUnlock(),
-                  icon: const Icon(Icons.fingerprint, size: 20),
-                  label: Text('Unlock'.tr(context)),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Unlock with your fingerprint or device PIN to view your '
+                            'net worth.'
+                        .tr(context),
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.only(top: 32),
+                  child: FilledButton.icon(
+                    onPressed: () => widget.onUnlock(),
+                    icon: const Icon(Icons.fingerprint, size: 20),
+                    label: Text('Unlock'.tr(context)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../asset/asset_edit_view_model.dart' show AssetEditEventType;
 import '../components/form_components.dart';
+import '../components/ui_components.dart';
 import 'liability_edit_view_model.dart';
 import 'liability_form_state.dart';
 
@@ -88,60 +89,42 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
         if (!form.loading) _primeControllers(form);
         return Scaffold(
           appBar: AppBar(
-            title: Text(
-              (form.isEditing ? 'Edit liability' : 'New liability').tr(context),
-            ),
+            toolbarHeight: 48,
             actions: <Widget>[
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: 16),
+                child: Center(
+                  child: Text(
+                    'OKANZO',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      letterSpacing: 1.2,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
               if (form.isEditing)
                 IconButton(
                   tooltip: 'Delete'.tr(context),
                   onPressed: viewModel.delete,
-                  icon: const Icon(Icons.delete),
+                  icon: const Icon(Icons.delete_outline),
                 ),
-              TextButton(
-                onPressed: form.isSaving ? null : viewModel.save,
-                child: Text('Save'.tr(context)),
-              ),
             ],
           ),
           body: form.loading
               ? const Center(child: CircularProgressIndicator())
               : ListView(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 8,
+                    horizontal: 26,
+                    vertical: 12,
                   ),
                   children: <Widget>[
-                    DropdownSelector<LiabilityType>(
-                      label: 'Type'.tr(context),
-                      selected: form.type,
-                      options: LiabilityType.values,
-                      optionLabel: (LiabilityType type) =>
-                          type.displayName.tr(context),
-                      onSelected: viewModel.onTypeChange,
-                    ),
-                    const SizedBox(height: 16),
-                    LabeledTextField(
-                      controller: _name,
-                      label: 'Name'.tr(context),
-                      placeholder: 'e.g. Home loan'.tr(context),
-                      onChanged: viewModel.onNameChange,
-                    ),
-                    const SizedBox(height: 16),
-                    InkWell(
-                      onTap: () => _pickCurrency(form.currency),
-                      child: InputDecorator(
-                        decoration: InputDecoration(
-                          border: const OutlineInputBorder(),
-                          labelText: 'Currency'.tr(context),
-                        ),
-                        child: Text(
-                          '${form.currency} — '
-                          '${CurrencyUtil.displayName(form.currency)}',
-                        ),
+                    PageHeading(
+                      (form.isEditing ? 'Edit liability' : 'Add liability').tr(
+                        context,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     LabeledTextField(
                       controller: _amount,
                       label: 'Outstanding amount'.tr(context),
@@ -149,15 +132,49 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      prominent: true,
+                      supportingText: 'The amount you still owe'.tr(context),
                       onChanged: viewModel.onAmountChange,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: <Widget>[
+                        DropdownSelector<LiabilityType>(
+                          label: 'Type'.tr(context),
+                          selected: form.type,
+                          options: LiabilityType.values,
+                          optionLabel: (LiabilityType type) =>
+                              type.displayName.tr(context),
+                          onSelected: viewModel.onTypeChange,
+                          compact: true,
+                        ),
+                        CurrencySelector(
+                          currency: form.currency,
+                          compact: true,
+                          onTap: () => _pickCurrency(form.currency),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     LabeledTextField(
+                      controller: _name,
+                      label: 'Name'.tr(context),
+                      placeholder: 'e.g. Home loan'.tr(context),
+                      onChanged: viewModel.onNameChange,
+                    ),
+                    const SizedBox(height: 16),
+                    OptionalNotesField(
                       controller: _notes,
-                      label: 'Notes (optional)'.tr(context),
-                      singleLine: false,
                       onChanged: viewModel.onNotesChange,
                     ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: form.isSaving ? null : viewModel.save,
+                      child: Text('Save liability'.tr(context)),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
         );

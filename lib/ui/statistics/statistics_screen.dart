@@ -86,10 +86,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   onTap: _clearAllSelections,
                   child: ListView(
                     padding: const EdgeInsets.only(
-                      top: 8,
+                      top: 16,
                       bottom: 24,
-                      left: 16,
-                      right: 16,
+                      left: 24,
+                      right: 24,
                     ),
                     children: <Widget>[
                       _ChartCard(
@@ -268,7 +268,7 @@ class _ChartCard extends StatelessWidget {
     );
 
     return Card(
-      color: theme.colorScheme.surfaceContainerHighest,
+      color: theme.colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(shapeLarge),
       ),

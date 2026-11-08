@@ -15,7 +15,9 @@ A private, offline-first app for tracking your **net worth** — your assets min
   - **Gold** and other quantity-based assets: enter a quantity and a price per unit.
   - **Cash, property, vehicles, …**: enter a single value.
 - **Liabilities** — track loans, mortgages, credit cards, pending payments and taxes.
-- **Net worth at a glance** — the home screen shows total assets, total liabilities and your net worth, converted into a single base currency. Assets and liabilities are grouped into **collapsible cards per category** (tap to expand for individual items; the collapsed card shows the category total).
+- **Focused entry forms** — a large page heading leads into the value or live estimate, followed by compact type/currency/exchange chips and understated underlined fields. Related valuation fields sit side by side when space and text size allow; narrow or large-text layouts stack them. Long-press the exchange chip for ticker/suffix guidance. Optional notes expand in place and existing notes open automatically. The save action follows the form rather than sitting in a fixed bottom bar; single-value assets avoid repeating the value. Currency rounding and all valuation modes remain unchanged.
+- **Grouped settings** — open **Appearance**, **Currency**, **Security**, **Data** or **About** from the compact, descriptive category list. Back returns to the category list, then to the app. All existing preferences and actions remain available.
+- **Quiet overview** — the home screen has an unboxed net-worth headline, simple asset/liability totals and compact tabs always labelled **Assets** and **Liabilities**, without counts. The selected section uses one quiet panel with **collapsible category rows** (tap to expand individual holdings; collapsed rows show category totals and item counts). Expansion and ordering remain available, and adding a record selects its corresponding section. Everything is converted into your base currency.
   - **Simple net worth**: enable **Settings → Currency → Simple net worth** to shorten only the home headline. Thousands are abbreviated from 1,000 (e.g. `$7K` for `$7,054`); smaller amounts stay exact. INR uses lakh/crore for larger values (e.g. `₹1.65 Cr` for `₹1,65,34,234`); other currencies use M/B (e.g. `$165.3M`). The option is off by default and persists across restarts. Detailed totals stay exact, and **Hide balances** still masks the headline.
 - **Custom ordering** — long-press and drag to reorder category cards, or reorder items within a category (items stay within their own type). Your order is saved.
 - **Portfolios** — create multiple portfolios (e.g. *Personal*, *Family*, *Business*), set a **default** that powers the home screen, and switch between them at any time. Each portfolio has its own net worth.
@@ -27,8 +29,8 @@ A private, offline-first app for tracking your **net worth** — your assets min
   - Screenshot protection: `FLAG_SECURE` on Android, and a blur overlay in the iOS app switcher.
   - **Hide balances** hides every monetary amount behind `••••` with one tap.
 - **Encrypted export / import** — back up selected portfolios (or all of them) to a password-protected file (AES-256-GCM with PBKDF2-HMAC-SHA256), and restore them on any device.
-- **Adaptive Material 3 UI** — light/dark/system themes, **Material You** dynamic color on Android 12+, a bottom navigation bar on phones and a navigation rail on tablets and larger windows.
-- **Localized UI** — English plus Spanish, Brazilian Portuguese, French, German, Japanese, Korean, Simplified Chinese, Italian, Hindi, Arabic, Indonesian, Turkish, Polish, Dutch, Vietnamese, Thai, Russian, Swedish, Danish and Norwegian Bokmål. By default, Okanzo uses the first supported language in the device's preferred-language list and falls back to English if none is supported. Choose **Settings → App language** to override it; the choice takes effect immediately and persists across restarts. Select **Use device language** to return to automatic selection. Arabic uses right-to-left layout. Exchange selection and preference dialogs are localized too. Changing app language does not change your base currency or device-based number formatting.
+- **Unified precision UI** — deep-green surfaces, sage accents, crisp number typography, quiet inset cards and subtle separators across the dashboard, statistics, portfolios, settings, entry forms and dialogs. **Settings → Appearance → Theme** is the single appearance control: **Light** uses the light palette, **Dark** uses **Midnight**, and **System default** switches between those variants with the device. Material You wallpaper colors remain available in light mode on Android 12+; dark mode keeps the fixed Midnight palette. Existing light/dark/system choices and legacy Midnight preferences are preserved. Navigation adapts from a bottom bar on phones to a rail on tablets and larger windows.
+- **Localized UI** — English plus Spanish, Brazilian Portuguese, French, German, Japanese, Korean, Simplified Chinese, Italian, Hindi, Arabic, Indonesian, Turkish, Polish, Dutch, Vietnamese, Thai, Russian, Swedish, Danish and Norwegian Bokmål. By default, Okanzo uses the first supported language in the device's preferred-language list and falls back to English if none is supported. Choose **Settings → Appearance → App language** to override it; the choice takes effect immediately and persists across restarts. Select **Use device language** to return to automatic selection. Arabic uses right-to-left layout. Exchange selection and preference dialogs are localized too. Changing app language does not change your base currency or device-based number formatting.
 - **What's new highlights** — a pop-up summarizes the key highlights of the latest release the first time you open Okanzo after installing or updating to a new version (after unlocking if app lock is enabled). You can also reopen the release highlights anytime from **Settings → About → What's new**.
 
 ## Privacy
@@ -176,9 +178,12 @@ This checks USD-to-EUR-to-GBP conversion for crypto, stocks and funds through th
 To test simple net worth on an Android device (including wireless debugging):
 
 ```bash
+flutter build apk --debug --build-number <installed-debug-version-code-or-higher> \
+  --target integration_test/simple_net_worth_test.dart
 flutter drive --driver test_driver/simple_net_worth.dart \
   --target integration_test/simple_net_worth_test.dart \
-  --build-number <installed-debug-version-code-or-higher> -d <android-device-id>
+  --use-application-binary build/app/outputs/flutter-apk/app-debug.apk \
+  --no-pub -d <android-device-id>
 ```
 
 This uses the separate debug app, creates temporary INR/USD portfolios, and
@@ -196,11 +201,31 @@ version code first:
 adb -s <android-device-id> shell dumpsys package com.cairnlabworks.okanzo.debug
 ```
 
-Set `--build-number` to at least that version code to avoid a downgrade-triggered
-uninstall. If app lock is enabled, unlock the debug app when prompted.
+Set `--build-number` on the APK build to at least that version code to avoid a
+downgrade-triggered uninstall; `flutter drive` consumes the prebuilt APK. Keep
+the host driver inside this repository so its package imports resolve.
+If app lock is enabled, unlock the debug app when prompted.
 Keep the device awake and unlocked, with the debug app in the foreground,
 throughout testing. A sleeping device can stop Flutter frame pumping and stall
 both the test and its settings cleanup.
+
+For the selected Midnight layout and its device regressions:
+
+```bash
+flutter build apk --debug --build-number <installed-debug-version-code-or-higher> \
+  --target integration_test/midnight_precision_test.dart
+flutter drive --driver test_driver/simple_net_worth.dart \
+  --target integration_test/midnight_precision_test.dart \
+  --use-application-binary build/app/outputs/flutter-apk/app-debug.apk \
+  --no-pub -d <android-device-id>
+```
+
+This checks the descriptive settings drill-in, heading placement, compact chips,
+paired valuation fields, inline save actions, encrypted persistence and 150%
+Arabic RTL on the actual device. It intentionally keeps **Midnight** selected,
+restores all other preferences and removes only its own test portfolio. After
+testing, rebuild and reinstall the normal debug entrypoint (`lib/main.dart`)
+with the same adequate build number so launching the app does not rerun tests.
 
 The test suite covers the pieces where behaviour must be exact: currency formatting and rounding, net-worth and FX conversion, asset/liability form validation and entity mapping, category ordering, list labels, localization coverage, quote/FX response parsing, and — most importantly — the encrypted backup format, which is verified byte-for-byte against a file produced by the original Android implementation.
 

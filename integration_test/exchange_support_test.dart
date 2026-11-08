@@ -10,10 +10,13 @@ import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
 import 'package:okanzo/ui/asset/stock_exchange_field.dart';
+import 'package:okanzo/ui/components/form_components.dart';
 import 'package:okanzo/ui/home/home_screen.dart';
 import 'package:okanzo/ui/home/home_view_model.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../test/helpers/popup_menu_helpers.dart';
 
 class _Listing {
   const _Listing(
@@ -103,18 +106,15 @@ Future<void> _enter(WidgetTester tester, String label, String value) async {
 }
 
 Future<void> _select<T>(WidgetTester tester, String label) async {
-  await _tap(tester, find.byType(DropdownMenu<T>));
+  await _tap(tester, find.byType(PopupMenuButton<T>));
   await _tap(tester, find.text(label).last);
 }
 
-List<String> _exchangeLabels(WidgetTester tester) => tester
-    .widget<DropdownMenu<Object>>(find.byType(DropdownMenu<Object>))
-    .dropdownMenuEntries
-    .map((DropdownMenuEntry<Object> entry) => entry.label)
-    .toList();
+List<String> _exchangeLabels(WidgetTester tester) =>
+    popupMenuLabels<Object>(tester);
 
 Future<void> _openPreferences(WidgetTester tester) async {
-  await _tap(tester, find.byType(DropdownMenu<Object>));
+  await _tap(tester, find.byType(PopupMenuButton<Object>));
   await _tap(tester, find.text(StockExchangeField.manageLabel).last);
   expect(find.text('Preferred exchanges'), findsOneWidget);
 }
@@ -218,10 +218,7 @@ Future<void> _pickCurrency(WidgetTester tester, String currency) async {
       .position
       .jumpTo(0);
   await tester.pumpAndSettle();
-  await _tap(
-    tester,
-    find.text('$current — ${CurrencyUtil.displayName(current)}'),
-  );
+  await _tap(tester, find.byType(CurrencySelector));
   await _tap(
     tester,
     find.text('$currency — ${CurrencyUtil.displayName(currency)}').last,
@@ -329,7 +326,7 @@ void main() {
         if (_captureScreenshots && listing.exchange == StockExchange.bse) {
           FocusManager.instance.primaryFocus?.unfocus();
           await tester.pumpAndSettle();
-          await _tap(tester, find.byType(DropdownMenu<Object>));
+          await _tap(tester, find.byType(PopupMenuButton<Object>));
           await binding.takeScreenshot('exchange-picker');
           await _tap(tester, find.text(StockExchange.bse.displayName).last);
         }
@@ -337,7 +334,10 @@ void main() {
         await _waitUntil(
           tester,
           () =>
-              find.textContaining('Last price:').evaluate().isNotEmpty ||
+              find
+                  .byKey(const ValueKey<String>('asset-valuation-caption'))
+                  .evaluate()
+                  .isNotEmpty ||
               find
                   .textContaining("Couldn't fetch price:")
                   .evaluate()
@@ -357,7 +357,7 @@ void main() {
           await tester.pumpAndSettle();
           await binding.takeScreenshot('bse-quote');
         }
-        await _tap(tester, find.widgetWithText(TextButton, 'Save'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Save asset'));
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
@@ -411,7 +411,7 @@ void main() {
         final AssetEntity asset = saved[listing.symbol]!;
         expect(
           find.text(
-            'Last price: ${CurrencyUtil.format(asset.lastPrice!, asset.currency)}',
+            '2 × ${CurrencyUtil.format(asset.lastPrice!, asset.currency)}',
           ),
           findsOneWidget,
         );
@@ -470,7 +470,10 @@ void main() {
             ?.text,
         '0700.HK',
       );
-      expect(find.textContaining('Last price:'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('asset-valuation-caption')),
+        findsOneWidget,
+      );
       await tester.pageBack();
       await tester.pumpAndSettle();
       await (await SharedPreferences.getInstance()).reload();
@@ -484,7 +487,7 @@ void main() {
         isNull,
       );
       if (_captureScreenshots) {
-        await _tap(tester, find.byType(DropdownMenu<Object>));
+        await _tap(tester, find.byType(PopupMenuButton<Object>));
         await binding.takeScreenshot('empty-exchanges');
         await _tap(tester, find.text(StockExchangeField.manageLabel).last);
         await _tap(tester, find.text('Cancel'));
@@ -621,7 +624,7 @@ void main() {
         );
         expect(_editor(tester).form.estimatedValue, expectedEur * 2);
         expect(
-          find.text('Last price: ${CurrencyUtil.format(expectedEur, 'EUR')}'),
+          find.text('2 × ${CurrencyUtil.format(expectedEur, 'EUR')}'),
           findsOneWidget,
         );
         await _tap(tester, find.text('Fetch latest price'));
@@ -633,7 +636,7 @@ void main() {
         expect(_editor(tester).form.currency, 'EUR');
         expect(_editor(tester).form.lastPrice, greaterThan(0));
         final double fetchedEur = _editor(tester).form.lastPrice!;
-        await _tap(tester, find.widgetWithText(TextButton, 'Save'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Save asset'));
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
@@ -664,7 +667,7 @@ void main() {
           _editor(tester).form.lastPrice,
           closeTo(expectedGbp, expectedGbp * 1e-12),
         );
-        await _tap(tester, find.widgetWithText(TextButton, 'Save'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Save asset'));
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,

@@ -18,11 +18,13 @@ import 'package:okanzo/domain/model/stock_exchange.dart';
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
 import 'package:okanzo/ui/asset/stock_exchange_field.dart';
+import 'package:okanzo/ui/components/form_components.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'helpers/fx_test_helpers.dart';
+import 'helpers/popup_menu_helpers.dart';
 
 class _AssetDao extends Fake implements AssetDao {
   final List<AssetEntity> assets = <AssetEntity>[];
@@ -419,7 +421,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final Finder exchangeMenu = find.byType(DropdownMenu<Object>);
+    final Finder exchangeMenu = find.byType(PopupMenuButton<Object>);
     await tester.ensureVisible(exchangeMenu);
     await tester.tap(exchangeMenu);
     await tester.pumpAndSettle();
@@ -443,10 +445,7 @@ void main() {
     await tester.tap(fetch);
     await tester.pumpAndSettle();
     expect(requests, <String>['RELIANCE.BO']);
-    expect(
-      find.text('Last price: ${CurrencyUtil.format(100, 'INR')}'),
-      findsOneWidget,
-    );
+    expect(find.text('0 × ${CurrencyUtil.format(100, 'INR')}'), findsOneWidget);
 
     await tester.ensureVisible(ticker);
     await tester.enterText(ticker, '0700.HK');
@@ -496,9 +495,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final Finder currency = find.text(
-        'USD — ${CurrencyUtil.displayName('USD')}',
-      );
+      final Finder currency = find.byType(CurrencySelector);
       await tester.ensureVisible(currency);
       await tester.tap(currency);
       await tester.pumpAndSettle();
@@ -508,13 +505,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('EUR — ${CurrencyUtil.displayName('EUR')}'),
-        findsOneWidget,
+        tester.widget<CurrencySelector>(find.byType(CurrencySelector)).currency,
+        'EUR',
       );
-      expect(
-        find.text('Last price: ${CurrencyUtil.format(5, 'EUR')}'),
-        findsOneWidget,
-      );
+      expect(find.text('2 × ${CurrencyUtil.format(5, 'EUR')}'), findsOneWidget);
       final Finder fetch = find.text('Fetch latest price');
       await tester.ensureVisible(fetch);
       await tester.tap(fetch);
@@ -522,13 +516,23 @@ void main() {
 
       expect(requests, <String>['AAPL']);
       expect(
-        find.text('Last price: ${CurrencyUtil.format(50, 'EUR')}'),
+        find.text('2 × ${CurrencyUtil.format(50, 'EUR')}'),
         findsOneWidget,
+      );
+      await tester.scrollUntilVisible(
+        find.byType(CurrencySelector),
+        -100,
+        scrollable: find.byType(Scrollable).first,
       );
       expect(
-        find.text('EUR — ${CurrencyUtil.displayName('EUR')}'),
-        findsOneWidget,
+        tester.widget<CurrencySelector>(find.byType(CurrencySelector)).currency,
+        'EUR',
       );
+      tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position
+          .jumpTo(0);
+      await tester.pumpAndSettle();
       expect(find.text(CurrencyUtil.format(100, 'EUR')), findsOneWidget);
     },
   );
@@ -545,14 +549,11 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  List<String> menuLabels(WidgetTester tester) => tester
-      .widget<DropdownMenu<Object>>(find.byType(DropdownMenu<Object>))
-      .dropdownMenuEntries
-      .map((DropdownMenuEntry<Object> entry) => entry.label)
-      .toList();
+  List<String> menuLabels(WidgetTester tester) =>
+      popupMenuLabels<Object>(tester);
 
   Future<void> openPreferences(WidgetTester tester) async {
-    final Finder menu = find.byType(DropdownMenu<Object>);
+    final Finder menu = find.byType(PopupMenuButton<Object>);
     await tester.ensureVisible(menu);
     await tester.tap(menu);
     await tester.pumpAndSettle();
@@ -619,10 +620,9 @@ void main() {
     ]);
     expect(
       tester
-          .widget<DropdownMenu<Object>>(find.byType(DropdownMenu<Object>))
-          .controller
-          ?.text,
-      StockExchange.us.displayName,
+          .widget<StockExchangeField>(find.byType(StockExchangeField))
+          .selected,
+      StockExchange.us,
     );
   });
 
@@ -696,14 +696,8 @@ void main() {
       StockExchange.us.displayName,
       StockExchangeField.manageLabel,
     ]);
-    final DropdownMenu<Object> menu = tester.widget<DropdownMenu<Object>>(
-      find.byType(DropdownMenu<Object>),
-    );
-    expect(menu.controller?.text, StockExchange.hongKong.displayName);
-    expect(
-      find.text('Last price: ${CurrencyUtil.format(10, 'HKD')}'),
-      findsOneWidget,
-    );
+    expect(find.text(StockExchange.hongKong.displayName), findsOneWidget);
+    expect(find.text('2 × ${CurrencyUtil.format(10, 'HKD')}'), findsOneWidget);
     final Finder ticker = find.widgetWithText(TextField, 'Ticker symbol');
     expect(tester.widget<TextField>(ticker).controller?.text, '0700.HK');
   });
@@ -719,7 +713,7 @@ void main() {
             .selected,
         StockExchange.bse,
       );
-      final Finder typeMenu = find.byType(DropdownMenu<AssetType>);
+      final Finder typeMenu = find.byType(PopupMenuButton<AssetType>);
       await tester.tap(typeMenu);
       await tester.pumpAndSettle();
       await tester.tap(find.text(AssetType.mutualFund.displayName).last);

@@ -78,10 +78,10 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
           ),
           body: ListView.separated(
             padding: const EdgeInsets.only(
-              top: 8,
+              top: 16,
               bottom: 96,
-              left: 16,
-              right: 16,
+              left: 24,
+              right: 24,
             ),
             itemCount: rows.length,
             separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -179,7 +179,7 @@ class _PortfolioCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     return Card(
-      color: theme.colorScheme.surfaceContainerHighest,
+      color: theme.colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(shapeLarge),
       ),
@@ -199,9 +199,30 @@ class _PortfolioCard extends StatelessWidget {
                   ),
                 ),
                 if (row.portfolio.isDefault)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Chip(label: Text('Default'.tr(context))),
+                  Flexible(
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 4),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.1,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Default'.tr(context),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 PopupMenuButton<String>(
                   tooltip: 'More'.tr(context),
@@ -235,9 +256,12 @@ class _PortfolioCard extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
             Text(
               CurrencyUtil.format(row.netWorth, row.baseCurrency),
-              style: theme.textTheme.headlineSmall,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
             ),
             Text(
               '{assets} assets · {liabilities} liabilities'
@@ -290,10 +314,7 @@ class _NameDialogState extends State<_NameDialog> {
         controller: _controller,
         autofocus: true,
         onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(
-          border: const OutlineInputBorder(),
-          labelText: 'Name'.tr(context),
-        ),
+        decoration: InputDecoration(labelText: 'Name'.tr(context)),
       ),
       actions: <Widget>[
         TextButton(
