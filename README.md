@@ -123,7 +123,10 @@ signing key and this key is only the upload key.
 
 The **Release** workflow (`.github/workflows/release.yml`) runs on `v*` tags, or manually from the
 Actions tab. It builds the signed `.aab` and per-ABI APKs and attaches them as a workflow artifact. It
-needs these repository secrets:
+uses F-Droid's pinned Linux build image, canonical checkout/SDK locations and
+individual ABI targets to avoid environment-dependent Flutter/NDK output.
+Official reproducibility still requires F-Droid's independent verification.
+It needs these repository secrets:
 
 | Secret | Value |
 | --- | --- |

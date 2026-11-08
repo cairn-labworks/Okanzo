@@ -15,6 +15,7 @@ import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/components/form_components.dart';
 import 'package:okanzo/ui/components/ui_components.dart';
+import 'package:okanzo/ui/components/whats_new_dialog.dart';
 import 'package:okanzo/ui/home/home_screen.dart';
 import 'package:okanzo/ui/home/net_worth_card.dart';
 import 'package:okanzo/ui/settings/settings_screen.dart';
@@ -306,6 +307,26 @@ void main() {
       passed('one Theme selector persists Light, System and Midnight Dark');
       await _back(tester);
       expect(find.text('Language, theme & colour'), findsOneWidget);
+      await _tap(tester, find.text('About'));
+      await _tap(tester, find.text('Okanzo'));
+      expect(find.byType(AboutDialog), findsOneWidget);
+      expect(find.byType(WhatsNewDialog), findsNothing);
+      expect(
+        tester.widget<AboutDialog>(find.byType(AboutDialog)).applicationVersion,
+        AppReleaseNotes.currentVersion,
+      );
+      final closeLabel = MaterialLocalizations.of(
+        tester.element(find.byType(AboutDialog)),
+      ).closeButtonLabel;
+      await _tap(tester, find.text(closeLabel));
+      await _tap(tester, find.text("What's new"));
+      expect(find.byType(WhatsNewDialog), findsOneWidget);
+      expect(find.byType(AboutDialog), findsNothing);
+      await _tap(tester, find.text('Got it'));
+      await _back(tester);
+      passed(
+        'app/version information is separate from current release highlights',
+      );
       await _back(tester);
       expect(find.byType(HomeScreen), findsOneWidget);
       passed(
