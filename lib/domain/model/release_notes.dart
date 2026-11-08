@@ -42,9 +42,45 @@ class ReleaseNotes {
 class AppReleaseNotes {
   const AppReleaseNotes._();
 
-  static const String currentVersion = '1.3.0';
+  static const String currentVersion = '1.4.0';
 
   static const List<ReleaseNotes> all = <ReleaseNotes>[
+    ReleaseNotes(
+      version: '1.4.0',
+      highlights: <ReleaseHighlight>[
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.theme,
+          title: 'Midnight and Quiet overview',
+          description: 'Enjoy sage accents, a clear net-worth headline and separate Assets and Liabilities tabs.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.assets,
+          title: 'Simpler settings and forms',
+          description: "Use grouped settings, one Theme choice and compact entry forms. App information is separate from What's new.",
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.currency,
+          title: 'Simple net worth',
+          description:
+              'Shorten the home net worth using currency-specific units',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.exchanges,
+          title: 'Reliable currency conversion',
+          description: 'Market prices stay in your holding currency when fetching, refreshing or switching currencies.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.backup,
+          title: 'Smoother refresh and backups',
+          description: 'Reduce duplicate lookups and keep backup encryption off the main thread.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.releaseNotes,
+          title: "What's new on update",
+          description: 'See key release highlights after updating Okanzo, or reopen them anytime from Settings.',
+        ),
+      ],
+    ),
     ReleaseNotes(
       version: '1.3.0',
       highlights: <ReleaseHighlight>[

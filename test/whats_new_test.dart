@@ -426,7 +426,13 @@ void main() {
           find.text('Novedades en ${AppReleaseNotes.currentVersion}'),
           findsOneWidget,
         );
-        expect(find.text('21 idiomas en la aplicación'), findsOneWidget);
+        expect(
+          find.text(
+            const AppLocalizations(Locale('es'))
+                .text(AppReleaseNotes.current.highlights.first.title),
+          ),
+          findsOneWidget,
+        );
 
         await tester.tap(find.text('Entendido'));
         await tester.pumpAndSettle();

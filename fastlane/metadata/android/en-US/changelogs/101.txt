@@ -1,0 +1,6 @@
+Midnight styling and Quiet overview with Assets/Liabilities tabs and aligned amounts.
+Grouped settings, one Light/Dark/System theme choice, focused forms and optional notes.
+Simple net worth uses currency-specific units; detailed totals stay exact.
+Fix market-price currency conversion and separate app information from What's new.
+Show release highlights after updates.
+Reduce duplicate quote/FX lookups and move backup encryption off the main thread. Existing data and backups remain compatible.

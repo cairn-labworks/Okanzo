@@ -9,14 +9,17 @@ Features:
 * Select stock exchanges across the US, China, Europe, Japan, Hong Kong, and India, and save a preferred-exchange shortlist.
 * Look up full Yahoo Finance tickers for other markets and cryptocurrency pairs.
 * Track loans, mortgages, credit cards, pending payments, and taxes.
-* See total assets, liabilities, and net worth in one base currency.
+* See total assets, liabilities, and net worth in the Quiet overview, with separate Assets and Liabilities tabs.
+* Optionally shorten the net-worth headline with currency-specific units, including lakh/crore for INR.
 * Create and switch between multiple portfolios.
 * Reorder categories and individual items.
 * Convert holdings using cached exchange rates.
 * Encrypt the local database with SQLCipher and protect its key with Android Keystore.
 * Optionally lock the app with fingerprint or device credentials.
 * Export and import password-protected encrypted backups.
-* Use a Material 3 interface with light, dark, and dynamic-color themes.
+* Use the sage light theme or deep-green Midnight dark theme, or follow your device. Wallpaper colors are available in light mode on Android 12+.
+* Find preferences in grouped settings and enter holdings with focused forms and optional notes.
+* See release highlights after updating, or reopen them from Settings. App information has its own About dialog.
 * Choose from 21 app languages in Settings, or follow your device language.
 
 Okanzo is offline-first. Network access is only used to look up public market prices and exchange rates. Only a ticker symbol or base currency code is sent. There are no accounts, analytics, or trackers, and portfolio values, names, and holdings are never transmitted.
