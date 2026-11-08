@@ -787,6 +787,55 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final Locale locale in <Locale>[
+    const Locale('en'),
+    const Locale('es'),
+  ]) {
+    testWidgets(
+      'Okanzo app information is separate from release highlights in $locale',
+      (WidgetTester tester) async {
+        await container.settingsRepository.setLastSeenVersion('1.2.5');
+        final strings = AppLocalizations(locale);
+        await tester.pumpWidget(
+          _app(container, SettingsScreen(onClose: () {}), locale: locale),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        await _tap(tester, find.text(strings.text('About')));
+        await _tap(tester, find.text('Okanzo'));
+        expect(find.byType(AboutDialog), findsOneWidget);
+        expect(find.byType(WhatsNewDialog), findsNothing);
+        final AboutDialog information = tester.widget<AboutDialog>(
+          find.byType(AboutDialog),
+        );
+        expect(information.applicationName, 'Okanzo');
+        expect(information.applicationVersion, AppReleaseNotes.currentVersion);
+        expect(information.applicationLegalese, contains('MIT'));
+        expect(
+          find.text(strings.text('Private by design. Stored on your device.')),
+          findsOneWidget,
+        );
+        expect(container.settingsRepository.current.lastSeenVersion, '1.2.5');
+        await tester.tap(
+          find.text(
+            MaterialLocalizations.of(tester.element(find.byType(AboutDialog)))
+                .closeButtonLabel,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await _tap(tester, find.text(strings.text("What's new")));
+        expect(find.byType(WhatsNewDialog), findsOneWidget);
+        expect(find.byType(AboutDialog), findsNothing);
+        await _tap(tester, find.text(strings.text('Got it')));
+        expect(
+          container.settingsRepository.current.lastSeenVersion,
+          AppReleaseNotes.currentVersion,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('Midnight settings match the descriptive drill-in layout', (
     WidgetTester tester,
   ) async {
