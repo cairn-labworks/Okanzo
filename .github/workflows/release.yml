@@ -31,14 +31,16 @@ jobs:
           mkdir -p "$RELEASE_WORKSPACE"
           cp -a . "$RELEASE_WORKSPACE/"
           apt-get update
-          apt-get install -y --no-install-recommends jq
-          sdkmanager "platform-tools" "build-tools;36.0.0" "platforms;android-36"
+          apt-get install -y --no-install-recommends jq xz-utils
+          sdkmanager "cmdline-tools;latest" "platform-tools" "build-tools;36.0.0" "platforms;android-36"
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           flutter-version: '3.47.5'
-          cache-path: /home/vagrant/build/srclib/flutter
+          cache-path: /home/vagrant/build/srclib
           pub-cache-path: /home/vagrant/build/com.cairnlabworks.okanzo/.pub-cache
+      - name: Set Flutter SDK ownership
+        run: chown -R "$(id -u):$(id -g)" "$FLUTTER_ROOT"
       - run: flutter config --android-sdk "$ANDROID_SDK_ROOT" --no-analytics
       - run: flutter pub get --enforce-lockfile
 
@@ -71,7 +73,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: okanzo-${{ github.ref_name }}
+          name: okanzo-${{ github.ref_type == 'tag' && github.ref_name || github.run_id }}
           path: |
             /home/vagrant/build/com.cairnlabworks.okanzo/build/app/outputs/bundle/release/app-release.aab
             /home/vagrant/build/com.cairnlabworks.okanzo/build/app/outputs/flutter-apk/app-*-release.apk
