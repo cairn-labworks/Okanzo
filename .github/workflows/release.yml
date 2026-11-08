@@ -73,7 +73,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: okanzo-${{ github.ref_name }}
+          name: okanzo-${{ github.ref_type == 'tag' && github.ref_name || github.run_id }}
           path: |
             /home/vagrant/build/com.cairnlabworks.okanzo/build/app/outputs/bundle/release/app-release.aab
             /home/vagrant/build/com.cairnlabworks.okanzo/build/app/outputs/flutter-apk/app-*-release.apk
