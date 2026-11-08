@@ -42,11 +42,11 @@ class ReleaseNotes {
 class AppReleaseNotes {
   const AppReleaseNotes._();
 
-  static const String currentVersion = '1.4.0';
+  static const String currentVersion = '1.4.1';
 
   static const List<ReleaseNotes> all = <ReleaseNotes>[
     ReleaseNotes(
-      version: '1.4.0',
+      version: '1.4.1',
       highlights: <ReleaseHighlight>[
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.theme,
