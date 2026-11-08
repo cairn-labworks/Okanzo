@@ -204,7 +204,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: 'Version {version} · Open source (MIT)'
                     .tr(context)
                     .replaceAll('{version}', AppReleaseNotes.currentVersion),
-                onTap: _showWhatsNew,
+                onTap: _showAppInformation,
               ),
               _SettingRow(
                 title: "What's new".tr(context),
@@ -349,6 +349,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _showAppInformation() {
+    showAboutDialog(
+      context: context,
+      applicationName: 'Okanzo',
+      applicationVersion: AppReleaseNotes.currentVersion,
+      applicationIcon: Icon(
+        Icons.account_balance_wallet_outlined,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      applicationLegalese: 'Version {version} · Open source (MIT)'
+          .tr(context)
+          .replaceAll('{version}', AppReleaseNotes.currentVersion),
+      children: <Widget>[
+        const SizedBox(height: 16),
+        Text('Private by design. Stored on your device.'.tr(context)),
+      ],
     );
   }
 
