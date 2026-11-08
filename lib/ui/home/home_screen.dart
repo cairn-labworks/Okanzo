@@ -11,7 +11,6 @@ import '../components/type_icons.dart';
 import '../components/ui_components.dart';
 import '../theme/app_style.dart';
 import '../theme/colors.dart';
-import '../theme/theme.dart';
 import 'category_groups.dart';
 import 'home_view_model.dart';
 import 'net_worth_card.dart';
@@ -37,6 +36,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   HomeViewModel? _viewModel;
+  bool _showAssets = true;
   final ValueNotifier<Set<String>> _expanded = ValueNotifier<Set<String>>(
     <String>{},
   );
@@ -87,6 +87,8 @@ class _HomeScreenState extends State<HomeScreen> {
         final HomeState state = viewModel.state;
         return Scaffold(
           appBar: AppBar(
+            toolbarHeight: 56,
+            titleSpacing: 24,
             title: _PortfolioTitle(
               state: state,
               onSelect: viewModel.selectPortfolio,
@@ -100,7 +102,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       context,
                     ),
                 icon: Icon(
-                  state.hideBalances ? Icons.visibility_off : Icons.visibility,
+                  state.hideBalances
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                 ),
               ),
               IconButton(
@@ -119,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
               IconButton(
                 onPressed: widget.onOpenSettings,
                 tooltip: 'Settings'.tr(context),
-                icon: const Icon(Icons.settings),
+                icon: const Icon(Icons.settings_outlined),
               ),
             ],
           ),
@@ -140,6 +144,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         liability.id,
                       ),
                   viewModel: viewModel,
+                  showAssets: _showAssets,
+                  onSectionSelected: (bool value) =>
+                      setState(() => _showAssets = value),
                 ),
         );
       },
@@ -174,6 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Icons.account_balance_wallet,
                   label: 'New asset'.tr(context),
                   onTap: () {
+                    setState(() => _showAssets = true);
                     Navigator.of(sheetContext).pop();
                     widget.onOpenAssetEditor(portfolio.id, 0);
                   },
@@ -182,6 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Icons.inbox,
                   label: 'New liability'.tr(context),
                   onTap: () {
+                    setState(() => _showAssets = false);
                     Navigator.of(sheetContext).pop();
                     widget.onOpenLiabilityEditor(portfolio.id, 0);
                   },
@@ -216,7 +225,7 @@ class _PortfolioTitle extends StatelessWidget {
           child: Text(
             state.activePortfolio?.name ?? 'Okanzo',
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleLarge?.copyWith(
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -305,6 +314,8 @@ class _HomeContent extends StatelessWidget {
     required this.onOpenAsset,
     required this.onOpenLiability,
     required this.viewModel,
+    required this.showAssets,
+    required this.onSectionSelected,
   });
 
   final HomeState state;
@@ -313,31 +324,27 @@ class _HomeContent extends StatelessWidget {
   final ValueChanged<AssetEntity> onOpenAsset;
   final ValueChanged<LiabilityEntity> onOpenLiability;
   final HomeViewModel viewModel;
+  final bool showAssets;
+  final ValueChanged<bool> onSectionSelected;
 
   @override
   Widget build(BuildContext context) {
     final bool colorful = AppStyle.of(context).colorfulCategories;
     return ListView(
-      padding: const EdgeInsets.only(top: 8, bottom: 96),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 96),
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: NetWorthCard(
-            summary: state.summary,
-            hideBalances: state.hideBalances,
-            simpleNetWorth: state.simpleNetWorth,
-          ),
+        NetWorthCard(
+          summary: state.summary,
+          hideBalances: state.hideBalances,
+          simpleNetWorth: state.simpleNetWorth,
         ),
-        SectionHeader(
-          title: 'Assets'.tr(context),
-          trailing: state.hideBalances
-              ? CurrencyUtil.maskShort
-              : CurrencyUtil.format(
-                  state.summary.totalAssets,
-                  state.baseCurrency,
-                ),
+        const SizedBox(height: 24),
+        _HoldingSectionTabs(
+          showAssets: showAssets,
+          onSelected: onSectionSelected,
         ),
-        if (!state.hasAnyAssets)
+        const SizedBox(height: 16),
+        if (showAssets && !state.hasAnyAssets)
           EmptyState(
             icon: Icons.account_balance_wallet,
             title: 'No assets yet'.tr(context),
@@ -345,179 +352,263 @@ class _HomeContent extends StatelessWidget {
                 'Add stocks, cash, property and more to track their value.'.tr(
                   context,
                 ),
-          )
-        else
-          DragReorderColumn<AssetCategoryGroup>(
-            items: state.assetGroups,
-            keyOf: (AssetCategoryGroup group) => group.type,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            verticalSpacing: 12,
-            onReordered: (List<AssetCategoryGroup> groups) =>
-                viewModel.onAssetCategoriesReordered(
-                  groups.map((AssetCategoryGroup g) => g.type).toList(),
-                ),
-            itemBuilder:
-                (
-                  BuildContext context,
-                  AssetCategoryGroup group,
-                  bool dragging,
-                ) {
-                  final String key = 'asset-${group.type.storageName}';
-                  return ValueListenableBuilder<Set<String>>(
-                    valueListenable: expanded,
-                    builder:
-                        (BuildContext context, Set<String> expandedKeys, _) =>
-                            _CategoryCardShell(
-                              icon: assetTypeIcon(group.type),
-                              accent: colorful
-                                  ? categoryColorAt(group.type.index)
-                                  : null,
-                              title: group.type.displayName.tr(context),
-                              count: group.items.length,
-                              totalText: state.hideBalances
-                                  ? CurrencyUtil.maskShort
-                                  : CurrencyUtil.format(
-                                      group.total,
-                                      group.baseCurrency,
-                                    ),
-                              isExpanded: expandedKeys.contains(key),
-                              isDragging: dragging,
-                              onToggle: () => onToggleExpanded(key),
-                              expandedContentBuilder: () =>
-                                  DragReorderColumn<AssetLine>(
-                                    items: group.items,
-                                    keyOf: (AssetLine line) => line.asset.id,
-                                    onReordered: (List<AssetLine> items) =>
-                                        viewModel.onAssetItemsReordered(
-                                          items
-                                              .map((AssetLine l) => l.asset.id)
-                                              .toList(),
-                                        ),
-                                    itemBuilder:
-                                        (
-                                          BuildContext context,
-                                          AssetLine line,
-                                          bool itemDragging,
-                                        ) => _HoldingItemRow(
-                                          title: line.asset.name,
-                                          subtitle: assetSubtitle(
-                                            line.asset,
-                                            group.baseCurrency,
-                                            unitsLabel: 'units'.tr(context),
-                                          ),
-                                          amount: state.hideBalances
-                                              ? CurrencyUtil.maskShort
-                                              : CurrencyUtil.format(
-                                                  line.convertedValue,
-                                                  group.baseCurrency,
-                                                ),
-                                          isDragging: itemDragging,
-                                          onOpen: () => onOpenAsset(line.asset),
-                                        ),
-                                  ),
-                            ),
-                  );
-                },
           ),
-        const SizedBox(height: 12),
-        SectionHeader(
-          title: 'Liabilities'.tr(context),
-          trailing: state.hideBalances
-              ? CurrencyUtil.maskShort
-              : CurrencyUtil.format(
-                  state.summary.totalLiabilities,
-                  state.baseCurrency,
-                ),
-        ),
-        if (!state.hasAnyLiabilities)
+        if (showAssets && state.hasAnyAssets)
+          _CategoryPanel(
+            child: DragReorderColumn<AssetCategoryGroup>(
+              items: state.assetGroups,
+              keyOf: (AssetCategoryGroup group) => group.type,
+              onReordered: (List<AssetCategoryGroup> groups) =>
+                  viewModel.onAssetCategoriesReordered(
+                    groups.map((AssetCategoryGroup g) => g.type).toList(),
+                  ),
+              itemBuilder:
+                  (
+                    BuildContext context,
+                    AssetCategoryGroup group,
+                    bool dragging,
+                  ) {
+                    final String key = 'asset-${group.type.storageName}';
+                    return ValueListenableBuilder<Set<String>>(
+                      valueListenable: expanded,
+                      builder:
+                          (BuildContext context, Set<String> expandedKeys, _) =>
+                              _CategoryCardShell(
+                                icon: assetTypeIcon(group.type),
+                                accent: colorful
+                                    ? categoryColorAt(group.type.index)
+                                    : null,
+                                title: group.type.displayName.tr(context),
+                                count: group.items.length,
+                                totalText: state.hideBalances
+                                    ? CurrencyUtil.maskShort
+                                    : CurrencyUtil.format(
+                                        group.total,
+                                        group.baseCurrency,
+                                      ),
+                                isExpanded: expandedKeys.contains(key),
+                                isDragging: dragging,
+                                showDivider:
+                                    group.type != state.assetGroups.first.type,
+                                onToggle: () => onToggleExpanded(key),
+                                expandedContentBuilder: () =>
+                                    DragReorderColumn<AssetLine>(
+                                      items: group.items,
+                                      keyOf: (AssetLine line) => line.asset.id,
+                                      onReordered: (List<AssetLine> items) =>
+                                          viewModel.onAssetItemsReordered(
+                                            items
+                                                .map(
+                                                  (AssetLine l) => l.asset.id,
+                                                )
+                                                .toList(),
+                                          ),
+                                      itemBuilder:
+                                          (
+                                            BuildContext context,
+                                            AssetLine line,
+                                            bool itemDragging,
+                                          ) => _HoldingItemRow(
+                                            title: line.asset.name,
+                                            subtitle: assetSubtitle(
+                                              line.asset,
+                                              group.baseCurrency,
+                                              unitsLabel: 'units'.tr(context),
+                                            ),
+                                            amount: state.hideBalances
+                                                ? CurrencyUtil.maskShort
+                                                : CurrencyUtil.format(
+                                                    line.convertedValue,
+                                                    group.baseCurrency,
+                                                  ),
+                                            isDragging: itemDragging,
+                                            onOpen: () =>
+                                                onOpenAsset(line.asset),
+                                          ),
+                                    ),
+                              ),
+                    );
+                  },
+            ),
+          ),
+        if (!showAssets && !state.hasAnyLiabilities)
           EmptyState(
             icon: Icons.inbox,
             title: 'No liabilities'.tr(context),
             subtitle: 'Track loans, credit cards and pending payments here.'.tr(
               context,
             ),
-          )
-        else
-          DragReorderColumn<LiabilityCategoryGroup>(
-            items: state.liabilityGroups,
-            keyOf: (LiabilityCategoryGroup group) => group.type,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            verticalSpacing: 12,
-            onReordered: (List<LiabilityCategoryGroup> groups) =>
-                viewModel.onLiabilityCategoriesReordered(
-                  groups.map((LiabilityCategoryGroup g) => g.type).toList(),
-                ),
-            itemBuilder:
-                (
-                  BuildContext context,
-                  LiabilityCategoryGroup group,
-                  bool dragging,
-                ) {
-                  final String key = 'liability-${group.type.storageName}';
-                  return ValueListenableBuilder<Set<String>>(
-                    valueListenable: expanded,
-                    builder:
-                        (BuildContext context, Set<String> expandedKeys, _) =>
-                            _CategoryCardShell(
-                              icon: liabilityTypeIcon(group.type),
-                              accent: colorful
-                                  ? categoryColorAt(group.type.index + 5)
-                                  : null,
-                              title: group.type.displayName.tr(context),
-                              count: group.items.length,
-                              totalText: state.hideBalances
-                                  ? CurrencyUtil.maskShort
-                                  : CurrencyUtil.format(
-                                      group.total,
-                                      group.baseCurrency,
-                                    ),
-                              isExpanded: expandedKeys.contains(key),
-                              isDragging: dragging,
-                              onToggle: () => onToggleExpanded(key),
-                              expandedContentBuilder: () =>
-                                  DragReorderColumn<LiabilityLine>(
-                                    items: group.items,
-                                    keyOf: (LiabilityLine line) =>
-                                        line.liability.id,
-                                    onReordered: (List<LiabilityLine> items) =>
-                                        viewModel.onLiabilityItemsReordered(
-                                          items
-                                              .map(
-                                                (LiabilityLine l) =>
-                                                    l.liability.id,
-                                              )
-                                              .toList(),
-                                        ),
-                                    itemBuilder:
-                                        (
-                                          BuildContext context,
-                                          LiabilityLine line,
-                                          bool itemDragging,
-                                        ) => _HoldingItemRow(
-                                          title: line.liability.name,
-                                          subtitle: currencyNote(
-                                            line.liability.currency,
-                                            group.baseCurrency,
-                                          ),
-                                          amount: state.hideBalances
-                                              ? CurrencyUtil.maskShort
-                                              : CurrencyUtil.format(
-                                                  line.convertedValue,
-                                                  group.baseCurrency,
-                                                ),
-                                          isDragging: itemDragging,
-                                          onOpen: () =>
-                                              onOpenLiability(line.liability),
-                                        ),
+          ),
+        if (!showAssets && state.hasAnyLiabilities)
+          _CategoryPanel(
+            child: DragReorderColumn<LiabilityCategoryGroup>(
+              items: state.liabilityGroups,
+              keyOf: (LiabilityCategoryGroup group) => group.type,
+              onReordered: (List<LiabilityCategoryGroup> groups) =>
+                  viewModel.onLiabilityCategoriesReordered(
+                    groups.map((LiabilityCategoryGroup g) => g.type).toList(),
+                  ),
+              itemBuilder:
+                  (
+                    BuildContext context,
+                    LiabilityCategoryGroup group,
+                    bool dragging,
+                  ) {
+                    final String key = 'liability-${group.type.storageName}';
+                    return ValueListenableBuilder<Set<String>>(
+                      valueListenable: expanded,
+                      builder:
+                          (
+                            BuildContext context,
+                            Set<String> expandedKeys,
+                            _,
+                          ) => _CategoryCardShell(
+                            icon: liabilityTypeIcon(group.type),
+                            accent: colorful
+                                ? categoryColorAt(group.type.index + 5)
+                                : null,
+                            title: group.type.displayName.tr(context),
+                            count: group.items.length,
+                            totalText: state.hideBalances
+                                ? CurrencyUtil.maskShort
+                                : CurrencyUtil.format(
+                                    group.total,
+                                    group.baseCurrency,
                                   ),
-                            ),
-                  );
-                },
+                            isExpanded: expandedKeys.contains(key),
+                            isDragging: dragging,
+                            showDivider:
+                                group.type != state.liabilityGroups.first.type,
+                            onToggle: () => onToggleExpanded(key),
+                            expandedContentBuilder: () =>
+                                DragReorderColumn<LiabilityLine>(
+                                  items: group.items,
+                                  keyOf: (LiabilityLine line) =>
+                                      line.liability.id,
+                                  onReordered: (List<LiabilityLine> items) =>
+                                      viewModel.onLiabilityItemsReordered(
+                                        items
+                                            .map(
+                                              (LiabilityLine l) =>
+                                                  l.liability.id,
+                                            )
+                                            .toList(),
+                                      ),
+                                  itemBuilder:
+                                      (
+                                        BuildContext context,
+                                        LiabilityLine line,
+                                        bool itemDragging,
+                                      ) => _HoldingItemRow(
+                                        title: line.liability.name,
+                                        subtitle: currencyNote(
+                                          line.liability.currency,
+                                          group.baseCurrency,
+                                        ),
+                                        amount: state.hideBalances
+                                            ? CurrencyUtil.maskShort
+                                            : CurrencyUtil.format(
+                                                line.convertedValue,
+                                                group.baseCurrency,
+                                              ),
+                                        isDragging: itemDragging,
+                                        onOpen: () =>
+                                            onOpenLiability(line.liability),
+                                      ),
+                                ),
+                          ),
+                    );
+                  },
+            ),
           ),
         const SizedBox(height: 8),
       ],
     );
   }
+}
+
+class _HoldingSectionTabs extends StatelessWidget {
+  const _HoldingSectionTabs({
+    required this.showAssets,
+    required this.onSelected,
+  });
+
+  final bool showAssets;
+  final ValueChanged<bool> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(24),
+      child: Row(
+        children: <Widget>[
+          for (final bool assets in <bool>[true, false])
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Material(
+                  color: showAssets == assets
+                      ? theme.colorScheme.surfaceContainerHigh
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Semantics(
+                    selected: showAssets == assets,
+                    button: true,
+                    child: InkWell(
+                      key: ValueKey<String>(
+                        assets ? 'home-assets-tab' : 'home-liabilities-tab',
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => onSelected(assets),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
+                          child: Center(
+                            child: Text(
+                              (assets ? 'Assets' : 'Liabilities').tr(context),
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: showAssets == assets
+                                    ? theme.colorScheme.onSurface
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryPanel extends StatelessWidget {
+  const _CategoryPanel({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    key: const ValueKey<String>('home-category-panel'),
+    color: Theme.of(context).colorScheme.surfaceContainerLow,
+    borderRadius: BorderRadius.circular(20),
+    clipBehavior: Clip.antiAlias,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: child,
+    ),
+  );
 }
 
 class _AddFab extends StatelessWidget {
@@ -546,9 +637,9 @@ class _AddFab extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: gradient.last.withValues(alpha: 0.45),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: gradient.last.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -556,7 +647,7 @@ class _AddFab extends StatelessWidget {
         heroTag: 'home-add-holding',
         onPressed: onPressed,
         backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         elevation: 0,
         highlightElevation: 0,
         icon: const Icon(Icons.add),
@@ -576,6 +667,7 @@ class _CategoryCardShell extends StatelessWidget {
     required this.isDragging,
     required this.onToggle,
     required this.expandedContentBuilder,
+    required this.showDivider,
     this.accent,
   });
 
@@ -587,6 +679,7 @@ class _CategoryCardShell extends StatelessWidget {
   final bool isDragging;
   final VoidCallback onToggle;
   final Widget Function() expandedContentBuilder;
+  final bool showDivider;
 
   /// Per-category accent colour used by the Midnight theme. Null keeps the
   /// neutral Material look.
@@ -596,11 +689,11 @@ class _CategoryCardShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final Color? accent = this.accent;
-    Widget header = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    final Widget header = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: <Widget>[
-          TypeAvatar(icon, accent: accent),
+          TypeAvatar(icon, accent: accent, size: 32),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -608,7 +701,9 @@ class _CategoryCardShell extends StatelessWidget {
               children: <Widget>[
                 Text(
                   title,
-                  style: theme.textTheme.titleMedium,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -625,38 +720,35 @@ class _CategoryCardShell extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            totalText,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: accent,
+          Flexible(
+            fit: FlexFit.tight,
+            child: Text(
+              totalText,
+              textAlign: TextAlign.end,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: accent,
+              ),
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Icon(
             isExpanded ? Icons.expand_less : Icons.expand_more,
+            size: 18,
             color: theme.colorScheme.onSurfaceVariant,
             semanticLabel: (isExpanded ? 'Collapse' : 'Expand').tr(context),
           ),
         ],
       ),
     );
-    if (accent != null) {
-      header = DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(left: BorderSide(color: accent, width: 4)),
-        ),
-        child: header,
-      );
-    }
-    return Card(
-      elevation: isDragging ? 8 : 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(shapeLarge),
-      ),
+    return Material(
+      color: theme.colorScheme.surfaceContainerLow,
+      elevation: isDragging ? 8 : 0,
+      borderRadius: isDragging ? BorderRadius.circular(20) : null,
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: <Widget>[
+          if (showDivider) const Divider(),
           InkWell(onTap: onToggle, child: header),
           if (isExpanded) ...<Widget>[
             Divider(height: 1, color: theme.colorScheme.outlineVariant),
@@ -691,13 +783,12 @@ class _HoldingItemRow extends StatelessWidget {
     return Material(
       color: isDragging
           ? theme.colorScheme.surfaceContainerHighest
-          : theme.colorScheme.surface,
+          : theme.colorScheme.surfaceContainerLow,
       child: InkWell(
         onTap: onOpen,
         child: Padding(
-          padding: const EdgeInsets.only(
-            left: 20,
-            right: 16,
+          padding: const EdgeInsetsDirectional.only(
+            start: 8,
             top: 12,
             bottom: 12,
           ),
@@ -725,8 +816,15 @@ class _HoldingItemRow extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(amount, style: theme.textTheme.titleMedium),
-              const SizedBox(width: 8),
+              Flexible(
+                fit: FlexFit.tight,
+                child: Text(
+                  amount,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+              const SizedBox(width: 6),
               Icon(
                 Icons.drag_indicator,
                 size: 20,

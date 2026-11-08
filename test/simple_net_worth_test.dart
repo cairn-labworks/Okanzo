@@ -305,6 +305,8 @@ void main() {
       expect(headline('₹1,65,34,234'), findsOneWidget);
       await tester.pumpWidget(_app(container, SettingsScreen(onClose: () {})));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Currency'));
+      await tester.pumpAndSettle();
       final Finder toggle = find.text('Simple net worth');
       await tester.ensureVisible(toggle);
       await tester.tap(toggle);
@@ -340,6 +342,8 @@ void main() {
     await tester.pumpWidget(
       _app(_Container(failing), SettingsScreen(onClose: () {})),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Currency'));
     await tester.pumpAndSettle();
     final Finder toggle = find.text('Simple net worth');
     await tester.ensureVisible(toggle);

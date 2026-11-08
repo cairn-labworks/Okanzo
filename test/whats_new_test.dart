@@ -398,9 +398,11 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(WhatsNewDialog), findsNothing);
 
-        await tester.tap(find.byIcon(Icons.settings));
+        await tester.tap(find.byIcon(Icons.settings_outlined));
         await tester.pumpAndSettle();
         expect(find.byType(SettingsScreen), findsOneWidget);
+        await tester.tap(find.text('Acerca de'));
+        await tester.pumpAndSettle();
 
         final Finder whatsNewRow = find.text('Novedades');
         await tester.scrollUntilVisible(

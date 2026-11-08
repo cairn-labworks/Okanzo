@@ -255,7 +255,10 @@ void main() {
       AppScope(container: _Container(settings), child: const OkanzoApp()),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.settings));
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    final BuildContext context = tester.element(find.byType(SettingsScreen));
+    await tester.tap(find.text('Appearance'.tr(context)));
     await tester.pumpAndSettle();
   }
 
@@ -314,7 +317,10 @@ void main() {
       expect(list.childrenDelegate.estimatedChildCount, 22);
       await selectLanguage(tester, AppLanguage.spanish);
       expect(find.byType(AlertDialog), findsNothing);
-      expect(find.text('Ajustes'), findsOneWidget);
+      expect(
+        find.text(const AppLocalizations(Locale('es')).text('Appearance')),
+        findsOneWidget,
+      );
       expect(find.text('Español'), findsOneWidget);
       expect(tester.element(find.byType(SettingsScreen)), same(settingsPage));
       expect(repository.current.language, AppLanguage.spanish);
@@ -329,7 +335,7 @@ void main() {
       );
       await openPicker(tester);
       await selectLanguage(tester, AppLanguage.english);
-      expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('Appearance'), findsOneWidget);
       expect(
         Directionality.of(tester.element(find.byType(SettingsScreen))),
         TextDirection.ltr,
@@ -346,21 +352,33 @@ void main() {
       ];
       await repository.setLanguage(AppLanguage.spanish);
       await openSettings(tester, repository);
-      expect(find.text('Ajustes'), findsOneWidget);
+      expect(
+        find.text(const AppLocalizations(Locale('es')).text('Appearance')),
+        findsOneWidget,
+      );
       tester.binding.platformDispatcher.localesTestValue = <Locale>[
         const Locale('de'),
       ];
       await tester.pumpAndSettle();
-      expect(find.text('Ajustes'), findsOneWidget);
+      expect(
+        find.text(const AppLocalizations(Locale('es')).text('Appearance')),
+        findsOneWidget,
+      );
       await openPicker(tester);
       await selectLanguage(tester, AppLanguage.system);
-      expect(find.text('Einstellungen'), findsOneWidget);
+      expect(
+        find.text(const AppLocalizations(Locale('de')).text('Appearance')),
+        findsOneWidget,
+      );
       expect(repository.current.language, AppLanguage.system);
       tester.binding.platformDispatcher.localesTestValue = <Locale>[
         const Locale('fr'),
       ];
       await tester.pumpAndSettle();
-      expect(find.text('Paramètres'), findsOneWidget);
+      expect(
+        find.text(const AppLocalizations(Locale('fr')).text('Appearance')),
+        findsOneWidget,
+      );
     },
   );
 

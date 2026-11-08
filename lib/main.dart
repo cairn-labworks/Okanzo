@@ -67,10 +67,10 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
         }
         return DynamicColorBuilder(
           builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-            final AppTheme appTheme = settings.appTheme;
-            // Wallpaper colors only apply to the Classic theme.
+            // Wallpaper colours apply to light mode; dark is always Midnight.
             final bool useDynamic =
-                settings.dynamicColor && appTheme == AppTheme.classic;
+                settings.dynamicColor &&
+                settings.appearanceMode != AppThemeMode.dark;
             return MaterialApp(
               title: 'Okanzo',
               debugShowCheckedModeBanner: false,
@@ -85,20 +85,17 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
               theme: buildTheme(
                 brightness: Brightness.light,
                 dynamicScheme: useDynamic ? lightDynamic : null,
-                appTheme: appTheme,
+                appTheme: AppTheme.classic,
               ),
               darkTheme: buildTheme(
                 brightness: Brightness.dark,
-                dynamicScheme: useDynamic ? darkDynamic : null,
-                appTheme: appTheme,
+                appTheme: AppTheme.midnight,
               ),
-              themeMode: appTheme == AppTheme.midnight
-                  ? ThemeMode.dark
-                  : switch (settings.themeMode) {
-                      AppThemeMode.system => ThemeMode.system,
-                      AppThemeMode.light => ThemeMode.light,
-                      AppThemeMode.dark => ThemeMode.dark,
-                    },
+              themeMode: switch (settings.appearanceMode) {
+                AppThemeMode.system => ThemeMode.system,
+                AppThemeMode.light => ThemeMode.light,
+                AppThemeMode.dark => ThemeMode.dark,
+              },
               home: AppLockGate(
                 appLockEnabled: settings.appLockEnabled,
                 child: const AppShell(),

@@ -64,6 +64,20 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   expect(tester.takeException(), isNull);
 }
 
+Future<void> _openCurrencySettings(WidgetTester tester) async {
+  await _tap(tester, find.byTooltip('Settings'));
+  if (find.text('Simple net worth').evaluate().isEmpty) {
+    await _tap(tester, find.text('Currency'));
+  }
+}
+
+Future<void> _closeCurrencySettings(WidgetTester tester) async {
+  await tester.pageBack();
+  await tester.pumpAndSettle();
+  await tester.pageBack();
+  await tester.pumpAndSettle();
+}
+
 Finder _cardText(String value) =>
     find.descendant(of: find.byType(NetWorthCard), matching: find.text(value));
 
@@ -195,14 +209,14 @@ void main() {
       await _expectHeadline(tester, CurrencyUtil.format(16534234, 'INR'));
       debugPrint('DEVICE CHECK: detailed INR headline passed');
 
-      await _tap(tester, find.byTooltip('Settings'));
+      await _openCurrencySettings(tester);
       await _tap(tester, find.text('Simple net worth'));
       await _waitUntil(
         tester,
         () => container!.settingsRepository.current.simpleNetWorth,
         'saved simple net worth setting',
       );
-      await tester.pageBack();
+      await _closeCurrencySettings(tester);
       await tester.pumpAndSettle();
       await _expectHeadline(tester, '₹1.65 Cr');
       expect(_cardText(CurrencyUtil.format(17534234, 'INR')), findsOneWidget);
@@ -217,26 +231,26 @@ void main() {
       await _expectHeadline(tester, '₹1.65 Cr');
       debugPrint('DEVICE CHECK: hidden balances and reveal passed');
 
-      await _tap(tester, find.byTooltip('Settings'));
+      await _openCurrencySettings(tester);
       await _tap(tester, find.text('Simple net worth'));
       await _waitUntil(
         tester,
         () => !container!.settingsRepository.current.simpleNetWorth,
         'disabled simple net worth setting',
       );
-      await tester.pageBack();
+      await _closeCurrencySettings(tester);
       await tester.pumpAndSettle();
       await _expectHeadline(tester, CurrencyUtil.format(16534234, 'INR'));
       debugPrint('DEVICE CHECK: disabling restores the exact headline');
 
-      await _tap(tester, find.byTooltip('Settings'));
+      await _openCurrencySettings(tester);
       await _tap(tester, find.text('Simple net worth'));
       await _waitUntil(
         tester,
         () => container!.settingsRepository.current.simpleNetWorth,
         're-enabled simple net worth setting',
       );
-      await tester.pageBack();
+      await _closeCurrencySettings(tester);
       await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
@@ -252,7 +266,7 @@ void main() {
         'DEVICE CHECK: persisted setting and database relaunch passed',
       );
 
-      await _tap(tester, find.byTooltip('Settings'));
+      await _openCurrencySettings(tester);
       await _tap(tester, find.text('Base currency'));
       await _tap(tester, find.text('USD — US Dollar'));
       await _waitUntil(
@@ -261,7 +275,7 @@ void main() {
         'USD base currency selected in the picker',
       );
       await container.settingsRepository.setSelectedPortfolioId(usdPortfolio);
-      await tester.pageBack();
+      await _closeCurrencySettings(tester);
       await tester.pumpAndSettle();
       await _expectHeadline(tester, '\$165.3M');
       expect(_cardText(CurrencyUtil.format(166342340, 'USD')), findsOneWidget);
@@ -282,24 +296,24 @@ void main() {
       await _expectHeadline(tester, '\$7K');
       expect(_cardText(CurrencyUtil.format(8054, 'USD')), findsOneWidget);
       expect(_cardText(CurrencyUtil.format(1000, 'USD')), findsOneWidget);
-      await _tap(tester, find.byTooltip('Settings'));
+      await _openCurrencySettings(tester);
       await _tap(tester, find.text('Simple net worth'));
       await _waitUntil(
         tester,
         () => !container!.settingsRepository.current.simpleNetWorth,
         'disabled simple net worth setting for USD thousands',
       );
-      await tester.pageBack();
+      await _closeCurrencySettings(tester);
       await tester.pumpAndSettle();
       await _expectHeadline(tester, CurrencyUtil.format(7054, 'USD'));
-      await _tap(tester, find.byTooltip('Settings'));
+      await _openCurrencySettings(tester);
       await _tap(tester, find.text('Simple net worth'));
       await _waitUntil(
         tester,
         () => container!.settingsRepository.current.simpleNetWorth,
         're-enabled simple net worth setting for USD thousands',
       );
-      await tester.pageBack();
+      await _closeCurrencySettings(tester);
       await tester.pumpAndSettle();
       await _expectHeadline(tester, '\$7K');
       debugPrint(

@@ -1,11 +1,10 @@
 /// A selectable overall appearance for the app.
 ///
-/// [classic] is the original Material 3 look that adapts to light/dark and the
-/// wallpaper palette. [midnight] is a fixed dark, colourful theme with a
-/// gradient net-worth hero and per-category accent colours.
+/// [classic] adapts the shared precision styling to light/dark and wallpaper
+/// colours. [midnight] keeps deep-green surfaces, sage accents and tonal depth.
 enum AppTheme {
-  classic('CLASSIC', 'Classic', 'Calm teal, adapts to light and dark'),
-  midnight('MIDNIGHT', 'Midnight', 'Dark and colourful, always dark');
+  classic('CLASSIC', 'Classic', 'Sage, adapts to light and dark'),
+  midnight('MIDNIGHT', 'Midnight', 'Deep green and sage, always dark');
 
   const AppTheme(this.storageName, this.displayName, this.description);
 

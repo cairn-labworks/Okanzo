@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/model/stock_exchange.dart';
 import '../../l10n/app_localizations.dart';
+import '../components/form_components.dart';
 
 enum _ExchangeAction { preferences }
 
@@ -12,6 +13,7 @@ class StockExchangeField extends StatefulWidget {
     required this.preferredExchanges,
     required this.onSelected,
     required this.onSavePreferences,
+    this.compact = false,
     super.key,
   });
 
@@ -19,6 +21,7 @@ class StockExchangeField extends StatefulWidget {
   final List<StockExchange> preferredExchanges;
   final ValueChanged<StockExchange> onSelected;
   final Future<void> Function(List<StockExchange>) onSavePreferences;
+  final bool compact;
 
   static const String manageLabel = 'Select preferred exchanges...';
 
@@ -48,44 +51,84 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
   }
 
   @override
-  Widget build(BuildContext context) => DropdownMenu<Object>(
-    controller: _controller,
-    initialSelection: widget.selected,
-    label: Text('Exchange'.tr(context)),
-    hintText: 'Choose preferred exchanges'.tr(context),
-    expandedInsets: EdgeInsets.zero,
-    requestFocusOnTap: false,
-    enableSearch: false,
-    dropdownMenuEntries: <DropdownMenuEntry<Object>>[
-      for (final StockExchange exchange in widget.preferredExchanges)
-        DropdownMenuEntry<Object>(
-          value: exchange,
-          label: exchange.displayName.tr(context),
-        ),
-      DropdownMenuEntry<Object>(
-        value: _ExchangeAction.preferences,
-        label: StockExchangeField.manageLabel.tr(context),
-        leadingIcon: const Icon(Icons.tune),
-      ),
-    ],
-    onSelected: (Object? value) async {
-      if (value is StockExchange) {
-        widget.onSelected(value);
-      } else if (value == _ExchangeAction.preferences) {
-        _controller.text = widget.selected?.displayName.tr(context) ?? '';
-        await showDialog<void>(
-          context: context,
-          builder: (_) => _PreferredExchangesDialog(
-            selected: widget.preferredExchanges,
-            onSave: widget.onSavePreferences,
+  Widget build(BuildContext context) {
+    if (widget.compact) {
+      final String label = widget.selected == StockExchange.us
+          ? 'US exchange'.tr(context)
+          : widget.selected?.displayName.tr(context) ?? 'Exchange'.tr(context);
+      final String? suffix = widget.selected?.suffix;
+      final String help = suffix == null || suffix.isEmpty
+          ? 'Enter a Yahoo Finance ticker. Full exchange-qualified tickers are also accepted.'
+                .tr(context)
+          : '{suffix} is added automatically. Full Yahoo Finance tickers are also accepted.'
+                .tr(context)
+                .replaceAll('{suffix}', suffix);
+      return PopupMenuButton<Object>(
+        tooltip: '${'Exchange'.tr(context)}\n$help',
+        onSelected: _select,
+        itemBuilder: (_) => <PopupMenuEntry<Object>>[
+          for (final StockExchange exchange in widget.preferredExchanges)
+            PopupMenuItem<Object>(
+              value: exchange,
+              child: Text(exchange.displayName.tr(context)),
+            ),
+          PopupMenuItem<Object>(
+            value: _ExchangeAction.preferences,
+            child: Row(
+              children: <Widget>[
+                const Icon(Icons.tune, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(StockExchangeField.manageLabel.tr(context)),
+                ),
+              ],
+            ),
           ),
-        );
-        if (context.mounted) {
-          _controller.text = widget.selected?.displayName.tr(context) ?? '';
-        }
+        ],
+        child: PickerChip(label: label),
+      );
+    }
+    return DropdownMenu<Object>(
+      controller: _controller,
+      initialSelection: widget.selected,
+      label: Text('Exchange'.tr(context)),
+      hintText: 'Choose preferred exchanges'.tr(context),
+      expandedInsets: EdgeInsets.zero,
+      requestFocusOnTap: false,
+      enableSearch: false,
+      dropdownMenuEntries: <DropdownMenuEntry<Object>>[
+        for (final StockExchange exchange in widget.preferredExchanges)
+          DropdownMenuEntry<Object>(
+            value: exchange,
+            label: exchange.displayName.tr(context),
+          ),
+        DropdownMenuEntry<Object>(
+          value: _ExchangeAction.preferences,
+          label: StockExchangeField.manageLabel.tr(context),
+          leadingIcon: const Icon(Icons.tune),
+        ),
+      ],
+      onSelected: _select,
+    );
+  }
+
+  Future<void> _select(Object? value) async {
+    if (value is StockExchange) {
+      widget.onSelected(value);
+    } else if (value == _ExchangeAction.preferences) {
+      _controller.text = widget.selected?.displayName.tr(context) ?? '';
+      await showDialog<void>(
+        context: context,
+        builder: (_) => _PreferredExchangesDialog(
+          selected: widget.preferredExchanges,
+          onSave: widget.onSavePreferences,
+        ),
+      );
+      if (mounted) {
+        _controller.text = widget.selected?.displayName.tr(context) ?? '';
       }
-    },
-  );
+    }
+  }
 }
 
 class _PreferredExchangesDialog extends StatefulWidget {
