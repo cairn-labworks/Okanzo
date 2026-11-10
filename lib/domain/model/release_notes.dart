@@ -42,9 +42,20 @@ class ReleaseNotes {
 class AppReleaseNotes {
   const AppReleaseNotes._();
 
-  static const String currentVersion = '1.4.2';
+  static const String currentVersion = '1.4.3';
 
   static const List<ReleaseNotes> all = <ReleaseNotes>[
+    ReleaseNotes(
+      version: '1.4.3',
+      highlights: <ReleaseHighlight>[
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.security,
+          title: 'F-Droid-compatible Android builds',
+          description:
+              'Disable opaque dependency metadata in Android packages.',
+        ),
+      ],
+    ),
     ReleaseNotes(
       version: '1.4.2',
       highlights: <ReleaseHighlight>[

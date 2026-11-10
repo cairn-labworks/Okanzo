@@ -126,6 +126,10 @@ Actions tab. It builds the signed `.aab` and per-ABI APKs and attaches them as a
 uses F-Droid's pinned Linux build image, canonical checkout/SDK locations and
 individual ABI targets to avoid environment-dependent Flutter/NDK output.
 Official reproducibility still requires F-Droid's independent verification.
+Android builds disable AGP's opaque dependency metadata in APKs and app bundles,
+as required by F-Droid. Run `fdroid scanner --exit-code <apk>` on each signed APK
+before publication; successful signature and reproducibility checks alone are
+not a substitute for the APK scan.
 It needs these repository secrets:
 
 | Secret | Value |
