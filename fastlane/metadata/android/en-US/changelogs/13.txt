@@ -1,0 +1,2 @@
+Disable opaque Gradle dependency metadata in Android APKs and app bundles, as requested by F-Droid review.
+Keep the reproducible build environment, developer signing key, and existing app behavior unchanged.

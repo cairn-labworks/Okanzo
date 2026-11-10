@@ -113,6 +113,12 @@ or update F-Droid by itself. Google Play is outside this skill's scope.
    `AllowedAPKSigningKeys`, and validate the AAB upload signature. Reject
    debug-signed artifacts: local release builds currently fall back to debug
    signing when `android/key.properties` is absent.
+   Run `fdroid scanner --exit-code "$APK"` on each signed APK before publication,
+   using current scanner definitions. Reject dependency-metadata signing blocks
+   and all other scanner findings; do not bypass them. Android's
+   `dependenciesInfo.includeInApk` and `includeInBundle` must remain false.
+   Verify the AAB also omits its dependency-metadata entry. Reproducibility and
+   signature checks alone do not establish that F-Droid accepts the APK.
 7. Preserve verified bytes and generate SHA-256 checksums. The F-Droid
    `Binaries` pattern currently requires these GitHub asset names:
 
