@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="fastlane/metadata/android/en-US/images/featureGraphic.png" alt="Okanzo — Your net worth. Private by design." width="100%" />
+<img src="marketing/banner.png" alt="Okanzo — A private, offline-first net worth tracker." width="100%" />
 
 </div>
 
@@ -22,7 +22,6 @@ Track your assets and liabilities across currencies and portfolios — encrypted
   <img alt="Flutter" src="https://img.shields.io/badge/Flutter-02569B?style=flat&logo=flutter&logoColor=white" />
   <img alt="Dart" src="https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white" />
   <img alt="Android" src="https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white" />
-  <img alt="iOS" src="https://img.shields.io/badge/iOS-000000?style=flat&logo=apple&logoColor=white" />
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-3D6249?style=flat" />
   <img alt="AES-256 · No tracking" src="https://img.shields.io/badge/AES--256%20%C2%B7%20No%20tracking-204938?style=flat&logo=shield&logoColor=white" />
   <img alt="Downloads" src="https://img.shields.io/github/downloads/cairn-labworks/Okanzo/total?style=flat&logo=github&logoColor=white&label=Downloads&color=3D6249" />
@@ -33,8 +32,6 @@ Track your assets and liabilities across currencies and portfolios — encrypted
 <a href="https://f-droid.org/packages/com.cairnlabworks.okanzo/"><img alt="Get it on F-Droid" src="marketing/badges/get-it-on-fdroid.svg" height="60" /></a>
 &nbsp;
 <a href="https://github.com/cairn-labworks/Okanzo/releases"><img alt="Get it on GitHub" src="marketing/badges/get-it-on-github.svg" height="60" /></a>
-&nbsp;
-<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.cairnlabworks.okanzo%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fcairn-labworks%2FOkanzo%22%2C%22author%22%3A%22Cairn%20Labworks%22%2C%22name%22%3A%22Okanzo%22%7D"><img alt="Get it on Obtainium" src="marketing/badges/get-it-on-obtainium.svg" height="60" /></a>
 
 <br/>
 
@@ -70,7 +67,7 @@ Track your assets and liabilities across currencies and portfolios — encrypted
 
 ## Overview
 
-Okanzo is an open source, offline-first app for tracking your **net worth** — your assets minus your liabilities — organised into portfolios, built with Flutter and Material 3 for **Android and iOS**.
+Okanzo is an open source, offline-first app for tracking your **net worth** — your assets minus your liabilities — organised into portfolios, built with Flutter and Material 3 for **Android**.
 
 Your financial data is stored **encrypted on your device** and never leaves it, except when you deliberately export an encrypted backup. No accounts, no analytics, no ads.
 
@@ -128,9 +125,9 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 
 ### Security & privacy
 
-- Local database encrypted at rest with **SQLCipher (AES-256)**, keyed through **Android Keystore** / **iOS Keychain**
+- Local database encrypted at rest with **SQLCipher (AES-256)**, keyed through **Android Keystore**
 - Optional **app lock** with fingerprint, biometrics or device PIN, re-locking whenever Okanzo leaves the foreground
-- **Screenshot protection**: `FLAG_SECURE` on Android and an app-switcher blur overlay on iOS
+- **Screenshot protection**: `FLAG_SECURE` on Android prevents screen captures and recent-apps previews
 - **Hide balances** masks every monetary figure behind `••••` in one tap
 
 </td>
@@ -170,7 +167,6 @@ The Flutter app uses the same `MWB1` encrypted backup container as the earlier A
 | Platform | Status |
 |----------|--------|
 | Android (8.0 / API 26+) | ✅ Supported ([F-Droid](https://f-droid.org/packages/com.cairnlabworks.okanzo/) & [GitHub Releases](https://github.com/cairn-labworks/Okanzo/releases)) |
-| iOS (15+) | ✅ Supported (build from source with Xcode) |
 
 <details>
 <summary><b>Install the APK yourself</b></summary>
@@ -184,8 +180,6 @@ Prefer direct downloads? Signed per-ABI APKs and `SHA256SUMS` are attached to ev
 | `com.cairnlabworks.okanzo_<base>3.apk` | `x86_64` | Emulators and x86_64 tablets |
 
 Runs on **Android 8.0 (Oreo) and newer**.
-
-If you install the APK directly, [**Obtainium**](https://github.com/ImranR98/Obtainium) can follow `https://github.com/cairn-labworks/Okanzo` and notify you when new releases are published.
 
 </details>
 
@@ -220,7 +214,7 @@ By default, Okanzo selects the first supported language in your device's preferr
 | UI | Flutter, Material 3 |
 | Architecture | MVVM (`ChangeNotifier` view models) with a lightweight manual DI container |
 | Persistence | `sqflite_sqlcipher` (encrypted SQLite) |
-| Keys & secrets | `flutter_secure_storage` (Android Keystore / iOS Keychain) |
+| Keys & secrets | `flutter_secure_storage` (Android Keystore) |
 | Auth | `local_auth` (biometrics / device credential) |
 | Preferences | `shared_preferences` |
 | Networking | `http` with hand-written JSON models |
@@ -266,17 +260,15 @@ Requirements:
 
 - Flutter (stable channel, Dart SDK ≥ 3.13)
 - Android: JDK 17 and the Android SDK (minSdk 26 / Android 8.0+)
-- iOS: Xcode 15+ and CocoaPods (iOS 15+)
 
 ```bash
 flutter pub get
 flutter run                         # debug on a connected device
 flutter build appbundle             # Android, Google Play bundle (.aab)
 flutter build apk --split-per-abi   # Android, per-ABI APKs
-flutter build ipa                   # iOS
 ```
 
-The application ID / bundle ID is `com.cairnlabworks.okanzo`; the current version is defined in `pubspec.yaml`.
+The application ID is `com.cairnlabworks.okanzo`; the current version is defined in `pubspec.yaml`.
 
 <details>
 <summary><b>Release signing &amp; publishing (<code>/create-release</code>)</b></summary>
@@ -317,7 +309,7 @@ flutter analyze
 flutter test
 ```
 
-The test suite covers currency formatting and rounding, net-worth and FX conversion, asset/liability form validation and entity mapping, category ordering, list labels, 21-locale localization coverage (`ios/Runner/Info.plist` also declares supported iOS locales), quote/FX response parsing, and byte-for-byte verification of the `MWB1` encrypted backup format.
+The test suite covers currency formatting and rounding, net-worth and FX conversion, asset/liability form validation and entity mapping, category ordering, list labels, 21-locale localization coverage, quote/FX response parsing, and byte-for-byte verification of the `MWB1` encrypted backup format.
 
 <details>
 <summary><b>Android emulator &amp; physical-device integration tests</b></summary>
@@ -389,6 +381,6 @@ If Okanzo is useful to you, starring the repository or reporting issues on [**Gi
 <br/>
 <br/>
 
-Released under the <a href="LICENSE"><b>MIT License</b></a>. Okanzo is an independent, open-source project and is not affiliated with or endorsed by Google or Apple. It uses Google's Material Design system for its UI.
+Released under the <a href="LICENSE"><b>MIT License</b></a>. Okanzo is an independent, open-source project and is not affiliated with or endorsed by Google. It uses Google's Material Design system for its UI.
 
 </div>

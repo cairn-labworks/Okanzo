@@ -21,7 +21,7 @@ The posters are generated from a single self-contained HTML file and rendered
 with headless Chrome/Edge (no build step or network needed).
 
 ```powershell
-# generator: marketing/generate.html  (append ?p=<0-5> to render one poster)
+# generator: marketing/generate.html  (?p=<0-5> for posters, ?banner=1 for README banner)
 $chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 $src    = (Resolve-Path "marketing\generate.html").Path -replace '\\','/'
 $outDir = (Resolve-Path "marketing\screenshots").Path
@@ -34,6 +34,11 @@ for ($i = 0; $i -lt $names.Count; $i++) {
     "--screenshot=$out" "file:///${src}?p=$i" | Out-Null
   Remove-Item -Recurse -Force $prof -ErrorAction SilentlyContinue
 }
+$bannerProf = Join-Path $env:TEMP "chrome-okanzo-$PID-banner"
+& $chrome "--headless=new" "--disable-gpu" "--hide-scrollbars" `
+  "--user-data-dir=$bannerProf" "--force-device-scale-factor=2" "--window-size=1200,400" `
+  "--screenshot=$(Join-Path (Resolve-Path 'marketing').Path 'banner.png')" "file:///${src}?banner=1" | Out-Null
+Remove-Item -Recurse -Force $bannerProf -ErrorAction SilentlyContinue
 ```
 
 Edit headlines, captions, callouts and the app-screen mockups in the `POSTERS`

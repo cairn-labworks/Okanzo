@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="218" height="60" viewBox="0 0 218 60" role="img" aria-label="Get it on Obtainium">
-  <rect x="0.75" y="0.75" width="216.5" height="58.5" rx="12" fill="#111B18" stroke="#2D4635" stroke-width="1.5"/>
-  <g transform="translate(18, 14)">
-    <rect width="32" height="32" rx="9" fill="#24372E"/>
-    <path d="M16 7v13m0 0l-5-5m5 5l5-5M9 24h14" fill="none" stroke="#C1E1BD" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-  <text x="62" y="23" fill="#88A196" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="600" letter-spacing="0.9">GET IT ON</text>
-  <text x="62" y="43" fill="#E8F0E9" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="21" font-weight="700">Obtainium</text>
-</svg>
