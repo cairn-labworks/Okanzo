@@ -80,3 +80,37 @@ jobs:
           if-no-files-found: error
           # Signed builds are public in this repo's Actions tab; download promptly.
           retention-days: 1
+
+  scan:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: okanzo-${{ github.ref_type == 'tag' && github.ref_name || github.run_id }}
+          path: dist
+      - name: Run F-Droid scanner and verify bundle metadata
+        run: |
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          export PATH="$(ls -d "$ANDROID_SDK_ROOT"/build-tools/* | sort -V | tail -n 1):$PATH"
+          command -v dexdump
+          mapfile -t apks < <(find dist -type f -name 'app-*-release.apk' | sort)
+          if [ "${#apks[@]}" -ne 3 ]; then
+            echo "::error::Expected 3 split APKs in artifact, found ${#apks[@]}."
+            exit 1
+          fi
+          aab="$(find dist -type f -name 'app-release.aab')"
+          if [ ! -f "$aab" ]; then
+            echo "::error::Expected app-release.aab in artifact."
+            exit 1
+          fi
+          python3 -m venv /tmp/fdroid-venv
+          /tmp/fdroid-venv/bin/pip install --quiet fdroidserver androguard
+          for apk in "${apks[@]}"; do
+            echo "Scanning $apk"
+            /tmp/fdroid-venv/bin/fdroid scanner --refresh --exit-code "$apk"
+          done
+          if unzip -l "$aab" | grep -Eq 'BUNDLE-METADATA/.*/dependencies\.pb'; then
+            echo "::error::AAB contains opaque dependency metadata."
+            exit 1
+          fi

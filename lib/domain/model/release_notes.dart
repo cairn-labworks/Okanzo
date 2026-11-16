@@ -42,9 +42,19 @@ class ReleaseNotes {
 class AppReleaseNotes {
   const AppReleaseNotes._();
 
-  static const String currentVersion = '1.4.3';
+  static const String currentVersion = '1.4.4';
 
   static const List<ReleaseNotes> all = <ReleaseNotes>[
+    ReleaseNotes(
+      version: '1.4.4',
+      highlights: <ReleaseHighlight>[
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.theme,
+          title: 'Refreshed Midnight and sage store visuals',
+          description: 'Update store screenshots and promotional previews to match the Quiet overview and Midnight interface.',
+        ),
+      ],
+    ),
     ReleaseNotes(
       version: '1.4.3',
       highlights: <ReleaseHighlight>[
