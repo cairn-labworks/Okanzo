@@ -53,21 +53,28 @@ class MainActivity : FlutterFragmentActivity() {
                 result.success(false)
             }
         }
-        // Updates FLAG_SECURE when the user toggles Block screenshots; see lib/util/screenshot_protection.dart.
+        // Updates or queries FLAG_SECURE when the user toggles Block screenshots; see lib/util/screenshot_protection.dart.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SECURITY_CHANNEL).setMethodCallHandler { call, result ->
-            if (call.method != "setScreenshotProtection") {
-                result.notImplemented()
-                return@setMethodCallHandler
+            when (call.method) {
+                "setScreenshotProtection" -> {
+                    val enabled = call.arguments as? Boolean
+                    if (enabled == null) {
+                        result.error("INVALID_ARGUMENT", "Expected a boolean argument", null)
+                        return@setMethodCallHandler
+                    }
+                    applyScreenshotProtection(enabled)
+                    result.success(isScreenshotProtectionEnabled() == enabled)
+                }
+                "isScreenshotProtectionEnabled" -> {
+                    result.success(isScreenshotProtectionEnabled())
+                }
+                else -> result.notImplemented()
             }
-            val enabled = call.arguments as? Boolean
-            if (enabled == null) {
-                result.error("INVALID_ARGUMENT", "Expected a boolean argument", null)
-                return@setMethodCallHandler
-            }
-            applyScreenshotProtection(enabled)
-            result.success(true)
         }
     }
+
+    private fun isScreenshotProtectionEnabled(): Boolean =
+        (window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE) != 0
 
     private companion object {
         const val LINKS_CHANNEL = "com.cairnlabworks.okanzo/links"

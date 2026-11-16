@@ -27,4 +27,14 @@ class ScreenshotProtection {
       // Non-Android platforms and headless widget tests have no window flag.
     }
   }
+
+  /// Queries Android's live `WindowManager.LayoutParams.FLAG_SECURE` state, or
+  /// returns null when no native window handler is registered.
+  static Future<bool?> isEnabled() async {
+    try {
+      return await channel.invokeMethod<bool>('isScreenshotProtectionEnabled');
+    } on MissingPluginException {
+      return null;
+    }
+  }
 }
