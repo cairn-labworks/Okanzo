@@ -42,9 +42,24 @@ class ReleaseNotes {
 class AppReleaseNotes {
   const AppReleaseNotes._();
 
-  static const String currentVersion = '1.4.5';
+  static const String currentVersion = '1.5.0';
 
   static const List<ReleaseNotes> all = <ReleaseNotes>[
+    ReleaseNotes(
+      version: '1.5.0',
+      highlights: <ReleaseHighlight>[
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.exchanges,
+          title: 'Company and crypto ticker search',
+          description: 'Search stocks, funds and cryptocurrencies by name or ticker while keeping manual symbol entry.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.security,
+          title: 'Screenshot protection toggle',
+          description: 'Screenshots and recent-apps previews stay blocked by default, with a toggle in Security settings.',
+        ),
+      ],
+    ),
     ReleaseNotes(
       version: '1.4.5',
       highlights: <ReleaseHighlight>[

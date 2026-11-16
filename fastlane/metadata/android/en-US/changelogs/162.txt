@@ -1,0 +1,2 @@
+Search stocks, funds, and cryptocurrencies by company or coin name with instant typeahead while preserving manual ticker entry.
+Add a default-on Block screenshots toggle under Settings -> Security to control Android screenshot and recent-apps protection.
