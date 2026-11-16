@@ -1,0 +1,2 @@
+Refresh F-Droid and store screenshots to showcase the Midnight theme, Quiet overview, focused entry forms, and grouped settings.
+Add automated F-Droid APK and bundle scanner verification to the release workflow.
