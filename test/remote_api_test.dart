@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -5,6 +6,7 @@ import 'package:http/testing.dart';
 import 'package:okanzo/data/remote/fx/fx_api.dart';
 import 'package:okanzo/data/remote/stock/chart_response.dart';
 import 'package:okanzo/data/remote/stock/stock_price_service.dart';
+import 'package:okanzo/data/remote/stock/stock_search_service.dart';
 import 'package:okanzo/domain/model/stock_exchange.dart';
 import 'package:okanzo/util/result.dart';
 import 'package:test/test.dart';
@@ -32,6 +34,202 @@ String metaBody(Map<String, Object?> meta) => jsonEncode(<String, Object?>{
 });
 
 void main() {
+  group('StockSearchService', () {
+    test('encodes company queries and returns Yahoo listing details', () async {
+      Uri? seen;
+      final StockSearchService service = StockSearchService(
+        client: MockClient((http.Request request) async {
+          seen = request.url;
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'quotes': <Object?>[
+                <String, Object?>{
+                  'symbol': 'AIR.PA',
+                  'longname': 'Airbus SE',
+                  'shortname': 'Airbus',
+                  'quoteType': 'EQUITY',
+                  'exchDisp': 'Paris',
+                  'isYahooFinance': true,
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+      final Result<List<StockSearchResult>> result = await service.search(
+        '  Airbus & partners  ',
+        type: StockSearchType.stock,
+      );
+      expect(seen!.host, 'query1.finance.yahoo.com');
+      expect(seen!.path, '/v1/finance/search');
+      expect(seen!.queryParameters['q'], 'Airbus & partners');
+      expect(seen!.queryParameters['newsCount'], '0');
+      expect(seen!.queryParameters['quotesCount'], '20');
+      expect(result.value.single.symbol, 'AIR.PA');
+      expect(result.value.single.name, 'Airbus SE');
+      expect(result.value.single.exchange, 'Paris');
+    });
+
+    test(
+      'filters instrument types, non-Yahoo rows and duplicate symbols',
+      () async {
+        final StockSearchService service = StockSearchService(
+          client: MockClient(
+            (_) async => http.Response(
+              jsonEncode(<String, Object?>{
+                'quotes': <Object?>[
+                  for (final (String, String) row in <(String, String)>[
+                    ('AAPL', 'EQUITY'),
+                    ('AAPL', 'EQUITY'),
+                    ('VTI', 'ETF'),
+                    ('VTSAX', 'MUTUALFUND'),
+                    ('BTC-USD', 'CRYPTOCURRENCY'),
+                    ('BTC-EUR', 'CRYPTOCURRENCY'),
+                    ('BTC-USD', 'CRYPTOCURRENCY'),
+                    ('ES=F', 'FUTURE'),
+                  ])
+                    <String, Object?>{
+                      'symbol': row.$1,
+                      'shortname': row.$1,
+                      'quoteType': row.$2,
+                      'exchange': 'NMS',
+                      'isYahooFinance': true,
+                    },
+                  <String, Object?>{
+                    'symbol': 'NOTYAHOO',
+                    'quoteType': 'EQUITY',
+                    'isYahooFinance': false,
+                  },
+                  <String, Object?>{
+                    'symbol': '',
+                    'quoteType': 'EQUITY',
+                    'isYahooFinance': true,
+                  },
+                  null,
+                ],
+              }),
+              200,
+            ),
+          ),
+        );
+        final Result<List<StockSearchResult>> stocks = await service.search(
+          'AA',
+          type: StockSearchType.stock,
+        );
+        expect(stocks.value.map((StockSearchResult r) => r.symbol), <String>[
+          'AAPL',
+        ]);
+        expect(stocks.value.single.name, 'AAPL');
+        expect(stocks.value.single.exchange, 'NMS');
+        final Result<List<StockSearchResult>> funds = await service.search(
+          'Vanguard',
+          type: StockSearchType.fund,
+        );
+        expect(funds.value.map((StockSearchResult r) => r.symbol), <String>[
+          'VTI',
+          'VTSAX',
+        ]);
+        final Result<List<StockSearchResult>> crypto = await service.search(
+          'Bitcoin',
+          type: StockSearchType.crypto,
+        );
+        expect(crypto.value.map((StockSearchResult r) => r.symbol), <String>[
+          'BTC-USD',
+          'BTC-EUR',
+        ]);
+      },
+    );
+
+    test('limits suggestions and preserves international names', () async {
+      final StockSearchService service = StockSearchService(
+        client: MockClient(
+          (_) async => http.Response.bytes(
+            utf8.encode(
+              jsonEncode(<String, Object?>{
+                'quotes': <Object?>[
+                  for (int i = 0; i < 12; i++)
+                    <String, Object?>{
+                      'symbol': '$i.T',
+                      'longname': 'トヨタ自動車',
+                      'quoteType': 'EQUITY',
+                      'isYahooFinance': true,
+                    },
+                ],
+              }),
+            ),
+            200,
+          ),
+        ),
+      );
+      final Result<List<StockSearchResult>> result = await service.search(
+        'トヨタ',
+        type: StockSearchType.stock,
+      );
+      expect(result.value, hasLength(8));
+      expect(result.value.first.name, 'トヨタ自動車');
+    });
+
+    test(
+      'does not send short queries and distinguishes empty results from errors',
+      () async {
+        int requests = 0;
+        final StockSearchService service = StockSearchService(
+          client: MockClient((_) async {
+            requests++;
+            return http.Response('{"quotes":[]}', 200);
+          }),
+        );
+        expect(
+          (await service.search(' A ', type: StockSearchType.stock)).isFailure,
+          isTrue,
+        );
+        expect(requests, 0);
+        expect(
+          (await service.search('no match', type: StockSearchType.stock)).value,
+          isEmpty,
+        );
+        expect(requests, 1);
+        for (final (String, int) response in <(String, int)>[
+          ('{"quotes":[]}', 429),
+          ('<html>Unavailable</html>', 503),
+          ('{"finance":{"error":{}}}', 200),
+          ('{"quotes":{}}', 200),
+          ('not JSON', 200),
+        ]) {
+          final StockSearchService failing = StockSearchService(
+            client: MockClient(
+              (_) async => http.Response(response.$1, response.$2),
+            ),
+          );
+          final Result<List<StockSearchResult>> result = await failing.search(
+            'Apple',
+            type: StockSearchType.stock,
+          );
+          expect(result.isFailure, isTrue, reason: '$response');
+        }
+      },
+    );
+
+    test('reports network errors and timeouts as failures', () async {
+      for (final Exception error in <Exception>[
+        http.ClientException('Offline'),
+        TimeoutException('Timed out'),
+      ]) {
+        final StockSearchService service = StockSearchService(
+          client: MockClient((_) async => throw error),
+        );
+        expect(
+          (await service.search(
+            'Apple',
+            type: StockSearchType.stock,
+          )).isFailure,
+          isTrue,
+        );
+      }
+    });
+  });
+
   group('StockPriceService', () {
     test('rejects an empty symbol without calling the network', () async {
       bool called = false;

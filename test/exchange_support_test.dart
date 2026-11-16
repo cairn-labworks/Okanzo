@@ -10,6 +10,7 @@ import 'package:okanzo/data/local/dao/asset_dao.dart';
 import 'package:okanzo/data/local/entity/asset_entity.dart';
 import 'package:okanzo/data/remote/stock/chart_response.dart';
 import 'package:okanzo/data/remote/stock/stock_price_service.dart';
+import 'package:okanzo/data/remote/stock/stock_search_service.dart';
 import 'package:okanzo/data/repository/asset_repository.dart';
 import 'package:okanzo/data/repository/settings_repository.dart';
 import 'package:okanzo/di/app_container.dart';
@@ -112,13 +113,26 @@ class _Database extends Fake implements Database {
 }
 
 class _Container extends Fake implements AppContainer {
-  _Container(this.assetRepository, this.settingsRepository);
+  _Container(
+    this.assetRepository,
+    this.settingsRepository, {
+    StockSearchService? searchService,
+  }) : stockSearchService =
+           searchService ??
+           StockSearchService(
+             client: MockClient(
+               (_) async => http.Response('{"quotes":[]}', 200),
+             ),
+           );
 
   @override
   final AssetRepository assetRepository;
 
   @override
   final SettingsRepository settingsRepository;
+
+  @override
+  final StockSearchService stockSearchService;
 }
 
 class _FailingSettingsRepository extends SettingsRepository {
@@ -208,6 +222,100 @@ void main() {
     addTearDown(viewModel.dispose);
     return viewModel;
   }
+
+  test('selected listings replace the exchange, preserve currency and custom names', () async {
+    final AssetEditViewModel viewModel = editor();
+    viewModel.onExchangeChange(StockExchange.bse);
+    viewModel.onNameChange('My long-term shares');
+    await viewModel.onCurrencyChange('EUR');
+    viewModel.onSymbolChange('RELIANCE');
+    await viewModel.fetchPrice();
+    expect(viewModel.form.lastPrice, isNotNull);
+    viewModel.onStockSelected(
+      const StockSearchResult(
+        symbol: 'AAPL',
+        name: 'Apple Inc.',
+        exchange: 'NASDAQ',
+      ),
+    );
+    expect(viewModel.form.quoteSymbol, 'AAPL');
+    expect(viewModel.form.exchange, StockExchange.us);
+    expect(viewModel.form.name, 'My long-term shares');
+    expect(viewModel.form.currency, 'EUR');
+    expect(viewModel.form.lastPrice, isNull);
+    expect(viewModel.form.lastPriceTimestamp, isNull);
+    viewModel.onNameChange('');
+    viewModel.onStockSelected(
+      const StockSearchResult(
+        symbol: 'VOD.L',
+        name: 'Vodafone Group',
+        exchange: 'London',
+      ),
+    );
+    expect(viewModel.form.quoteSymbol, 'VOD.L');
+    expect(viewModel.form.exchange, StockExchange.other);
+    expect(viewModel.form.name, 'Vodafone Group');
+  });
+
+  testWidgets('company search selects, fetches and saves the exact listing', (
+    WidgetTester tester,
+  ) async {
+    await settings.setPreferredExchanges(<StockExchange>[StockExchange.bse]);
+    final List<String> queries = <String>[];
+    final StockSearchService search = StockSearchService(
+      client: MockClient((http.Request request) async {
+        queries.add(request.url.queryParameters['q']!);
+        return http.Response(
+          '{"quotes":[{"symbol":"AAPL","longname":"Apple Inc.",'
+          '"quoteType":"EQUITY","exchDisp":"NASDAQ","isYahooFinance":true}]}',
+          200,
+        );
+      }),
+    );
+    await tester.pumpWidget(
+      AppScope(
+        container: _Container(repository, settings, searchService: search),
+        child: const MaterialApp(
+          home: AssetEditScreen(portfolioId: 1, assetId: 0),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final Finder ticker = find.widgetWithText(TextField, 'Company or ticker');
+    await tester.ensureVisible(ticker);
+    await tester.enterText(ticker, 'Apple');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Apple Inc.'));
+    await tester.tap(find.text('Apple Inc.'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(ticker).controller!.text, 'AAPL');
+    expect(
+      tester
+          .widget<TextField>(find.widgetWithText(TextField, 'Name'))
+          .controller!
+          .text,
+      'Apple Inc.',
+    );
+    expect(
+      tester
+          .widget<StockExchangeField>(find.byType(StockExchangeField))
+          .selected,
+      StockExchange.us,
+    );
+    await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '2');
+    await tester.ensureVisible(find.text('Fetch latest price'));
+    await tester.tap(find.text('Fetch latest price'));
+    await tester.pumpAndSettle();
+    expect(requests, <String>['AAPL']);
+    await tester.ensureVisible(find.text('Save asset'));
+    await tester.tap(find.text('Save asset'));
+    await tester.pumpAndSettle();
+    expect(dao.assets.single.symbol, 'AAPL');
+    expect(dao.assets.single.name, 'Apple Inc.');
+    expect(dao.assets.single.quantity, 2);
+    expect(dao.assets.single.lastPrice, isNotNull);
+    expect(queries, <String>['Apple']);
+  });
 
   test('stock and fund editors fetch and save each exchange listing', () async {
     for (final AssetType type in <AssetType>[
@@ -430,7 +538,7 @@ void main() {
     await tester.tap(bse);
     await tester.pumpAndSettle();
 
-    final Finder ticker = find.widgetWithText(TextField, 'Ticker symbol');
+    final Finder ticker = find.widgetWithText(TextField, 'Company or ticker');
     await tester.ensureVisible(ticker);
     await tester.enterText(ticker, 'RELIANCE');
     await tester.pumpAndSettle();
@@ -458,29 +566,72 @@ void main() {
     );
   });
 
-  testWidgets('cryptocurrency editor has no stock exchange selector', (
-    WidgetTester tester,
-  ) async {
-    dao.assets.add(_holding(1, 'BTC-USD').copyWith(type: AssetType.crypto));
-    await tester.pumpWidget(
-      AppScope(
-        container: _Container(repository, settings),
-        child: const MaterialApp(
-          home: AssetEditScreen(portfolioId: 1, assetId: 1),
+  test(
+    'crypto selection keeps the exact pair, currency and exchange state',
+    () async {
+      dao.assets.add(
+        _holding(
+          1,
+          'BTC-USD',
+        ).copyWith(type: AssetType.crypto, currency: 'EUR'),
+      );
+      final AssetEditViewModel viewModel = editor(assetId: 1);
+      await Future<void>.delayed(Duration.zero);
+      expect(viewModel.form.lastPrice, isNotNull);
+      final StockExchange exchange = viewModel.form.exchange;
+      viewModel.onNameChange('');
+      viewModel.onStockSelected(
+        const StockSearchResult(
+          symbol: 'BTC-EUR',
+          name: 'Bitcoin EUR',
+          exchange: 'CCC',
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      expect(viewModel.form.quoteSymbol, 'BTC-EUR');
+      expect(viewModel.form.name, 'Bitcoin EUR');
+      expect(viewModel.form.currency, 'EUR');
+      expect(viewModel.form.exchange, exchange);
+      expect(viewModel.form.lastPrice, isNull);
+      viewModel.onNameChange('My Bitcoin');
+      viewModel.onStockSelected(
+        const StockSearchResult(
+          symbol: 'BTC-USD',
+          name: 'Bitcoin USD',
+          exchange: 'CCC',
+        ),
+      );
+      expect(viewModel.form.quoteSymbol, 'BTC-USD');
+      expect(viewModel.form.name, 'My Bitcoin');
+      await viewModel.save();
+      expect(dao.assets.single.symbol, 'BTC-USD');
+      expect(dao.assets.single.type, AssetType.crypto);
+    },
+  );
 
-    expect(find.byType(StockExchangeField), findsNothing);
-    expect(
-      tester
-          .widget<TextField>(find.widgetWithText(TextField, 'Ticker symbol'))
-          .controller
-          ?.text,
-      'BTC-USD',
-    );
-  });
+  testWidgets(
+    'cryptocurrency editor has typeahead but no stock exchange selector',
+    (WidgetTester tester) async {
+      dao.assets.add(_holding(1, 'BTC-USD').copyWith(type: AssetType.crypto));
+      await tester.pumpWidget(
+        AppScope(
+          container: _Container(repository, settings),
+          child: const MaterialApp(
+            home: AssetEditScreen(portfolioId: 1, assetId: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(StockExchangeField), findsNothing);
+      expect(
+        tester
+            .widget<TextField>(find.widgetWithText(TextField, 'Coin or ticker'))
+            .controller
+            ?.text,
+        'BTC-USD',
+      );
+    },
+  );
 
   testWidgets(
     'currency picker converts the price and fetch preserves selection',
@@ -698,7 +849,7 @@ void main() {
     ]);
     expect(find.text(StockExchange.hongKong.displayName), findsOneWidget);
     expect(find.text('2 × ${CurrencyUtil.format(10, 'HKD')}'), findsOneWidget);
-    final Finder ticker = find.widgetWithText(TextField, 'Ticker symbol');
+    final Finder ticker = find.widgetWithText(TextField, 'Company or ticker');
     expect(tester.widget<TextField>(ticker).controller?.text, '0700.HK');
   });
 

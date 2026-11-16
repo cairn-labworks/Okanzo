@@ -15,6 +15,7 @@ import '../data/remote/api_client.dart';
 import '../data/remote/fx/fx_api.dart';
 import '../data/remote/stock/chart_response.dart';
 import '../data/remote/stock/stock_price_service.dart';
+import '../data/remote/stock/stock_search_service.dart';
 import '../data/repository/asset_repository.dart';
 import '../data/repository/fx_repository.dart';
 import '../data/repository/liability_repository.dart';
@@ -31,6 +32,7 @@ class AppContainer {
     required this.settingsRepository,
     required this.portfolioRepository,
     required this.assetRepository,
+    required this.stockSearchService,
     required this.liabilityRepository,
     required this.fxRepository,
     required this.backupRepository,
@@ -74,6 +76,7 @@ class AppContainer {
         stockPriceService,
         fxRepository,
       ),
+      stockSearchService: StockSearchService(client: client),
       liabilityRepository: LiabilityRepository(liabilityDao),
       fxRepository: fxRepository,
       backupRepository: BackupRepository(portfolioDao, assetDao, liabilityDao),
@@ -108,6 +111,7 @@ class AppContainer {
   final SettingsRepository settingsRepository;
   final PortfolioRepository portfolioRepository;
   final AssetRepository assetRepository;
+  final StockSearchService stockSearchService;
   final LiabilityRepository liabilityRepository;
   final FxRepository fxRepository;
   final BackupRepository backupRepository;
