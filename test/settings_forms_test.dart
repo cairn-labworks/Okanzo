@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:okanzo/data/backup/backup_repository.dart';
@@ -33,11 +34,13 @@ import 'package:okanzo/ui/lock/lock_screen.dart';
 import 'package:okanzo/ui/navigation/app_shell.dart';
 import 'package:okanzo/ui/portfolio/portfolio_screen.dart';
 import 'package:okanzo/ui/settings/settings_screen.dart';
+import 'package:okanzo/ui/settings/settings_view_model.dart';
 import 'package:okanzo/ui/statistics/statistics_screen.dart';
 import 'package:okanzo/ui/theme/theme.dart';
 import 'package:okanzo/ui/theme/app_style.dart';
 import 'package:okanzo/util/result.dart';
 import 'package:okanzo/util/currency_util.dart';
+import 'package:okanzo/util/screenshot_protection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _Assets extends Fake implements AssetRepository {
@@ -158,6 +161,40 @@ class _FailingAppearanceRepository extends SettingsRepository {
   @override
   Future<void> setAppearanceMode(AppThemeMode mode) async {
     throw StateError('Storage unavailable');
+  }
+}
+
+class _RejectingScreenshotPreferences extends Fake
+    implements SharedPreferences {
+  _RejectingScreenshotPreferences({required this.throwOnWrite});
+
+  final bool throwOnWrite;
+  bool? cachedValue;
+  int reloads = 0;
+
+  @override
+  String? getString(String key) => key == 'base_currency' ? 'USD' : null;
+
+  @override
+  bool? getBool(String key) => key == 'block_screenshots' ? cachedValue : null;
+
+  @override
+  int? getInt(String key) => null;
+
+  @override
+  List<String>? getStringList(String key) => null;
+
+  @override
+  Future<bool> setBool(String key, bool value) async {
+    cachedValue = value;
+    if (throwOnWrite) throw StateError('Storage unavailable');
+    return false;
+  }
+
+  @override
+  Future<void> reload() async {
+    reloads++;
+    cachedValue = null;
   }
 }
 
@@ -777,7 +814,7 @@ void main() {
     final Map<String, List<String>> categories = <String, List<String>>{
       'Appearance': <String>['App language', 'Theme', 'Dynamic color'],
       'Currency': <String>['Base currency', 'Simple net worth'],
-      'Security': <String>['App lock'],
+      'Security': <String>['App lock', 'Block screenshots'],
       'Data': <String>[
         'Exchange rates',
         'Export portfolios',
@@ -1533,4 +1570,149 @@ void main() {
       await tester.pumpAndSettle();
     }
   });
+
+  testWidgets(
+    'Block screenshots is enabled by default, updates FLAG_SECURE channel and persists',
+    (WidgetTester tester) async {
+      final List<bool> channelCalls = <bool>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(ScreenshotProtection.channel, (
+            MethodCall call,
+          ) async {
+            expect(call.method, 'setScreenshotProtection');
+            channelCalls.add(call.arguments as bool);
+            return true;
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(ScreenshotProtection.channel, null),
+      );
+
+      expect(container.settingsRepository.current.blockScreenshots, isTrue);
+      await container.settingsRepository.setHideBalances(true);
+
+      await open(tester, SettingsScreen(onClose: () {}));
+      await _tap(tester, find.text('Security'));
+
+      SwitchListTile tile() => tester.widget<SwitchListTile>(
+        find.widgetWithText(SwitchListTile, 'Block screenshots'),
+      );
+      expect(tile().value, isTrue);
+
+      await _tap(tester, find.text('Block screenshots'));
+      expect(tile().value, isFalse);
+      expect(container.settingsRepository.current.blockScreenshots, isFalse);
+      expect(channelCalls, <bool>[false]);
+
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+      final SettingsRepository reopened = SettingsRepository(prefs);
+      addTearDown(reopened.dispose);
+      expect(reopened.current.blockScreenshots, isFalse);
+      expect(reopened.current.hideBalances, isTrue);
+
+      await _tap(tester, find.text('Block screenshots'));
+      expect(tile().value, isTrue);
+      expect(container.settingsRepository.current.blockScreenshots, isTrue);
+      expect(channelCalls, <bool>[false, true]);
+    },
+  );
+
+  for (final bool throwOnWrite in <bool>[false, true]) {
+    testWidgets(
+      'failed screenshot-protection writes restore default and localize error (throws: $throwOnWrite)',
+      (WidgetTester tester) async {
+        final List<bool> channelCalls = <bool>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(ScreenshotProtection.channel, (
+              MethodCall call,
+            ) async {
+              channelCalls.add(call.arguments as bool);
+              return true;
+            });
+        addTearDown(
+          () => TestDefaultBinaryMessengerBinding
+              .instance
+              .defaultBinaryMessenger
+              .setMockMethodCallHandler(ScreenshotProtection.channel, null),
+        );
+
+        final _RejectingScreenshotPreferences rejected =
+            _RejectingScreenshotPreferences(throwOnWrite: throwOnWrite);
+        final SettingsRepository failing = SettingsRepository(rejected);
+        addTearDown(failing.dispose);
+        expect(failing.current.blockScreenshots, isTrue);
+
+        const AppLocalizations es = AppLocalizations(Locale('es'));
+        await tester.pumpWidget(
+          _app(
+            _Container(failing),
+            SettingsScreen(onClose: () {}),
+            locale: const Locale('es'),
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        await _tap(tester, find.text(es.text('Security')));
+        await _tap(tester, find.text(es.text('Block screenshots')));
+
+        expect(failing.current.blockScreenshots, isTrue);
+        expect(rejected.reloads, 1);
+        expect(channelCalls, isEmpty);
+        expect(
+          tester
+              .widget<SwitchListTile>(
+                find.widgetWithText(
+                  SwitchListTile,
+                  es.text('Block screenshots'),
+                ),
+              )
+              .value,
+          isTrue,
+        );
+        expect(
+          find.textContaining(
+            'No se pudo guardar la protección contra capturas:',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+  }
+
+  test(
+    'native screenshot-protection failure rolls back stored preference',
+    () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(ScreenshotProtection.channel, (
+            MethodCall call,
+          ) async {
+            throw PlatformException(code: 'WINDOW_ERROR', message: 'Failed');
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(ScreenshotProtection.channel, null),
+      );
+
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('block_screenshots'), isNull);
+
+      final SettingsViewModel viewModel = SettingsViewModel(
+        settingsRepository: container.settingsRepository,
+        portfolioRepository: container.portfolioRepository,
+        fxRepository: container.fxRepository,
+        backupRepository: container.backupRepository,
+      );
+      addTearDown(viewModel.dispose);
+
+      await viewModel.setBlockScreenshots(false);
+      expect(
+        viewModel.message,
+        startsWith("Couldn't save screenshot protection:"),
+      );
+      expect(viewModel.settings.blockScreenshots, isTrue);
+      expect(container.settingsRepository.current.blockScreenshots, isTrue);
+      expect(prefs.getBool('block_screenshots'), isNull);
+    },
+  );
 }

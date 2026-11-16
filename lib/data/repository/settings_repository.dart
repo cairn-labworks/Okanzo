@@ -9,6 +9,7 @@ import '../../domain/model/release_notes.dart';
 import '../../domain/model/stock_exchange.dart';
 import '../../domain/model/theme_mode.dart';
 import '../../util/currency_util.dart';
+import '../../util/screenshot_protection.dart';
 
 /// All user-facing app preferences.
 class AppSettings {
@@ -18,6 +19,7 @@ class AppSettings {
     this.dynamicColor = true,
     required this.baseCurrency,
     this.appLockEnabled = false,
+    this.blockScreenshots = true,
     this.hideBalances = false,
     this.simpleNetWorth = false,
     this.selectedPortfolioId,
@@ -31,6 +33,7 @@ class AppSettings {
   final bool dynamicColor;
   final String baseCurrency;
   final bool appLockEnabled;
+  final bool blockScreenshots;
   final bool hideBalances;
   final bool simpleNetWorth;
   final int? selectedPortfolioId;
@@ -61,6 +64,7 @@ class SettingsRepository {
   static const String _keyDynamicColor = 'dynamic_color';
   static const String _keyBaseCurrency = 'base_currency';
   static const String _keyAppLock = 'app_lock_enabled';
+  static const String _keyBlockScreenshots = 'block_screenshots';
   static const String _keyHideBalances = 'hide_balances';
   static const String _keySimpleNetWorth = 'simple_net_worth';
   static const String _keySelectedPortfolio = 'selected_portfolio_id';
@@ -70,6 +74,7 @@ class SettingsRepository {
 
   final SharedPreferences _prefs;
   // SharedPreferences updates its cache before confirming a write.
+  bool? _blockScreenshots;
   bool? _simpleNetWorth;
   List<String>? _cachedExchangeNames;
   List<StockExchange>? _cachedPreferredExchanges;
@@ -89,6 +94,8 @@ class SettingsRepository {
     baseCurrency:
         _prefs.getString(_keyBaseCurrency) ?? CurrencyUtil.deviceCurrencyCode(),
     appLockEnabled: _prefs.getBool(_keyAppLock) ?? false,
+    blockScreenshots: _blockScreenshots ??=
+        _prefs.getBool(_keyBlockScreenshots) ?? true,
     hideBalances: _prefs.getBool(_keyHideBalances) ?? false,
     simpleNetWorth: _simpleNetWorth ??=
         _prefs.getBool(_keySimpleNetWorth) ?? false,
@@ -222,6 +229,39 @@ class SettingsRepository {
 
   Future<void> setAppLockEnabled(bool enabled) async {
     await _prefs.setBool(_keyAppLock, enabled);
+    _emit();
+  }
+
+  Future<void> setBlockScreenshots(bool enabled) async {
+    final bool? original = _prefs.getBool(_keyBlockScreenshots);
+    bool prefsSaved = false;
+    bool applied = false;
+    try {
+      prefsSaved = await _prefs.setBool(_keyBlockScreenshots, enabled);
+      if (!prefsSaved) {
+        throw StateError('Screenshot protection preference could not be saved');
+      }
+      await ScreenshotProtection.setEnabled(enabled);
+      applied = true;
+    } finally {
+      if (!applied) {
+        try {
+          if (prefsSaved) {
+            final bool restored = original == null
+                ? await _prefs.remove(_keyBlockScreenshots)
+                : await _prefs.setBool(_keyBlockScreenshots, original);
+            if (!restored) {
+              throw StateError(
+                'Screenshot protection preference could not be restored',
+              );
+            }
+          }
+        } finally {
+          await _prefs.reload();
+        }
+      }
+    }
+    _blockScreenshots = enabled;
     _emit();
   }
 

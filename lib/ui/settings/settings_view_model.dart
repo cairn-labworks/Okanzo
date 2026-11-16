@@ -48,6 +48,7 @@ class SettingsViewModel extends ChangeNotifier {
   List<PortfolioEntity> _portfolios = const <PortfolioEntity>[];
   int? _fxUpdatedAt;
   String? _message;
+  bool _savingBlockScreenshots = false;
   bool _savingSimpleNetWorth = false;
   bool _disposed = false;
 
@@ -58,6 +59,8 @@ class SettingsViewModel extends ChangeNotifier {
   int? get fxUpdatedAt => _fxUpdatedAt;
 
   String? get message => _message;
+
+  bool get isSavingBlockScreenshots => _savingBlockScreenshots;
 
   bool get isSavingSimpleNetWorth => _savingSimpleNetWorth;
 
@@ -97,6 +100,20 @@ class SettingsViewModel extends ChangeNotifier {
 
   void setAppLockEnabled(bool enabled) =>
       unawaited(_settingsRepository.setAppLockEnabled(enabled));
+
+  Future<void> setBlockScreenshots(bool enabled) async {
+    if (_savingBlockScreenshots) return;
+    _savingBlockScreenshots = true;
+    notifyListeners();
+    try {
+      await _settingsRepository.setBlockScreenshots(enabled);
+    } on Object catch (error) {
+      _message = "Couldn't save screenshot protection: $error";
+    } finally {
+      _savingBlockScreenshots = false;
+      if (!_disposed) notifyListeners();
+    }
+  }
 
   Future<void> refreshRates() async {
     final Result<void> result = await _fxRepository.refreshRates();

@@ -139,7 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           _SettingsSection(
             title: 'Security'.tr(context),
-            description: 'App lock & device authentication'.tr(context),
+            description: 'App lock & screenshot protection'.tr(context),
             icon: Icons.lock_outline,
             children: <Widget>[
               _SwitchRow(
@@ -149,6 +149,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 value: settings.appLockEnabled,
                 onChanged: _onAppLockChanged,
+              ),
+              _SwitchRow(
+                title: 'Block screenshots'.tr(context),
+                subtitle: 'Prevent screenshots and hide Okanzo in recent apps'
+                    .tr(context),
+                value: settings.blockScreenshots,
+                onChanged: viewModel.isSavingBlockScreenshots
+                    ? null
+                    : viewModel.setBlockScreenshots,
               ),
             ],
           ),
