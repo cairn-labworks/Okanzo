@@ -16,7 +16,7 @@ Features:
 * Reorder categories and individual items.
 * Convert holdings using cached exchange rates.
 * Encrypt the local database with SQLCipher and protect its key with Android Keystore.
-* Optionally lock the app with fingerprint or device credentials.
+* Optionally lock the app with fingerprint or device credentials, and block screenshots and recent-apps previews by default (configurable in Settings).
 * Export and import password-protected encrypted backups.
 * Use the sage light theme or deep-green Midnight dark theme, or follow your device. Wallpaper colors are available in light mode on Android 12+.
 * Find preferences in grouped settings and enter holdings with focused forms and optional notes.

@@ -128,7 +128,7 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 
 - Local database encrypted at rest with **SQLCipher (AES-256)**, keyed through **Android Keystore**
 - Optional **app lock** with fingerprint, biometrics or device PIN, re-locking whenever Okanzo leaves the foreground
-- **Screenshot protection**: `FLAG_SECURE` on Android prevents screen captures and recent-apps previews
+- **Screenshot protection**: `FLAG_SECURE` on Android prevents screen captures and recent-apps previews by default, with a toggle under **Settings → Security → Block screenshots**
 - **Hide balances** masks every monetary figure behind `••••` in one tap
 
 </td>

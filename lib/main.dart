@@ -15,6 +15,7 @@ import 'ui/navigation/app_shell.dart';
 import 'ui/theme/dynamic_color.dart';
 import 'ui/theme/theme.dart';
 import 'util/biometric_authenticator.dart';
+import 'util/screenshot_protection.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,13 @@ Future<void> main() async {
   // Number and date formatting follows the device locale, as it did on Android.
   Intl.defaultLocale = Platform.localeName.split('.').first;
   final AppContainer container = await AppContainer.create();
+  try {
+    await ScreenshotProtection.setEnabled(
+      container.settingsRepository.current.blockScreenshots,
+    );
+  } on PlatformException {
+    // Keep startup non-fatal; MainActivity enables FLAG_SECURE by default.
+  }
   runApp(AppScope(container: container, child: const OkanzoApp()));
 }
 

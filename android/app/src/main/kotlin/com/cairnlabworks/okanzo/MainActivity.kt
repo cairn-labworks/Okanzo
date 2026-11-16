@@ -11,13 +11,26 @@ import io.flutter.plugin.common.MethodChannel
 
 /**
  * FlutterFragmentActivity is required by local_auth so the biometric prompt can
- * attach to a FragmentActivity. FLAG_SECURE keeps balances out of screenshots
- * and the recents thumbnail, matching the original Android app.
+ * attach to a FragmentActivity. FLAG_SECURE is enabled by default to keep
+ * balances out of screenshots and the recents thumbnail, and can be toggled
+ * from Settings -> Security via [SECURITY_CHANNEL].
  */
 class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        val blockScreenshots = runCatching {
+            getSharedPreferences(FLUTTER_PREFERENCES, MODE_PRIVATE)
+                .getBoolean(KEY_BLOCK_SCREENSHOTS, true)
+        }.getOrDefault(true)
+        applyScreenshotProtection(blockScreenshots)
+    }
+
+    private fun applyScreenshotProtection(enabled: Boolean) {
+        if (enabled) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -40,9 +53,26 @@ class MainActivity : FlutterFragmentActivity() {
                 result.success(false)
             }
         }
+        // Updates FLAG_SECURE when the user toggles Block screenshots; see lib/util/screenshot_protection.dart.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SECURITY_CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method != "setScreenshotProtection") {
+                result.notImplemented()
+                return@setMethodCallHandler
+            }
+            val enabled = call.arguments as? Boolean
+            if (enabled == null) {
+                result.error("INVALID_ARGUMENT", "Expected a boolean argument", null)
+                return@setMethodCallHandler
+            }
+            applyScreenshotProtection(enabled)
+            result.success(true)
+        }
     }
 
     private companion object {
         const val LINKS_CHANNEL = "com.cairnlabworks.okanzo/links"
+        const val SECURITY_CHANNEL = "com.cairnlabworks.okanzo/security"
+        const val FLUTTER_PREFERENCES = "FlutterSharedPreferences"
+        const val KEY_BLOCK_SCREENSHOTS = "flutter.block_screenshots"
     }
 }
