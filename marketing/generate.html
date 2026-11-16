@@ -223,6 +223,53 @@
   .brand .bl svg{ width:44px; height:44px; }
   .brand .bn{ font-size:42px; font-weight:900; letter-spacing:-.5px; color:#F2F7F3; }
   .brand .bt{ font-size:26px; font-weight:800; letter-spacing:3px; color:#88A196; }
+
+  /* ---- Streak-style wide hero banner (1200x400 @ 2x -> 2400x800) ---- */
+  .banner{
+    width:1200px; height:400px; position:relative; overflow:hidden;
+    background:
+      radial-gradient(58% 130% at 75% 46%, #23543f 0%, #153428 36%, #0b1c15 66%, #060c0a 86%, #040807 100%);
+    color:#E8F0E9;
+  }
+  .banner::before{
+    content:""; position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(193,225,189,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(193,225,189,.04) 1px, transparent 1px);
+    background-size:36px 36px;
+    -webkit-mask-image: radial-gradient(65% 95% at 76% 40%, #000 0%, transparent 78%);
+            mask-image: radial-gradient(65% 95% at 76% 40%, #000 0%, transparent 78%);
+    pointer-events:none;
+  }
+  .banner::after{
+    content:""; position:absolute; inset:0;
+    background-image: radial-gradient(rgba(193,225,189,.055) 1px, transparent 1.2px);
+    background-size:20px 20px; opacity:.45; pointer-events:none;
+  }
+  .b-left{
+    position:absolute; left:68px; top:0; bottom:0; width:490px; z-index:10;
+    display:flex; flex-direction:column; justify-content:center;
+  }
+  .b-brand{ display:flex; align-items:center; gap:18px; }
+  .b-icon{
+    width:64px; height:64px; border-radius:16px; display:grid; place-items:center;
+    background:linear-gradient(135deg,#127355,#185624);
+    box-shadow:0 14px 28px -10px rgba(18,115,85,.65), 0 0 0 1px rgba(193,225,189,.18) inset;
+  }
+  .b-icon svg{ width:42px; height:42px; }
+  .b-title{ font-size:64px; font-weight:900; letter-spacing:-2.2px; line-height:1; color:#F4F8F5; }
+  .b-sub{ margin-top:22px; font-size:21.5px; line-height:1.45; color:#B4C7BD; font-weight:400; }
+  .b-pills{ display:flex; gap:12px; margin-top:28px; }
+  .b-pill{
+    border:1.25px solid rgba(193,225,189,.28); border-radius:100px;
+    padding:9px 20px; font-size:12.5px; font-weight:700; letter-spacing:1.8px;
+    color:#E4F1E7; background:rgba(19,33,28,.6);
+  }
+  .b-stage{ position:absolute; left:520px; right:0; top:0; bottom:0; z-index:5; }
+  .b-phone-slot{ position:absolute; transform-origin:top left; }
+  .b-phone-slot .phone{
+    box-shadow: 0 36px 80px -16px rgba(0,0,0,.88), 0 0 0 2px rgba(193,225,189,.13) inset;
+  }
 </style>
 </head>
 <body>
@@ -575,12 +622,48 @@ function posterHTML(p){
   </div>`;
 }
 
+function bannerHTML(){
+  return `<div class="banner">
+    <div class="b-left">
+      <div class="b-brand">
+        <div class="b-icon">${I.trend}</div>
+        <div class="b-title">Okanzo</div>
+      </div>
+      <div class="b-sub">A private, offline-first net worth tracker.<br>Encrypted on your phone, in any currency.</div>
+      <div class="b-pills">
+        <div class="b-pill">FREE</div>
+        <div class="b-pill">OPEN SOURCE</div>
+        <div class="b-pill">NO ACCOUNT</div>
+      </div>
+    </div>
+    <div class="b-stage">
+      <div class="b-phone-slot" style="left:2px; top:72px; z-index:2; transform:perspective(1500px) rotateY(15deg) rotateX(3deg) rotateZ(-4deg) scale(0.42);">
+        <div class="phone"><div class="island"></div><div class="screen">${statsScreen()}</div></div>
+      </div>
+      <div class="b-phone-slot" style="left:184px; top:28px; z-index:4; transform:scale(0.48);">
+        <div class="phone"><div class="island"></div><div class="screen">${homeScreen(true)}</div></div>
+      </div>
+      <div class="b-phone-slot" style="left:418px; top:74px; z-index:3; transform:perspective(1500px) rotateY(-15deg) rotateX(3deg) rotateZ(4deg) scale(0.42);">
+        <div class="phone"><div class="island"></div><div class="screen">${lockScreen()}</div></div>
+      </div>
+    </div>
+  </div>`;
+}
+
 document.getElementById('root').innerHTML = POSTERS.map(posterHTML).join('');
 
 // Single-poster export mode: generate.html?p=INDEX renders just one 1080x1920 poster.
+// Banner export mode: generate.html?banner=1 renders the 1200x400 (2400x800 @ 2x) README banner.
 const _params = new URLSearchParams(location.search);
 const _single = _params.get('p');
-if (_single !== null) {
+const _banner = _params.get('banner');
+if (_banner !== null) {
+  document.documentElement.style.background = '#040807';
+  document.body.style.width = '1200px';
+  document.body.style.height = '400px';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('root').innerHTML = bannerHTML();
+} else if (_single !== null) {
   const idx = parseInt(_single, 10);
   document.documentElement.style.background = '#050908';
   document.body.style.width = '1080px';
