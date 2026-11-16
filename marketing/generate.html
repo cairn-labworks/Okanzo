@@ -270,6 +270,40 @@
   .b-phone-slot .phone{
     box-shadow: 0 36px 80px -16px rgba(0,0,0,.88), 0 0 0 2px rgba(193,225,189,.13) inset;
   }
+
+  /* ---- Streak-style F-Droid / store featureGraphic (1024x500) ---- */
+  .fgraphic{
+    width:1024px; height:500px; position:relative; overflow:hidden;
+    background:
+      radial-gradient(80% 72% at 50% 8%, #21503c 0%, #143125 34%, #0b1b15 62%, #060b09 86%, #040807 100%);
+    color:#E8F0E9; display:flex; flex-direction:column; align-items:center;
+  }
+  .fgraphic::after{
+    content:""; position:absolute; inset:0;
+    background-image: radial-gradient(rgba(193,225,189,.055) 1px, transparent 1.2px);
+    background-size:20px 20px; opacity:.45; pointer-events:none;
+  }
+  .fg-top{ position:relative; z-index:10; display:flex; flex-direction:column; align-items:center; padding-top:34px; }
+  .fg-brand{ display:flex; align-items:center; gap:14px; }
+  .fg-icon{
+    width:46px; height:46px; border-radius:12px; display:grid; place-items:center;
+    background:linear-gradient(135deg,#127355,#185624);
+    box-shadow:0 10px 22px -8px rgba(18,115,85,.65), 0 0 0 1px rgba(193,225,189,.18) inset;
+  }
+  .fg-icon svg{ width:30px; height:30px; }
+  .fg-title{ font-size:48px; font-weight:900; letter-spacing:-1.6px; line-height:1; color:#F4F8F5; }
+  .fg-sub{ margin-top:14px; font-size:19px; color:#B4C7BD; font-weight:400; text-align:center; }
+  .fg-pills{ display:flex; gap:10px; margin-top:16px; }
+  .fg-pill{
+    border:1.2px solid rgba(193,225,189,.28); border-radius:100px;
+    padding:6px 16px; font-size:11px; font-weight:700; letter-spacing:1.6px;
+    color:#E4F1E7; background:rgba(19,33,28,.62);
+  }
+  .fg-stage{ position:absolute; left:0; right:0; top:208px; bottom:0; z-index:5; }
+  .fg-phone-slot{ position:absolute; transform-origin:top left; }
+  .fg-phone-slot .phone{
+    box-shadow: 0 32px 72px -14px rgba(0,0,0,.9), 0 0 0 2px rgba(193,225,189,.14) inset;
+  }
 </style>
 </head>
 <body>
@@ -650,14 +684,50 @@ function bannerHTML(){
   </div>`;
 }
 
+function featureGraphicHTML(){
+  return `<div class="fgraphic">
+    <div class="fg-top">
+      <div class="fg-brand">
+        <div class="fg-icon">${I.trend}</div>
+        <div class="fg-title">Okanzo</div>
+      </div>
+      <div class="fg-sub">A private, offline-first net worth tracker</div>
+      <div class="fg-pills">
+        <div class="fg-pill">FREE</div>
+        <div class="fg-pill">OPEN SOURCE</div>
+        <div class="fg-pill">NO ACCOUNT</div>
+      </div>
+    </div>
+    <div class="fg-stage">
+      <div class="fg-phone-slot" style="left:212px; top:34px; z-index:2; transform:perspective(1400px) rotateY(15deg) rotateX(3deg) rotateZ(-6deg) scale(0.37);">
+        <div class="phone"><div class="island"></div><div class="screen">${statsScreen()}</div></div>
+      </div>
+      <div class="fg-phone-slot" style="left:392px; top:4px; z-index:4; transform:scale(0.42);">
+        <div class="phone"><div class="island"></div><div class="screen">${homeScreen(true)}</div></div>
+      </div>
+      <div class="fg-phone-slot" style="left:602px; top:32px; z-index:3; transform:perspective(1400px) rotateY(-15deg) rotateX(3deg) rotateZ(6deg) scale(0.37);">
+        <div class="phone"><div class="island"></div><div class="screen">${lockScreen()}</div></div>
+      </div>
+    </div>
+  </div>`;
+}
+
 document.getElementById('root').innerHTML = POSTERS.map(posterHTML).join('');
 
 // Single-poster export mode: generate.html?p=INDEX renders just one 1080x1920 poster.
 // Banner export mode: generate.html?banner=1 renders the 1200x400 (2400x800 @ 2x) README banner.
+// Feature graphic mode: generate.html?feature=1 renders the 1024x500 F-Droid / store feature graphic.
 const _params = new URLSearchParams(location.search);
 const _single = _params.get('p');
 const _banner = _params.get('banner');
-if (_banner !== null) {
+const _feature = _params.get('feature');
+if (_feature !== null) {
+  document.documentElement.style.background = '#040807';
+  document.body.style.width = '1024px';
+  document.body.style.height = '500px';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('root').innerHTML = featureGraphicHTML();
+} else if (_banner !== null) {
   document.documentElement.style.background = '#040807';
   document.body.style.width = '1200px';
   document.body.style.height = '400px';

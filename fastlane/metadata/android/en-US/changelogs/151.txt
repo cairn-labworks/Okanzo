@@ -1,0 +1,1 @@
+Refresh F-Droid feature graphic and store screenshots in Okanzo's Midnight and sage visual style, and align documentation for Android builds.
