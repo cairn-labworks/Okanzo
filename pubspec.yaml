@@ -2,7 +2,7 @@ name: okanzo
 description: "Private, offline-first net worth tracker with on-device encryption."
 publish_to: 'none'
 
-version: 1.4.4+14
+version: 1.4.5+15
 
 environment:
   sdk: ^3.13.0

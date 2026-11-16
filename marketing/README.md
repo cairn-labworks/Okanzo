@@ -21,7 +21,7 @@ The posters are generated from a single self-contained HTML file and rendered
 with headless Chrome/Edge (no build step or network needed).
 
 ```powershell
-# generator: marketing/generate.html  (?p=<0-5> for posters, ?banner=1 for README banner)
+# generator: marketing/generate.html  (?p=<0-5> for posters, ?banner=1 for README banner, ?feature=1 for 1024x500 store feature graphic)
 $chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
 $src    = (Resolve-Path "marketing\generate.html").Path -replace '\\','/'
 $outDir = (Resolve-Path "marketing\screenshots").Path
