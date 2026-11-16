@@ -1,19 +1,19 @@
 # Okanzo — marketing screenshots
 
-Store / landing-page promo screenshots in a **dark & colorful** style
+Store / landing-page promo screenshots in Okanzo's **Midnight & sage precision** style
 (inspired by the framing of [Streak](https://github.com/InlitX/streak)).
 Each poster is a 1080×1920 composite (rendered at 2× → 2160×3840) with a badge,
-headline, subtitle, a device mockup of the app, floating feature callouts and a
-bottom brand/feature strip.
+headline, subtitle, a device mockup of the overhauled Quiet overview and Midnight UI,
+floating feature callouts and a bottom brand/feature strip.
 
 | File | Screen | Headline |
 |------|--------|----------|
-| `screenshots/01-networth.png`   | Home            | Your wealth. One glance. |
-| `screenshots/02-statistics.png` | Statistics      | Numbers, not guesswork. |
-| `screenshots/03-currency.png`   | Home (expanded) | Every currency. One total. |
-| `screenshots/04-private.png`    | Lock screen     | Private by design. |
-| `screenshots/05-portfolios.png` | Portfolios      | Many portfolios. One you. |
-| `screenshots/06-backup.png`     | Export          | Your data. Your keys. |
+| `screenshots/01-networth.png`   | Home (Quiet overview) | Your wealth. One glance. |
+| `screenshots/02-statistics.png` | Statistics            | Numbers, not guesswork. |
+| `screenshots/03-currency.png`   | Home (expanded)       | Every currency. One total. |
+| `screenshots/04-private.png`    | Lock screen           | Private by design. |
+| `screenshots/05-portfolios.png` | Portfolios            | Many portfolios. One you. |
+| `screenshots/06-backup.png`     | Settings → Data       | Your data. Your keys. |
 
 ## Regenerating
 
@@ -23,11 +23,16 @@ with headless Chrome/Edge (no build step or network needed).
 ```powershell
 # generator: marketing/generate.html  (append ?p=<0-5> to render one poster)
 $chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
-$src    = "marketing\generate.html"
-0..5 | ForEach-Object {
-  & $chrome --headless=new --disable-gpu --hide-scrollbars `
-    --force-device-scale-factor=2 --window-size=1080,1920 `
-    --screenshot="screenshots\poster-$_.png" "file:///$($src -replace '\\','/')?p=$_"
+$src    = (Resolve-Path "marketing\generate.html").Path -replace '\\','/'
+$outDir = (Resolve-Path "marketing\screenshots").Path
+$names  = @('01-networth','02-statistics','03-currency','04-private','05-portfolios','06-backup')
+for ($i = 0; $i -lt $names.Count; $i++) {
+  $out  = Join-Path $outDir "$($names[$i]).png"
+  $prof = Join-Path $env:TEMP "chrome-okanzo-$PID-$i"
+  & $chrome "--headless=new" "--disable-gpu" "--hide-scrollbars" `
+    "--user-data-dir=$prof" "--force-device-scale-factor=2" "--window-size=1080,1920" `
+    "--screenshot=$out" "file:///${src}?p=$i" | Out-Null
+  Remove-Item -Recurse -Force $prof -ErrorAction SilentlyContinue
 }
 ```
 
@@ -37,7 +42,7 @@ and screen-builder functions inside the generator, then re-run.
 ## Exchange feature screenshots
 
 Unlike the promotional posters above, these are actual Android emulator
-captures of the app, using a **Global demo** portfolio with sample holdings:
+captures of the app in Midnight dark mode, using a **Global demo** portfolio with sample holdings:
 
 | File | Screen |
 |------|--------|
@@ -60,26 +65,6 @@ flutter drive \
 The capture uses Flutter's integration-test image surface; the app's
 `FLAG_SECURE` screenshot protection stays enabled. The full live exchange smoke
 test also runs, so network access and Yahoo quote availability are required.
-
-### Physical-device validation
-
-The [Android 13 wireless captures](screenshots/exchanges/android-13-wireless/)
-show the same feature on a physical phone in dark mode:
-
-| Screen | Capture |
-|--------|---------|
-| Preferred-only dropdown | [exchange-picker.png](screenshots/exchanges/android-13-wireless/exchange-picker.png) |
-| Checkbox popup | [preferred-exchanges.png](screenshots/exchanges/android-13-wireless/preferred-exchanges.png) |
-| Empty shortlist | [empty-exchanges.png](screenshots/exchanges/android-13-wireless/empty-exchanges.png) |
-| Live BSE quote | [bse-quote.png](screenshots/exchanges/android-13-wireless/bse-quote.png) |
-| Sample international holdings | [global-portfolio.png](screenshots/exchanges/android-13-wireless/global-portfolio.png) |
-
-Two full integration runs passed over wireless debugging, including all 14
-live stock/ETF quotes, saving/reopening, bulk refresh, encrypted database
-reopening, and preference defaults, Save/Cancel, empty lists and persistence.
-The installed release app and its data were not modified; tests used a separate
-debug app, which the runner removed afterward. All captures contain sample data
-and preserve `FLAG_SECURE`.
 
 Preference unit tests cover defaults, storage failure, deduplication,
 reload/persistence, explicitly empty lists, obsolete entries and notifications.
