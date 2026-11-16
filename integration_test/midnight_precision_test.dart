@@ -370,7 +370,7 @@ void main() {
       expect(chips[1].top, chips[2].top);
       expect(find.byType(DropdownMenu<AssetType>), findsNothing);
       expect(
-        tester.getRect(_field('Ticker symbol')).top,
+        tester.getRect(_field('Company or ticker')).top,
         tester.getRect(_field('Quantity')).top,
       );
       final Text amount = tester.widget<Text>(
@@ -560,7 +560,9 @@ void main() {
       );
       expect(
         tester.getRect(_field(strings.text('Quantity'))).top,
-        greaterThan(tester.getRect(_field(strings.text('Ticker symbol'))).top),
+        greaterThan(
+          tester.getRect(_field(strings.text('Company or ticker'))).top,
+        ),
       );
       await _saveBelowNotes(tester, strings.text('Save asset'));
       expect(tester.takeException(), isNull);

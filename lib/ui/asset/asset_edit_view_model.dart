@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/local/entity/asset_entity.dart';
 import '../../data/remote/stock/stock_price_service.dart';
+import '../../data/remote/stock/stock_search_service.dart';
 import '../../data/repository/asset_repository.dart';
 import '../../data/repository/settings_repository.dart';
 import '../../domain/model/asset_type.dart';
@@ -164,6 +165,19 @@ class AssetEditViewModel extends ChangeNotifier {
     if (value != _form.exchange) {
       _updateQuoteInput(_form.withExchange(value));
     }
+  }
+
+  void onStockSelected(StockSearchResult result) {
+    _updateQuoteInput(
+      _form.copyWith(
+        symbol: result.symbol,
+        exchange: _form.usesStockExchange
+            ? StockExchange.fromSymbol(result.symbol)
+            : _form.exchange,
+        name: _form.name.trim().isEmpty ? result.name : _form.name,
+        clearLastPrice: true,
+      ),
+    );
   }
 
   void onManualValueChange(String value) =>

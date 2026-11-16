@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/remote/stock/stock_search_service.dart';
 import '../../di/app_container.dart';
 import '../../domain/model/asset_type.dart';
 import '../../domain/model/stock_exchange.dart';
@@ -10,6 +11,7 @@ import '../components/ui_components.dart';
 import 'asset_edit_view_model.dart';
 import 'asset_form_state.dart';
 import 'stock_exchange_field.dart';
+import 'stock_search_field.dart';
 
 /// Create or edit a single asset.
 class AssetEditScreen extends StatefulWidget {
@@ -234,28 +236,28 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     final ThemeData theme = Theme.of(context);
     switch (form.valuationMode) {
       case ValuationMode.market:
+        final Widget quantityField = LabeledTextField(
+          controller: _quantity,
+          label: 'Quantity'.tr(context),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          onChanged: viewModel.onQuantityChange,
+        );
         return <Widget>[
-          FormFieldPair(
-            first: LabeledTextField(
-              controller: _symbol,
-              label: 'Ticker symbol'.tr(context),
-              placeholder: form.usesStockExchange
-                  ? 'e.g. {symbol}'
-                        .tr(context)
-                        .replaceAll('{symbol}', form.exchange.example)
-                  : 'e.g. {symbol}'
-                        .tr(context)
-                        .replaceAll('{symbol}', 'BTC-USD, ETH-USD'),
-              onChanged: viewModel.onSymbolChange,
-            ),
-            second: LabeledTextField(
-              controller: _quantity,
-              label: 'Quantity'.tr(context),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              onChanged: viewModel.onQuantityChange,
-            ),
+          StockSearchField(
+            controller: _symbol,
+            service: AppScope.of(context).stockSearchService,
+            type: switch (form.type) {
+              AssetType.crypto => StockSearchType.crypto,
+              AssetType.mutualFund => StockSearchType.fund,
+              _ => StockSearchType.stock,
+            },
+            quantityField: quantityField,
+            onChanged: viewModel.onSymbolChange,
+            onSelected: (result) {
+              viewModel.onStockSelected(result);
+              _symbol.text = viewModel.form.symbol;
+              _name.text = viewModel.form.name;
+            },
           ),
           Align(
             alignment: AlignmentDirectional.centerStart,

@@ -320,7 +320,7 @@ void main() {
         }
         await _selectExchange(tester, listing.exchange);
         await _enter(tester, 'Name', listing.name);
-        await _enter(tester, 'Ticker symbol', listing.ticker);
+        await _enter(tester, 'Company or ticker', listing.ticker);
         await _enter(tester, 'Quantity', '2');
         await _pickCurrency(tester, listing.currency);
         if (_captureScreenshots && listing.exchange == StockExchange.bse) {
@@ -402,7 +402,7 @@ void main() {
         expect(
           tester
               .widget<TextField>(
-                find.widgetWithText(TextField, 'Ticker symbol'),
+                find.widgetWithText(TextField, 'Company or ticker'),
               )
               .controller
               ?.text,
@@ -465,7 +465,9 @@ void main() {
       );
       expect(
         tester
-            .widget<TextField>(find.widgetWithText(TextField, 'Ticker symbol'))
+            .widget<TextField>(
+              find.widgetWithText(TextField, 'Company or ticker'),
+            )
             .controller
             ?.text,
         '0700.HK',
@@ -604,7 +606,11 @@ void main() {
           await _select<AssetType>(tester, type.displayName);
         }
         await _enter(tester, 'Name', name);
-        await _enter(tester, 'Ticker symbol', symbol);
+        await _enter(
+          tester,
+          type == AssetType.crypto ? 'Coin or ticker' : 'Company or ticker',
+          symbol,
+        );
         await _enter(tester, 'Quantity', '2');
         await _pickCurrency(tester, 'USD');
         await _tap(tester, find.text('Fetch latest price'));

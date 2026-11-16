@@ -10,6 +10,7 @@ class LabeledTextField extends StatelessWidget {
     required this.controller,
     required this.label,
     this.onChanged,
+    this.focusNode,
     this.placeholder,
     this.prefix,
     this.suffix,
@@ -24,6 +25,7 @@ class LabeledTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final ValueChanged<String>? onChanged;
+  final FocusNode? focusNode;
   final String? placeholder;
   final String? prefix;
   final String? suffix;
@@ -42,6 +44,7 @@ class LabeledTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       onChanged: onChanged,
       maxLines: singleLine ? 1 : null,
       keyboardType: keyboardType,

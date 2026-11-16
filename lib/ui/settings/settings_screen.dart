@@ -221,10 +221,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   vertical: 12,
                 ),
                 child: Text(
-                  'Your data is stored encrypted on this device and never '
-                          'leaves it, except when you export a backup. Stock and '
-                          'exchange-rate lookups send only the ticker or currency code.'
-                      .tr(context),
+                  <String>[
+                    'Your data is stored encrypted on this device and never '
+                            'leaves it, except when you export a backup. Stock and '
+                            'exchange-rate lookups send only the ticker or currency code.'
+                        .tr(context),
+                    'Company/ticker search sends the text you type to Yahoo Finance.'
+                        .tr(context),
+                  ].join('\n'),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

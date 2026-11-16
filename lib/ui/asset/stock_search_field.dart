@@ -1,0 +1,207 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+
+import '../../data/remote/stock/stock_search_service.dart';
+import '../../l10n/app_localizations.dart';
+import '../../util/result.dart';
+import '../components/form_components.dart';
+
+class StockSearchField extends StatefulWidget {
+  const StockSearchField({
+    required this.controller,
+    required this.service,
+    required this.type,
+    required this.quantityField,
+    required this.onChanged,
+    required this.onSelected,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final StockSearchService service;
+  final StockSearchType type;
+  final Widget quantityField;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<StockSearchResult> onSelected;
+
+  @override
+  State<StockSearchField> createState() => _StockSearchFieldState();
+}
+
+class _StockSearchFieldState extends State<StockSearchField> {
+  final FocusNode _focus = FocusNode();
+  final GlobalKey _feedbackKey = GlobalKey();
+  Timer? _debounce;
+  int _request = 0;
+  late String _text;
+  bool _searching = false;
+  Result<List<StockSearchResult>>? _result;
+
+  @override
+  void initState() {
+    super.initState();
+    _text = widget.controller.text;
+    widget.controller.addListener(_onControllerChanged);
+    _focus.addListener(_onFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(StockSearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onControllerChanged);
+      _text = widget.controller.text;
+      widget.controller.addListener(_onControllerChanged);
+    }
+    if (oldWidget.controller != widget.controller ||
+        oldWidget.type != widget.type) {
+      _reset();
+    }
+  }
+
+  void _onFocusChange() {
+    if (!_focus.hasFocus) _reset();
+  }
+
+  void _onControllerChanged() {
+    if (_text == widget.controller.text) return;
+    _text = widget.controller.text;
+    _reset();
+  }
+
+  void _reset() {
+    _debounce?.cancel();
+    _request++;
+    setState(() {
+      _searching = false;
+      _result = null;
+    });
+  }
+
+  void _onChanged(String value) {
+    widget.onChanged(value);
+    if (value.trim().length < 2) return;
+    setState(() => _searching = true);
+    final int request = _request;
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      unawaited(_search(value, request));
+    });
+  }
+
+  Future<void> _search(String query, int request) async {
+    final Result<List<StockSearchResult>> result = await widget.service.search(
+      query,
+      type: widget.type,
+    );
+    if (!mounted || request != _request || !_focus.hasFocus) return;
+    setState(() {
+      _searching = false;
+      _result = result;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final BuildContext? feedback = _feedbackKey.currentContext;
+      if (!mounted || request != _request || feedback == null) return;
+      unawaited(
+        Scrollable.ensureVisible(
+          feedback,
+          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          duration: const Duration(milliseconds: 200),
+        ),
+      );
+    });
+  }
+
+  void _select(StockSearchResult result) {
+    _reset();
+    widget.onSelected(result);
+    _focus.unfocus();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    widget.controller.removeListener(_onControllerChanged);
+    _focus.removeListener(_onFocusChange);
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Result<List<StockSearchResult>>? result = _result;
+    return TextFieldTapRegion(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          FormFieldPair(
+            first: LabeledTextField(
+              controller: widget.controller,
+              focusNode: _focus,
+              label:
+                  (widget.type == StockSearchType.crypto
+                          ? 'Coin or ticker'
+                          : 'Company or ticker')
+                      .tr(context),
+              placeholder: 'Search Yahoo Finance'.tr(context),
+              onChanged: _onChanged,
+            ),
+            second: widget.quantityField,
+          ),
+          if (_searching)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: LinearProgressIndicator(),
+            ),
+          if (result != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: result.isFailure || result.value.isEmpty
+                  ? Text(
+                      key: _feedbackKey,
+                      (result.isFailure
+                              ? 'Search unavailable. Enter a ticker manually or try again.'
+                              : 'No matches. Try another name or enter a ticker.')
+                          .tr(context),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: result.isFailure
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    )
+                  : Material(
+                      color: theme.colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(12),
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        children: <Widget>[
+                          for (final StockSearchResult match in result.value)
+                            ListTile(
+                              key: match == result.value.first
+                                  ? _feedbackKey
+                                  : null,
+                              title: Text(
+                                match.name,
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                              subtitle: Text(
+                                <String>[
+                                  match.symbol,
+                                  if (widget.type != StockSearchType.crypto &&
+                                      match.exchange.isNotEmpty)
+                                    match.exchange,
+                                ].join(' · '),
+                                style: theme.textTheme.bodySmall,
+                              ),
+                              onTap: () => _select(match),
+                            ),
+                        ],
+                      ),
+                    ),
+            ),
+        ],
+      ),
+    );
+  }
+}

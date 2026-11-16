@@ -95,6 +95,7 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 - Track **stocks, mutual funds/ETFs, crypto, gold, cash, bank deposits, real estate, vehicles, bonds**, plus **loans, mortgages, credit cards, pending payments and taxes**
 - **International exchanges**: NYSE/Nasdaq, Shanghai, Tokyo, Hong Kong, BSE (India), and Euronext Paris, Amsterdam, Brussels, Lisbon, Dublin, Oslo and Milan — or **Other / full Yahoo ticker** (`000001.SZ`, `VOD.L`, `RELIANCE.NS`, `SHOP.TO`). Quotes in minor units (such as British pence) convert automatically; [Yahoo Finance coverage](https://help.yahoo.com/kb/finance/complete-list-markets-exchanges-yahoo-finance-sln2310.html) applies
 - **Preferred exchanges** shortlist starting with **US (NYSE / Nasdaq)**, customisable via **Select preferred exchanges...** (including an empty shortlist) while preserving existing holdings
+- **Company, coin or ticker search**: type at least two characters in the stock, fund or crypto search field for Yahoo Finance suggestions showing the name and ticker, plus the exchange for stocks/funds. Crypto suggestions show full trading pairs such as `BTC-USD`; explicit non-USD pairs are preserved. Select a listing to fill its symbol and, if blank, its name. Manual ticker entry still works offline or when search is unavailable
 - **Smart crypto & FX conversion**: bare crypto tickers (`BTC` → `BTC-USD`, explicit `BTC-EUR` preserved), quote-to-holding currency conversion without resetting your chosen currency, and automatic portfolio conversion into your base currency
 
 </td>
@@ -190,9 +191,12 @@ Runs on **Android 8.0 (Oreo) and newer**.
 > [!IMPORTANT]
 > Okanzo is **offline-first**, with no accounts, no analytics, no ads and no tracking. Your portfolio values, names and holdings never leave your device unless you export an encrypted backup yourself.
 >
-> Network access is used **only** for two keyless public lookups:
+> Network access is used **only** for keyless public lookups:
 > 1. **Stock, fund & crypto prices** — sends only the ticker symbol to a public finance endpoint when you explicitly fetch or refresh prices.
 > 2. **Exchange rates** — sends only a base currency code to a public rates endpoint (at most every 12 hours, or when refreshed manually).
+> 3. **Company/coin/ticker search** — sends only text typed into the stock, fund or crypto search field to Yahoo Finance after a short pause (at least two characters). Asset names, quantities and portfolio data are not included.
+
+Search uses Yahoo Finance's free, keyless public search endpoint, the same provider as price lookups. This is an **unofficial API**, with no availability guarantee or service-level agreement; rate limits and coverage may change. No account, API key, paid plan or additional dependency is required. Search results are global rather than restricted to preferred exchanges; choosing a stock/fund listing sets its exchange, while crypto selection retains the exact trading pair. Both preserve your holding currency and any custom asset name.
 
 Read the full [**privacy policy**](https://cairn-labworks.github.io/Okanzo/privacy/).
 
@@ -332,15 +336,16 @@ To test simple net worth or Midnight layout regressions on an Android device wit
 adb -s <android-device-id> shell dumpsys package com.cairnlabworks.okanzo.debug
 ```
 
-Set `--build-number` on the APK build to at least that version code to avoid a downgrade-triggered uninstall, and keep the device awake and unlocked with the debug app in the foreground throughout testing:
+Set `--build-number` on the APK build to at least that version code to avoid a downgrade-triggered uninstall, and keep the device awake and unlocked with the debug app in the foreground throughout testing. The APK must also use the **same signing key** as the installed debug app. First run `adb install -r` as shown below: if it reports a signing mismatch, **stop** rather than uninstalling the app. Flutter's installer can automatically uninstall on failure, deleting app data. Always pass `--keep-app-running` to `flutter drive`; without it, drive uninstalls the app after testing:
 
 ```bash
 flutter build apk --debug --build-number <installed-debug-version-code-or-higher> \
   --target integration_test/simple_net_worth_test.dart
+adb -s <android-device-id> install -r build/app/outputs/flutter-apk/app-debug.apk
 flutter drive --driver test_driver/simple_net_worth.dart \
   --target integration_test/simple_net_worth_test.dart \
   --use-application-binary build/app/outputs/flutter-apk/app-debug.apk \
-  --no-pub -d <android-device-id>
+  --keep-app-running --no-pub -d <android-device-id>
 ```
 
 For the Midnight layout, settings drill-in, paired valuation fields and 150% Arabic RTL device regressions:
@@ -348,13 +353,21 @@ For the Midnight layout, settings drill-in, paired valuation fields and 150% Ara
 ```bash
 flutter build apk --debug --build-number <installed-debug-version-code-or-higher> \
   --target integration_test/midnight_precision_test.dart
+adb -s <android-device-id> install -r build/app/outputs/flutter-apk/app-debug.apk
 flutter drive --driver test_driver/simple_net_worth.dart \
   --target integration_test/midnight_precision_test.dart \
   --use-application-binary build/app/outputs/flutter-apk/app-debug.apk \
-  --no-pub -d <android-device-id>
+  --keep-app-running --no-pub -d <android-device-id>
 ```
 
 After device testing, rebuild and reinstall the normal debug entrypoint (`lib/main.dart`) with the same adequate build number so launching the app does not rerun tests.
+
+For live company/coin/ticker typeahead, international listing selection, fund and crypto search,
+price fetching and saving on a physical device, use the same build-and-drive
+commands with `--target integration_test/stock_search_test.dart`. This test uses
+a temporary portfolio and removes it afterward without changing existing holdings,
+the default portfolio or preferences. It also supports an empty debug installation.
+The phone must have internet access.
 
 </details>
 

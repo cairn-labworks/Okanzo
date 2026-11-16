@@ -5,6 +5,7 @@ import 'package:okanzo/data/backup/backup_repository.dart';
 import 'package:okanzo/data/local/entity/asset_entity.dart';
 import 'package:okanzo/data/local/entity/liability_entity.dart';
 import 'package:okanzo/data/local/entity/portfolio_entity.dart';
+import 'package:okanzo/data/remote/stock/stock_search_service.dart';
 import 'package:okanzo/data/repository/asset_repository.dart';
 import 'package:okanzo/data/repository/currency_converter.dart';
 import 'package:okanzo/data/repository/fx_repository.dart';
@@ -143,6 +144,14 @@ class _Rates extends Fake implements FxRepository {
 
 class _Backups extends Fake implements BackupRepository {}
 
+class _Search extends Fake implements StockSearchService {
+  @override
+  Future<Result<List<StockSearchResult>>> search(
+    String query, {
+    required StockSearchType type,
+  }) async => Result<List<StockSearchResult>>.success(<StockSearchResult>[]);
+}
+
 class _FailingAppearanceRepository extends SettingsRepository {
   _FailingAppearanceRepository(super.preferences);
 
@@ -159,6 +168,8 @@ class _Container extends Fake implements AppContainer {
   final SettingsRepository settingsRepository;
   @override
   final _Assets assetRepository = _Assets();
+  @override
+  final StockSearchService stockSearchService = _Search();
   @override
   final _Liabilities liabilityRepository = _Liabilities();
   @override
@@ -916,11 +927,11 @@ void main() {
         greaterThan(tester.getRect(find.byTooltip('Back')).bottom),
       );
       expect(
-        tester.getRect(_field('Ticker symbol')).top,
+        tester.getRect(_field('Company or ticker')).top,
         tester.getRect(_field('Quantity')).top,
       );
       expect(
-        tester.getRect(_field('Ticker symbol')).left,
+        tester.getRect(_field('Company or ticker')).left,
         lessThan(tester.getRect(_field('Quantity')).left),
       );
       final Scaffold scaffold = tester.widget<Scaffold>(
@@ -1303,7 +1314,12 @@ void main() {
             100,
             scrollable: find.byType(Scrollable).first,
           );
-          expect(_field('Ticker symbol'), findsOneWidget);
+          expect(
+            _field(
+              type == AssetType.crypto ? 'Coin or ticker' : 'Company or ticker',
+            ),
+            findsOneWidget,
+          );
           expect(_field('Quantity'), findsOneWidget);
           await tester.scrollUntilVisible(
             find.text('Fetch latest price'),

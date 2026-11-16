@@ -32,7 +32,7 @@
 <div class="wrap">
   <div class="pill">Private by design</div>
   <h1>Okanzo — Privacy Policy</h1>
-  <p class="sub">Last updated: 8 October 2026</p>
+  <p class="sub">Last updated: 16 November 2026</p>
 
   <p>
     Okanzo is an offline-first net worth tracker published by Cairn Labworks. It is
@@ -52,14 +52,22 @@
   <h2>Network access</h2>
   <p>
     Okanzo makes network requests only to look up public market data. These requests
-    contain the minimum needed and never include your portfolio values, item names,
-    balances, or any personal information:
+    contain the minimum needed and never include saved portfolio values, asset name
+    fields, quantities or balances. Search sends only what you type into the search
+    field, as described below:
   </p>
   <ul>
     <li>
       <strong>Market prices</strong> &mdash; when you refresh or tap fetch-price on a
       market-linked asset, only the <em>ticker symbol</em> is sent to the public Yahoo
       Finance endpoint (<code>query1.finance.yahoo.com</code>).
+    </li>
+    <li>
+      <strong>Company/coin/ticker search</strong> &mdash; when you type at least two
+      characters in the stock, fund or crypto search field, the <em>search text</em> is sent
+      to Yahoo Finance (<code>query1.finance.yahoo.com</code>) after a short pause
+      to retrieve suggestions. No asset name field, quantity, balance or portfolio
+      data is included. Manual ticker entry remains available if search is unavailable.
     </li>
     <li>
       <strong>Currency exchange rates</strong> &mdash; refreshed automatically (on launch
