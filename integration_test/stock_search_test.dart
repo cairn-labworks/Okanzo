@@ -232,7 +232,17 @@ void main() {
         expect(_listing('AAPL').hitTestable(), findsOneWidget);
         await _tap(tester, _listing('AAPL'));
         expect(_input(tester, 'Company or ticker'), 'AAPL');
-        expect(_input(tester, 'Name').toLowerCase(), contains('apple'));
+        expect(_input(tester, 'Custom name (optional)'), isEmpty);
+        expect(
+          tester
+              .widget<TextField>(
+                find.widgetWithText(TextField, 'Custom name (optional)'),
+              )
+              .decoration
+              ?.hintText
+              ?.toLowerCase(),
+          contains('apple'),
+        );
         expect(
           tester
               .widget<StockExchangeField>(find.byType(StockExchangeField))
@@ -241,10 +251,14 @@ void main() {
         );
         checks['companySearchAndNameAutofill'] = true;
         debugPrint(
-          'DEVICE CHECK: company name resolves to AAPL and fills the name',
+          'DEVICE CHECK: company name resolves to AAPL and hints fetched name while custom name stays optional',
         );
 
-        await _enter(tester, 'Name', 'My search test holding');
+        await _enter(
+          tester,
+          'Custom name (optional)',
+          'My search test holding',
+        );
         await _enter(tester, 'Company or ticker', 'Airbus');
         await _waitUntil(
           tester,
@@ -253,7 +267,10 @@ void main() {
         );
         await _tap(tester, _listing('AIR.PA'));
         expect(_input(tester, 'Company or ticker'), 'AIR.PA');
-        expect(_input(tester, 'Name'), 'My search test holding');
+        expect(
+          _input(tester, 'Custom name (optional)'),
+          'My search test holding',
+        );
         expect(
           tester
               .widget<StockExchangeField>(find.byType(StockExchangeField))
@@ -302,7 +319,9 @@ void main() {
             (await container.assetRepository.getForPortfolio(testPortfolio))
                 .single;
         expect(saved.symbol, 'AAPL');
-        expect(saved.name, 'My search test holding');
+        expect(saved.name.toLowerCase(), contains('apple'));
+        expect(saved.customName, 'My search test holding');
+        expect(saved.displayName, 'My search test holding');
         expect(saved.quantity, 2);
         expect(saved.lastPrice, greaterThan(0));
         checks['tickerSearchLivePriceAndSave'] = true;
@@ -323,7 +342,17 @@ void main() {
         );
         await _tap(tester, _listing('BTC-USD'));
         expect(_input(tester, 'Coin or ticker'), 'BTC-USD');
-        expect(_input(tester, 'Name').toLowerCase(), contains('bitcoin'));
+        expect(_input(tester, 'Custom name (optional)'), isEmpty);
+        expect(
+          tester
+              .widget<TextField>(
+                find.widgetWithText(TextField, 'Custom name (optional)'),
+              )
+              .decoration
+              ?.hintText
+              ?.toLowerCase(),
+          contains('bitcoin'),
+        );
         await _enter(tester, 'Coin or ticker', 'BTC-EUR');
         await _waitUntil(
           tester,
@@ -368,7 +397,7 @@ void main() {
 
         await _tap(tester, find.text('Open search test editor'));
         expect(find.text('Save asset'), findsNothing);
-        await _enter(tester, 'Name', 'Unsaved asset');
+        await _enter(tester, 'Custom name (optional)', 'Unsaved asset');
         await _enter(tester, 'Company or ticker', 'MSFT');
         await _enter(tester, 'Quantity', '5');
         await _tap(tester, find.widgetWithText(OutlinedButton, 'Cancel'));
@@ -430,7 +459,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         await _tap(tester, find.text('Open offline editor'));
-        await _enter(tester, 'Name', 'Offline Microsoft');
+        await _enter(tester, 'Custom name (optional)', 'Offline Microsoft');
         await _enter(tester, 'Company or ticker', 'MSFT');
         await _waitUntil(
           tester,
@@ -458,7 +487,8 @@ void main() {
         final AssetEntity offlineSaved =
             (await container.assetRepository.getForPortfolio(testPortfolio))
                 .singleWhere(
-                  (AssetEntity asset) => asset.name == 'Offline Microsoft',
+                  (AssetEntity asset) =>
+                      asset.displayName == 'Offline Microsoft',
                 );
         expect(offlineSaved.symbol, 'MSFT');
         expect(offlineSaved.quantity, 3);

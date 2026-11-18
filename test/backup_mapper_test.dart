@@ -80,9 +80,23 @@ void main() {
       expect(restored.createdAt, 999);
       expect(restored.updatedAt, 999);
       expect(restored.name, 'Apple');
+      expect(restored.customName, isNull);
       expect(restored.symbol, 'AAPL');
       expect(restored.lastPriceTimestamp, 1700000000000);
       expect(restored.position, 2);
+
+      final AssetEntity withCustom = asset.copyWith(customName: 'Core Apple');
+      final Map<String, Object?> customJson = assetToBackup(withCustom)
+          .toJson();
+      expect(customJson['customName'], 'Core Apple');
+      final AssetEntity restoredCustom = backupToAsset(
+        BackupAsset.fromJson(customJson),
+        42,
+        999,
+      );
+      expect(restoredCustom.name, 'Apple');
+      expect(restoredCustom.customName, 'Core Apple');
+      expect(restoredCustom.displayName, 'Core Apple');
     });
 
     test('unknown types fall back instead of failing the import', () {

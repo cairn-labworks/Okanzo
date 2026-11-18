@@ -409,7 +409,7 @@ class _HomeContent extends StatelessWidget {
                                             AssetLine line,
                                             bool itemDragging,
                                           ) => _HoldingItemRow(
-                                            title: line.asset.name,
+                                            title: line.asset.displayName,
                                             subtitle: assetSubtitle(
                                               line.asset,
                                               group.baseCurrency,

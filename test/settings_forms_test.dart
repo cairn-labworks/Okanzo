@@ -1350,7 +1350,6 @@ void main() {
         updatedAt: 0,
       );
       await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 1));
-      expect(_field('Name'), findsOneWidget);
       expect(find.byType(CurrencySelector), findsOneWidget);
       expect(
         tester.widget<CurrencySelector>(find.byType(CurrencySelector)).currency,
@@ -1359,30 +1358,42 @@ void main() {
       expect(_notesInput, findsNothing);
       switch (type.valuationMode) {
         case ValuationMode.market:
+          expect(_field('Name'), findsNothing);
           expect(find.text('Estimated value'), findsOneWidget);
+          final String tickerLabel = type == AssetType.crypto
+              ? 'Coin or ticker'
+              : 'Company or ticker';
           await tester.scrollUntilVisible(
             _field('Quantity'),
             100,
             scrollable: find.byType(Scrollable).first,
           );
-          expect(
-            _field(
-              type == AssetType.crypto ? 'Coin or ticker' : 'Company or ticker',
-            ),
-            findsOneWidget,
-          );
+          expect(_field(tickerLabel), findsOneWidget);
           expect(_field('Quantity'), findsOneWidget);
           await tester.scrollUntilVisible(
-            find.text('Fetch latest price'),
+            _field('Custom name (optional)'),
             100,
             scrollable: find.byType(Scrollable).first,
           );
           expect(find.text('Fetch latest price'), findsOneWidget);
+          expect(_field('Custom name (optional)'), findsOneWidget);
+          expect(
+            tester.getRect(_field('Custom name (optional)')).top,
+            greaterThan(tester.getRect(_field(tickerLabel)).bottom),
+          );
+          expect(
+            tester.getRect(_field('Custom name (optional)')).top,
+            greaterThan(tester.getRect(_field('Quantity')).bottom),
+          );
         case ValuationMode.quantity:
+          expect(_field('Name'), findsOneWidget);
+          expect(_field('Custom name (optional)'), findsNothing);
           expect(_field('Quantity'), findsOneWidget);
           expect(_field('Price per g'), findsOneWidget);
           expect(find.text('Estimated value'), findsOneWidget);
         case ValuationMode.flat:
+          expect(_field('Name'), findsOneWidget);
+          expect(_field('Custom name (optional)'), findsNothing);
           expect(_field('Value'), findsOneWidget);
           expect(find.text('Estimated value'), findsNothing);
           expect(_field('Quantity'), findsNothing);
@@ -1966,6 +1977,56 @@ void main() {
         }
       }
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Home displays customName override when set and fetched name otherwise',
+    (WidgetTester tester) async {
+      await container.settingsRepository.setHideBalances(false);
+      container.assetRepository.items = const <AssetEntity>[
+        AssetEntity(
+          id: 1,
+          portfolioId: 1,
+          type: AssetType.stock,
+          name: 'Apple Inc.',
+          currency: 'USD',
+          symbol: 'AAPL',
+          quantity: 10,
+          lastPrice: 220,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+        AssetEntity(
+          id: 2,
+          portfolioId: 1,
+          type: AssetType.mutualFund,
+          name: 'Vanguard S&P 500 ETF',
+          customName: 'Retirement S&P 500',
+          currency: 'USD',
+          symbol: 'VOO',
+          quantity: 5,
+          lastPrice: 540,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+
+      await open(
+        tester,
+        HomeScreen(
+          onOpenAssetEditor: (_, _) {},
+          onOpenLiabilityEditor: (_, _) {},
+          onManagePortfolios: () {},
+          onOpenSettings: () {},
+        ),
+      );
+
+      await _tap(tester, find.text('Stock'));
+      await _tap(tester, find.text('Mutual fund / ETF'));
+      expect(find.text('Apple Inc.'), findsOneWidget);
+      expect(find.text('Retirement S&P 500'), findsOneWidget);
+      expect(find.text('Vanguard S&P 500 ETF'), findsNothing);
     },
   );
 }
