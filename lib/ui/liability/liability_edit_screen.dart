@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../di/app_container.dart';
@@ -170,9 +172,20 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                       onChanged: viewModel.onNotesChange,
                     ),
                     const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: form.isSaving ? null : viewModel.save,
-                      child: Text('Save liability'.tr(context)),
+                    FormActionRow(
+                      isSaving: form.isSaving,
+                      onCancel: form.isSaving
+                          ? null
+                          : () {
+                              FocusScope.of(context).unfocus();
+                              Navigator.of(context).pop();
+                            },
+                      onSave: form.isSaving
+                          ? null
+                          : () {
+                              FocusScope.of(context).unfocus();
+                              unawaited(viewModel.save());
+                            },
                     ),
                     const SizedBox(height: 24),
                   ],

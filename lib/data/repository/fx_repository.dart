@@ -1,6 +1,7 @@
 import '../../util/result.dart';
 import '../local/dao/fx_rate_dao.dart';
 import '../local/entity/fx_rate_entity.dart';
+import '../remote/api_client.dart';
 import '../remote/fx/fx_api.dart';
 import 'currency_converter.dart';
 
@@ -37,7 +38,10 @@ class FxRepository {
     if (!rates.canConvert(from) || !rates.canConvert(to)) {
       final Result<void> refreshed = await refreshRates();
       if (refreshed.isFailure) {
-        return Result<double>.failure(refreshed.errorMessage!);
+        return Result<double>.failure(
+          refreshed.errorMessage!,
+          isOffline: refreshed.isOffline,
+        );
       }
       rates = await currentConverter();
     }
@@ -84,6 +88,7 @@ class FxRepository {
       _cachedConverter = _toConverter(entities);
       return Result<void>.success(null);
     } on Object catch (error) {
+      if (isOfflineError(error)) return Result<void>.offline();
       return Result<void>.failure(error.toString());
     }
   }

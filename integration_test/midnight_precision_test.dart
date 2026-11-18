@@ -385,12 +385,12 @@ void main() {
         ),
       );
       expect(editor.bottomNavigationBar, isNull);
-      await _saveBelowNotes(tester, 'Save asset');
+      await _saveBelowNotes(tester, 'Save');
       passed(
         'amount-led form has three inline chips, paired fields and Save beneath notes',
       );
       await _enter(tester, 'Quantity', '13');
-      await _tap(tester, find.text('Save asset'));
+      await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
       await _wait(
         tester,
         () => find.byType(HomeScreen).evaluate().isNotEmpty,
@@ -407,8 +407,8 @@ void main() {
       expect(find.byType(PickerChip), findsNWidgets(2));
       await _enter(tester, 'Outstanding amount', '4200');
       await _enter(tester, 'Name', 'Midnight test loan');
-      await _saveBelowNotes(tester, 'Save liability');
-      await _tap(tester, find.text('Save liability'));
+      await _saveBelowNotes(tester, 'Save');
+      await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
       await _wait(
         tester,
         () => find.byType(HomeScreen).evaluate().isNotEmpty,
@@ -564,7 +564,7 @@ void main() {
           tester.getRect(_field(strings.text('Company or ticker'))).top,
         ),
       );
-      await _saveBelowNotes(tester, strings.text('Save asset'));
+      await _saveBelowNotes(tester, strings.text('Save'));
       expect(tester.takeException(), isNull);
       passed(
         '150% Arabic RTL keeps drill-in navigation and stacks paired fields safely',

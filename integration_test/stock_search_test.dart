@@ -1,10 +1,26 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:okanzo/data/backup/backup_repository.dart';
+import 'package:okanzo/data/local/app_database.dart';
+import 'package:okanzo/data/local/dao/asset_dao.dart';
+import 'package:okanzo/data/local/dao/fx_rate_dao.dart';
 import 'package:okanzo/data/local/dao/portfolio_dao.dart';
 import 'package:okanzo/data/local/entity/asset_entity.dart';
+import 'package:okanzo/data/remote/fx/fx_api.dart';
+import 'package:okanzo/data/remote/stock/chart_response.dart';
+import 'package:okanzo/data/remote/stock/stock_price_service.dart';
 import 'package:okanzo/data/remote/stock/stock_search_service.dart';
+import 'package:okanzo/data/repository/asset_repository.dart';
+import 'package:okanzo/data/repository/fx_repository.dart';
+import 'package:okanzo/data/repository/liability_repository.dart';
+import 'package:okanzo/data/repository/portfolio_repository.dart';
+import 'package:okanzo/data/repository/settings_repository.dart';
 import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/app_theme.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
@@ -13,7 +29,41 @@ import 'package:okanzo/l10n/app_localizations.dart';
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/asset/stock_exchange_field.dart';
 import 'package:okanzo/ui/asset/stock_search_field.dart';
+import 'package:okanzo/ui/liability/liability_edit_screen.dart';
 import 'package:okanzo/ui/theme/theme.dart';
+
+class _OfflineContainer implements AppContainer {
+  _OfflineContainer(this._inner)
+    : _offlineClient = MockClient(
+        (_) async => throw const SocketException('Network is unreachable'),
+      );
+
+  final AppContainer _inner;
+  final http.Client _offlineClient;
+
+  @override
+  AppDatabase get database => _inner.database;
+  @override
+  SettingsRepository get settingsRepository => _inner.settingsRepository;
+  @override
+  PortfolioRepository get portfolioRepository => _inner.portfolioRepository;
+  @override
+  LiabilityRepository get liabilityRepository => _inner.liabilityRepository;
+  @override
+  BackupRepository get backupRepository => _inner.backupRepository;
+  @override
+  FxRepository get fxRepository =>
+      FxRepository(FxRateDao(database), FxApi(client: _offlineClient));
+  @override
+  AssetRepository get assetRepository => AssetRepository(
+    AssetDao(database),
+    StockPriceService(StockApi(client: _offlineClient)),
+    fxRepository,
+  );
+  @override
+  StockSearchService get stockSearchService =>
+      StockSearchService(client: _offlineClient);
+}
 
 Future<void> _waitUntil(
   WidgetTester tester,
@@ -42,6 +92,13 @@ Future<void> _waitUntil(
 }
 
 Future<void> _tap(WidgetTester tester, Finder finder) async {
+  if (finder.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      finder,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
   expect(finder, findsOneWidget);
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
@@ -122,16 +179,32 @@ void main() {
               home: Builder(
                 builder: (BuildContext context) => Scaffold(
                   body: Center(
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => AssetEditScreen(
-                            portfolioId: testPortfolio!,
-                            assetId: 0,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => AssetEditScreen(
+                                portfolioId: testPortfolio!,
+                                assetId: 0,
+                              ),
+                            ),
                           ),
+                          child: const Text('Open search test editor'),
                         ),
-                      ),
-                      child: const Text('Open search test editor'),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => LiabilityEditScreen(
+                                portfolioId: testPortfolio!,
+                                liabilityId: 0,
+                              ),
+                            ),
+                          ),
+                          child: const Text('Open liability test editor'),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -219,23 +292,11 @@ void main() {
         );
         await _tap(tester, _listing('AAPL'));
         await _enter(tester, 'Quantity', '2');
-        await _tap(tester, find.text('Fetch latest price'));
-        await _waitUntil(
-          tester,
-          () =>
-              tester
-                  .widget<FilledButton>(
-                    find.widgetWithText(FilledButton, 'Save asset'),
-                  )
-                  .onPressed !=
-              null,
-          'live price fetch',
-        );
-        await _tap(tester, find.text('Save asset'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
-          'saved asset',
+          'saved asset with automatic price fetch',
         );
         final AssetEntity saved =
             (await container.assetRepository.getForPortfolio(testPortfolio))
@@ -245,8 +306,9 @@ void main() {
         expect(saved.quantity, 2);
         expect(saved.lastPrice, greaterThan(0));
         checks['tickerSearchLivePriceAndSave'] = true;
+        checks['autoFetchPriceOnSave'] = true;
         debugPrint(
-          'DEVICE CHECK: ticker search, live quote and encrypted database save succeeded',
+          'DEVICE CHECK: ticker search, automatic live quote on Save and encrypted database save succeeded',
         );
 
         await _tap(tester, find.text('Open search test editor'));
@@ -272,18 +334,20 @@ void main() {
         expect(_input(tester, 'Coin or ticker'), 'BTC-EUR');
         await _enter(tester, 'Quantity', '0.25');
         await _tap(tester, find.text('Fetch latest price'));
+        final Finder cryptoSave = find.widgetWithText(FilledButton, 'Save');
+        if (cryptoSave.evaluate().isEmpty) {
+          await tester.scrollUntilVisible(
+            cryptoSave,
+            120,
+            scrollable: find.byType(Scrollable).first,
+          );
+        }
         await _waitUntil(
           tester,
-          () =>
-              tester
-                  .widget<FilledButton>(
-                    find.widgetWithText(FilledButton, 'Save asset'),
-                  )
-                  .onPressed !=
-              null,
+          () => tester.widget<FilledButton>(cryptoSave).onPressed != null,
           'live crypto price',
         );
-        await _tap(tester, find.text('Save asset'));
+        await _tap(tester, cryptoSave);
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
@@ -300,6 +364,108 @@ void main() {
         checks['cryptoNamePairLivePriceAndSave'] = true;
         debugPrint(
           'DEVICE CHECK: crypto name and non-USD pair search, live price and save succeeded',
+        );
+
+        await _tap(tester, find.text('Open search test editor'));
+        expect(find.text('Save asset'), findsNothing);
+        await _enter(tester, 'Name', 'Unsaved asset');
+        await _enter(tester, 'Company or ticker', 'MSFT');
+        await _enter(tester, 'Quantity', '5');
+        await _tap(tester, find.widgetWithText(OutlinedButton, 'Cancel'));
+        expect(find.byType(AssetEditScreen), findsNothing);
+        expect(
+          await container.assetRepository.getForPortfolio(testPortfolio),
+          hasLength(2),
+        );
+
+        await _tap(tester, find.text('Open liability test editor'));
+        expect(find.text('Save liability'), findsNothing);
+        expect(find.widgetWithText(FilledButton, 'Save'), findsOneWidget);
+        await _enter(tester, 'Outstanding amount', '500');
+        await _enter(tester, 'Name', 'Unsaved loan');
+        await _tap(tester, find.widgetWithText(OutlinedButton, 'Cancel'));
+        expect(find.byType(LiabilityEditScreen), findsNothing);
+        expect(
+          await container.liabilityRepository.getForPortfolio(testPortfolio),
+          isEmpty,
+        );
+        checks['cancelAndSaveButtonsVerified'] = true;
+        debugPrint('DEVICE CHECK: Cancel and Save verified on both forms');
+
+        await tester.pumpWidget(
+          AppScope(
+            container: _OfflineContainer(container),
+            child: MaterialApp(
+              theme: buildTheme(
+                brightness: Brightness.dark,
+                appTheme: AppTheme.midnight,
+              ),
+              locale: const Locale('en'),
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              home: Builder(
+                builder: (BuildContext context) => Scaffold(
+                  body: Center(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => AssetEditScreen(
+                            portfolioId: testPortfolio!,
+                            assetId: 0,
+                          ),
+                        ),
+                      ),
+                      child: const Text('Open offline editor'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await _tap(tester, find.text('Open offline editor'));
+        await _enter(tester, 'Name', 'Offline Microsoft');
+        await _enter(tester, 'Company or ticker', 'MSFT');
+        await _waitUntil(
+          tester,
+          () => find
+              .text(
+                'No internet connection. Enter a ticker manually to save offline.',
+              )
+              .evaluate()
+              .isNotEmpty,
+          'offline search notice',
+        );
+        await _enter(tester, 'Quantity', '3');
+        await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+        await _waitUntil(
+          tester,
+          () => find.byType(AssetEditScreen).evaluate().isEmpty,
+          'offline asset save',
+        );
+        expect(
+          find.text(
+            'No internet connection. Saved without latest price — refresh when online.',
+          ),
+          findsOneWidget,
+        );
+        final AssetEntity offlineSaved =
+            (await container.assetRepository.getForPortfolio(testPortfolio))
+                .singleWhere(
+                  (AssetEntity asset) => asset.name == 'Offline Microsoft',
+                );
+        expect(offlineSaved.symbol, 'MSFT');
+        expect(offlineSaved.quantity, 3);
+        expect(offlineSaved.lastPrice, isNull);
+        checks['offlineSaveAndNoticeVerified'] = true;
+        debugPrint(
+          'DEVICE CHECK: offline manual ticker save and non-intrusive notice succeeded',
         );
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());

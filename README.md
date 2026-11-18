@@ -192,7 +192,7 @@ Runs on **Android 8.0 (Oreo) and newer**.
 > Okanzo is **offline-first**, with no accounts, no analytics, no ads and no tracking. Your portfolio values, names and holdings never leave your device unless you export an encrypted backup yourself.
 >
 > Network access is used **only** for keyless public lookups:
-> 1. **Stock, fund & crypto prices** — sends only the ticker symbol to a public finance endpoint when you explicitly fetch or refresh prices.
+> 1. **Stock, fund & crypto prices** — sends only the ticker symbol to a public finance endpoint when you fetch, save (if not yet priced) or refresh market-linked holdings.
 > 2. **Exchange rates** — sends only a base currency code to a public rates endpoint (at most every 12 hours, or when refreshed manually).
 > 3. **Company/coin/ticker search** — sends only text typed into the stock, fund or crypto search field to Yahoo Finance after a short pause (at least two characters). Asset names, quantities and portfolio data are not included.
 

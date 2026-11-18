@@ -291,7 +291,13 @@ void main() {
       ]);
       await _openPreferences(tester);
       await _togglePreference(tester, StockExchange.us);
-      await _tap(tester, find.text('Cancel'));
+      await _tap(
+        tester,
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(TextButton, 'Cancel'),
+        ),
+      );
       expect(
         container.settingsRepository.current.preferredExchanges,
         <StockExchange>[StockExchange.us],
@@ -357,7 +363,7 @@ void main() {
           await tester.pumpAndSettle();
           await binding.takeScreenshot('bse-quote');
         }
-        await _tap(tester, find.widgetWithText(FilledButton, 'Save asset'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
@@ -492,7 +498,13 @@ void main() {
         await _tap(tester, find.byType(PopupMenuButton<Object>));
         await binding.takeScreenshot('empty-exchanges');
         await _tap(tester, find.text(StockExchangeField.manageLabel).last);
-        await _tap(tester, find.text('Cancel'));
+        await _tap(
+          tester,
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.widgetWithText(TextButton, 'Cancel'),
+          ),
+        );
       }
       await _setPreferences(tester, <StockExchange>[
         StockExchange.us,
@@ -642,7 +654,7 @@ void main() {
         expect(_editor(tester).form.currency, 'EUR');
         expect(_editor(tester).form.lastPrice, greaterThan(0));
         final double fetchedEur = _editor(tester).form.lastPrice!;
-        await _tap(tester, find.widgetWithText(FilledButton, 'Save asset'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
@@ -673,7 +685,7 @@ void main() {
           _editor(tester).form.lastPrice,
           closeTo(expectedGbp, expectedGbp * 1e-12),
         );
-        await _tap(tester, find.widgetWithText(FilledButton, 'Save asset'));
+        await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,

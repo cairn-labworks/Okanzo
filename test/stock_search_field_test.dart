@@ -279,6 +279,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(quantity.text, '5');
     expect(find.byType(ListTile), findsNothing);
+
+    await tester.enterText(getSearch(), 'MSFT');
+    await tester.pump(const Duration(milliseconds: 350));
+    service.requests.last.response.complete(
+      Result<List<StockSearchResult>>.offline(),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'No internet connection. Enter a ticker manually to save offline.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+    expect(symbol.text, 'MSFT');
   });
 
   testWidgets('changing asset type invalidates pending stock results', (

@@ -11,11 +11,13 @@ class PriceRefreshResult {
     required this.updated,
     required this.failed,
     required this.total,
+    this.offline = false,
   });
 
   final int updated;
   final int failed;
   final int total;
+  final bool offline;
 }
 
 class AssetRepository {
@@ -78,7 +80,10 @@ class AssetRepository {
       currency,
     );
     if (converted.isFailure) {
-      return Result<StockQuote>.failure(converted.errorMessage!);
+      return Result<StockQuote>.failure(
+        converted.errorMessage!,
+        isOffline: converted.isOffline,
+      );
     }
     return Result<StockQuote>.success(
       StockQuote(
@@ -108,7 +113,12 @@ class AssetRepository {
       currency: asset.currency,
       isCrypto: asset.type == AssetType.crypto,
     );
-    if (quote.isFailure) return Result<double>.failure(quote.errorMessage!);
+    if (quote.isFailure) {
+      return Result<double>.failure(
+        quote.errorMessage!,
+        isOffline: quote.isOffline,
+      );
+    }
     final int now = DateTime.now().millisecondsSinceEpoch;
     await _dao.updatePrice(
       asset.id,
@@ -171,6 +181,7 @@ class AssetRepository {
 
     int updated = 0;
     int failed = 0;
+    int offlineFailed = 0;
     final int now = DateTime.now().millisecondsSinceEpoch;
     final List<({int id, double price, int timestamp, String? currency})>
     updates = <({int id, double price, int timestamp, String? currency})>[];
@@ -183,6 +194,7 @@ class AssetRepository {
       final Result<StockQuote>? raw = rawQuotes[key];
       if (raw == null || raw.isFailure) {
         failed++;
+        if (raw?.isOffline ?? false) offlineFailed++;
         continue;
       }
       final StockQuote quote = raw.value;
@@ -198,6 +210,7 @@ class AssetRepository {
       );
       if (converted.isFailure) {
         failed++;
+        if (converted.isOffline) offlineFailed++;
         continue;
       }
       updates.add((
@@ -214,6 +227,7 @@ class AssetRepository {
       updated: updated,
       failed: failed,
       total: assets.length,
+      offline: updated == 0 && failed > 0 && offlineFailed == failed,
     );
   }
 }

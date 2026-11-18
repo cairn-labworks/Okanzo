@@ -120,6 +120,8 @@ class SettingsViewModel extends ChangeNotifier {
     _fxUpdatedAt = await _fxRepository.latestTimestamp();
     _message = result.isSuccess
         ? 'Exchange rates updated'
+        : result.isOffline
+        ? Result.offlineMessage
         : "Couldn't update rates";
     notifyListeners();
   }
