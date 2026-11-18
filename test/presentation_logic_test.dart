@@ -218,6 +218,53 @@ void main() {
     });
   });
 
+  group('selectDonutCenterAmount', () {
+    test('keeps exact text when scaling stays readable in the donut hole', () {
+      expect(
+        selectDonutCenterAmount(
+          fullText: '₹9,18,543',
+          compactText: '₹9.18 L',
+          fullTextWidth: 96,
+          maxWidth: 103,
+        ),
+        '₹9,18,543',
+      );
+      expect(
+        selectDonutCenterAmount(
+          fullText: '₹1,65,34,234',
+          compactText: '₹1.65 Cr',
+          fullTextWidth: 128,
+          maxWidth: 103,
+        ),
+        '₹1,65,34,234',
+      );
+    });
+
+    test('switches to compact units when full digits would shrink too far', () {
+      expect(
+        selectDonutCenterAmount(
+          fullText: '₹68,73,17,27,181',
+          compactText: '₹6,873.17 Cr',
+          fullTextWidth: 170,
+          maxWidth: 103,
+        ),
+        '₹6,873.17 Cr',
+      );
+    });
+
+    test('never replaces text when compact form is not shorter', () {
+      expect(
+        selectDonutCenterAmount(
+          fullText: '₹999',
+          compactText: '₹999',
+          fullTextWidth: 200,
+          maxWidth: 103,
+        ),
+        '₹999',
+      );
+    });
+  });
+
   group('expanded rows convert to the base currency', () {
     // 1 USD = 0.5 GBP, 1 USD = 80 INR.
     const CurrencyConverter converter = CurrencyConverter(<String, double>{

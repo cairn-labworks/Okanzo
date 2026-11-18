@@ -90,18 +90,24 @@ class CurrencyUtil {
   /// A masked placeholder for a hidden balance, e.g. "₹ ••••" or "US $ ••••".
   static String masked(String code) => '${symbol(code)} $maskShort';
 
-  /// Compact headline figures: lakh/crore for INR, K/M/B otherwise.
+  /// Compact headline figures: lakh/crore/lakh-crore for INR, K/M/B/T otherwise.
   static String formatCompact(double amount, String code) {
     final String currencySymbol = symbol(code);
     final double abs = amount.abs();
     final String sign = amount < 0 ? '-' : '';
     if (code == 'INR') {
+      if (abs >= 1000000000000) {
+        return '$sign$currencySymbol${_round(abs / 1000000000000, decimalPlaces: 2, indianGrouping: true)} L Cr';
+      }
       if (abs >= 10000000) {
-        return '$sign$currencySymbol${_round(abs / 10000000, decimalPlaces: 2)} Cr';
+        return '$sign$currencySymbol${_round(abs / 10000000, decimalPlaces: 2, indianGrouping: true)} Cr';
       }
       if (abs >= 100000) {
-        return '$sign$currencySymbol${_round(abs / 100000, decimalPlaces: 2)} L';
+        return '$sign$currencySymbol${_round(abs / 100000, decimalPlaces: 2, indianGrouping: true)} L';
       }
+    }
+    if (abs >= 1000000000000) {
+      return '$sign$currencySymbol${_round(abs / 1000000000000)}T';
     }
     if (abs >= 1000000000) {
       return '$sign$currencySymbol${_round(abs / 1000000000)}B';
@@ -115,12 +121,61 @@ class CurrencyUtil {
     return format(amount, code);
   }
 
-  static String _round(double value, {int decimalPlaces = 1}) {
-    final double scale = math.pow(10, decimalPlaces).toDouble();
-    final double rounded = (value * scale).truncate() / scale;
-    return rounded % 1.0 == 0.0
-        ? rounded.truncate().toString()
-        : rounded.toString();
+  static String _round(
+    double value, {
+    int decimalPlaces = 1,
+    bool indianGrouping = false,
+  }) {
+    if (!value.isFinite) return '0';
+    final int scaleInt = math.pow(10, decimalPlaces).round();
+    final double scaledDouble = value * scaleInt;
+    if (scaledDouble.abs() >= 9007199254740992.0) {
+      return value.toStringAsExponential(1);
+    }
+    final int scaled = scaledDouble.truncate();
+    final int whole = scaled ~/ scaleInt;
+    final int fraction = scaled % scaleInt;
+    final String wholeText = _groupCompactWhole(whole, indian: indianGrouping);
+    if (decimalPlaces <= 0 || fraction == 0) {
+      return wholeText;
+    }
+    final String fractionDigits = fraction
+        .toString()
+        .padLeft(decimalPlaces, '0')
+        .replaceFirst(RegExp(r'0+$'), '');
+    return '$wholeText.$fractionDigits';
+  }
+
+  static String _groupCompactWhole(int value, {required bool indian}) {
+    final String digits = value.toString();
+    if (digits.length <= 3) return digits;
+    if (indian) {
+      final String tail = digits.substring(digits.length - 3);
+      final String head = digits.substring(0, digits.length - 3);
+      final StringBuffer buffer = StringBuffer();
+      final int leading = head.length % 2;
+      if (leading > 0) {
+        buffer.write(head.substring(0, leading));
+      }
+      for (int i = leading; i < head.length; i += 2) {
+        if (buffer.isNotEmpty) buffer.write(',');
+        buffer.write(head.substring(i, i + 2));
+      }
+      buffer
+        ..write(',')
+        ..write(tail);
+      return buffer.toString();
+    }
+    final StringBuffer buffer = StringBuffer();
+    final int leading = digits.length % 3;
+    if (leading > 0) {
+      buffer.write(digits.substring(0, leading));
+    }
+    for (int i = leading; i < digits.length; i += 3) {
+      if (buffer.isNotEmpty) buffer.write(',');
+      buffer.write(digits.substring(i, i + 3));
+    }
+    return buffer.toString();
   }
 
   /// Matches `java.lang.Math.round`: floor(value + 0.5), which differs from

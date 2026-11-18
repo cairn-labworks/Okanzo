@@ -23,6 +23,7 @@ import 'package:okanzo/domain/model/theme_mode.dart';
 import 'package:okanzo/l10n/app_localizations.dart';
 import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
+import 'package:okanzo/ui/components/donut_chart.dart';
 import 'package:okanzo/ui/components/form_components.dart';
 import 'package:okanzo/ui/components/drag_reorder_column.dart';
 import 'package:okanzo/ui/components/ui_components.dart';
@@ -1736,6 +1737,235 @@ void main() {
       expect(viewModel.settings.blockScreenshots, isTrue);
       expect(container.settingsRepository.current.blockScreenshots, isTrue);
       expect(prefs.getBool('block_screenshots'), isNull);
+    },
+  );
+
+  for (final (AppTheme, Brightness) appearance in <(AppTheme, Brightness)>[
+    (AppTheme.midnight, Brightness.dark),
+    (AppTheme.classic, Brightness.light),
+  ]) {
+    testWidgets(
+      'statistics keeps large amounts readable and strictly inside the donut hole in $appearance',
+      (WidgetTester tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(360, 800);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+
+        await container.settingsRepository.setBaseCurrency('INR');
+        container.assetRepository.items = const <AssetEntity>[
+          AssetEntity(
+            id: 1,
+            portfolioId: 1,
+            type: AssetType.cash,
+            name: 'Treasury reserve',
+            currency: 'INR',
+            manualValue: 68731729181,
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+        ];
+        container.liabilityRepository.items = const <LiabilityEntity>[
+          LiabilityEntity(
+            id: 1,
+            portfolioId: 1,
+            type: LiabilityType.loan,
+            name: 'Short loan',
+            currency: 'INR',
+            amount: 2000,
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+        ];
+
+        await tester.pumpWidget(
+          _app(
+            container,
+            const StatisticsScreen(),
+            appTheme: appearance.$1,
+            brightness: appearance.$2,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        void expectInsideFirstDonutHole(Finder textFinder) {
+          final Finder donutFinder = find.byType(DonutChart).first;
+          final DonutChart donut = tester.widget<DonutChart>(donutFinder);
+          final Offset center = tester.getCenter(donutFinder);
+          final Rect rect = tester.getRect(textFinder);
+          for (final Offset corner in <Offset>[
+            rect.topLeft,
+            rect.topRight,
+            rect.bottomLeft,
+            rect.bottomRight,
+          ]) {
+            expect(
+              (corner - center).distance,
+              lessThan(donut.innerRadius),
+              reason:
+                  '$corner must stay inside hole radius ${donut.innerRadius}',
+            );
+          }
+        }
+
+        final Finder overviewDonut = find.byType(DonutChart).first;
+        final Finder centerNetWorth = find.descendant(
+          of: overviewDonut,
+          matching: find.text('₹6,873.17 Cr'),
+        );
+        expect(centerNetWorth, findsOneWidget);
+        expect(
+          tester.widget<Text>(centerNetWorth).semanticsLabel,
+          CurrencyUtil.format(68731727181, 'INR'),
+        );
+        expect(
+          find.descendant(
+            of: overviewDonut,
+            matching: find.byTooltip(CurrencyUtil.format(68731727181, 'INR')),
+          ),
+          findsOneWidget,
+        );
+        expectInsideFirstDonutHole(
+          find.descendant(of: overviewDonut, matching: find.text('Net worth')),
+        );
+        expectInsideFirstDonutHole(centerNetWorth);
+
+        // Exact unrounded values remain visible in the Overview legend rows.
+        final Finder overviewCard = find.byType(Card).first;
+        expect(
+          find.descendant(
+            of: overviewCard,
+            matching: find.text(CurrencyUtil.format(68731729181, 'INR')),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: overviewCard,
+            matching: find.text(CurrencyUtil.format(2000, 'INR')),
+          ),
+          findsOneWidget,
+        );
+
+        // Selecting the small Liabilities row displays exact digits inside the hole.
+        await tester.tap(find.text('Liabilities').first);
+        await tester.pumpAndSettle();
+        final Finder selectedSmallAmount = find.descendant(
+          of: overviewDonut,
+          matching: find.text(CurrencyUtil.format(2000, 'INR')),
+        );
+        expect(selectedSmallAmount, findsOneWidget);
+        expectInsideFirstDonutHole(selectedSmallAmount);
+        expectInsideFirstDonutHole(
+          find.descendant(of: overviewDonut, matching: find.text('0.0%')),
+        );
+
+        // Tapping the donut hole clears the slice selection back to Net worth.
+        await tester.tapAt(tester.getCenter(overviewDonut));
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(of: overviewDonut, matching: find.text('Net worth')),
+          findsOneWidget,
+        );
+        expect(centerNetWorth, findsOneWidget);
+
+        // Masked mode hides both compact center and exact legend balances.
+        await container.settingsRepository.setHideBalances(true);
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: overviewDonut,
+            matching: find.text(CurrencyUtil.masked('INR')),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('₹6,873.17 Cr'), findsNothing);
+        expect(
+          find.text(CurrencyUtil.format(68731729181, 'INR')),
+          findsNothing,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'statistics keeps large RTL amounts inside donut holes and legend rows at 180% text scale',
+    (WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(320, 740);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await container.settingsRepository.setBaseCurrency('USD');
+      container.assetRepository.items = const <AssetEntity>[
+        AssetEntity(
+          id: 1,
+          portfolioId: 1,
+          type: AssetType.realEstate,
+          name: 'Global index',
+          currency: 'USD',
+          manualValue: 987654321098,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+      container.liabilityRepository.items = const <LiabilityEntity>[
+        LiabilityEntity(
+          id: 1,
+          portfolioId: 1,
+          type: LiabilityType.creditCard,
+          name: 'Corporate line',
+          currency: 'USD',
+          amount: 123456789,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _app(
+          container,
+          const StatisticsScreen(),
+          locale: const Locale('ar'),
+          textScale: 1.8,
+          appTheme: AppTheme.midnight,
+          brightness: Brightness.dark,
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      final Finder overviewDonut = find.byType(DonutChart).first;
+      final DonutChart donut = tester.widget<DonutChart>(overviewDonut);
+      final Offset center = tester.getCenter(overviewDonut);
+      final Finder centerAmount = find.descendant(
+        of: overviewDonut,
+        matching: find.text(
+          CurrencyUtil.formatCompact(987654321098 - 123456789, 'USD'),
+        ),
+      );
+      expect(centerAmount, findsOneWidget);
+      expect(
+        tester.widget<Text>(centerAmount).textDirection,
+        TextDirection.ltr,
+      );
+      for (final Element textElement
+          in find
+              .descendant(of: overviewDonut, matching: find.byType(Text))
+              .evaluate()) {
+        final Rect rect = tester.getRect(find.byWidget(textElement.widget));
+        for (final Offset corner in <Offset>[
+          rect.topLeft,
+          rect.topRight,
+          rect.bottomLeft,
+          rect.bottomRight,
+        ]) {
+          expect((corner - center).distance, lessThan(donut.innerRadius));
+        }
+      }
+      expect(tester.takeException(), isNull);
     },
   );
 }
