@@ -42,9 +42,34 @@ class ReleaseNotes {
 class AppReleaseNotes {
   const AppReleaseNotes._();
 
-  static const String currentVersion = '1.5.0';
+  static const String currentVersion = '1.6.0';
 
   static const List<ReleaseNotes> all = <ReleaseNotes>[
+    ReleaseNotes(
+      version: '1.6.0',
+      highlights: <ReleaseHighlight>[
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.assets,
+          title: 'Guided entry forms',
+          description: 'Read clearer labels, recognize picker icons and move to the next empty required field.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.exchanges,
+          title: 'Simpler market holdings',
+          description: 'Use optional custom names and fetch missing market prices automatically when saving.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.portfolio,
+          title: 'Your default portfolio first',
+          description: 'Open your default portfolio on launch and switch immediately when the default changes.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.statistics,
+          title: 'Readable large totals',
+          description: 'Keep large totals readable in donut charts with currency-aware compact values.',
+        ),
+      ],
+    ),
     ReleaseNotes(
       version: '1.5.0',
       highlights: <ReleaseHighlight>[

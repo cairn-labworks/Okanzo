@@ -1,0 +1,4 @@
+Clearer editor labels, picker icons and guided focus for required fields.
+Optional custom names for market holdings; missing prices fetch automatically on Save, with clear offline notices.
+Open the default portfolio on launch and switch when the default changes.
+Keep large statistics totals readable with currency-aware compact values.
