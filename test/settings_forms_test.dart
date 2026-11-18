@@ -1426,6 +1426,18 @@ void main() {
           expect(_field('Value'), findsOneWidget);
           expect(find.text('Estimated value'), findsNothing);
           expect(_field('Quantity'), findsNothing);
+          expect(
+            tester
+                .widget<EditableText>(
+                  find.descendant(
+                    of: _field('Value'),
+                    matching: find.byType(EditableText),
+                  ),
+                )
+                .focusNode
+                .hasFocus,
+            isFalse,
+          );
       }
       await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
       expect(container.assetRepository.saved?.type, type);
@@ -1433,6 +1445,89 @@ void main() {
       expect(find.byType(AssetEditScreen), findsNothing);
     });
   }
+
+  testWidgets('new flat assets focus the value with a blinking cursor', (
+    WidgetTester tester,
+  ) async {
+    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+    for (final AssetType type in AssetType.values.where(
+      (AssetType type) => type.valuationMode == ValuationMode.flat,
+    )) {
+      await _tap(tester, find.byType(DropdownSelector<AssetType>));
+      await _tap(tester, find.text(type.displayName).last);
+      final EditableTextState value = tester.state<EditableTextState>(
+        find.descendant(
+          of: _field('Value'),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(value.widget.focusNode.hasFocus, isTrue, reason: type.name);
+      expect(value.widget.controller.selection.isCollapsed, isTrue);
+      await tester.pump(const Duration(milliseconds: 100));
+      final bool cursorVisible = value.cursorCurrentlyVisible;
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(value.cursorCurrentlyVisible, !cursorVisible);
+    }
+  });
+
+  testWidgets('new liabilities focus the amount without stealing later focus', (
+    WidgetTester tester,
+  ) async {
+    await open(
+      tester,
+      const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
+    );
+    final EditableTextState amount = tester.state<EditableTextState>(
+      find.descendant(
+        of: _field('Outstanding amount'),
+        matching: find.byType(EditableText),
+      ),
+    );
+    expect(amount.widget.focusNode.hasFocus, isTrue);
+    expect(amount.widget.controller.selection.isCollapsed, isTrue);
+    await tester.pump(const Duration(milliseconds: 100));
+    final bool cursorVisible = amount.cursorCurrentlyVisible;
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(amount.cursorCurrentlyVisible, !cursorVisible);
+    await tester.enterText(
+      find.descendant(of: _field('Name'), matching: find.byType(TextField)),
+      'Synthetic loan',
+    );
+    await tester.pump();
+    expect(amount.widget.focusNode.hasFocus, isFalse);
+  });
+
+  testWidgets('new asset value does not steal focus while entering a name', (
+    WidgetTester tester,
+  ) async {
+    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+    expect(
+      tester
+          .widgetList<EditableText>(find.byType(EditableText))
+          .any((EditableText input) => input.focusNode.hasFocus),
+      isFalse,
+    );
+    await _tap(tester, find.byType(DropdownSelector<AssetType>));
+    await _tap(tester, find.text('Cash').last);
+    final Finder name = find.descendant(
+      of: _field('Name'),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(name, 'Synthetic cash');
+    await tester.pump();
+    expect(
+      tester
+          .widget<EditableText>(
+            find.descendant(
+              of: _field('Name'),
+              matching: find.byType(EditableText),
+            ),
+          )
+          .focusNode
+          .hasFocus,
+      isTrue,
+    );
+  });
 
   testWidgets('asset notes and inputs survive collapsing and type changes', (
     WidgetTester tester,
@@ -1534,6 +1629,18 @@ void main() {
         const LiabilityEditScreen(portfolioId: 1, liabilityId: 1),
       );
       expect(_field('Outstanding amount'), findsOneWidget);
+      expect(
+        tester
+            .widget<EditableText>(
+              find.descendant(
+                of: _field('Outstanding amount'),
+                matching: find.byType(EditableText),
+              ),
+            )
+            .focusNode
+            .hasFocus,
+        isFalse,
+      );
       expect(_notesInput, findsOneWidget);
       expect(
         tester.widget<TextField>(_notesInput).controller?.text,
