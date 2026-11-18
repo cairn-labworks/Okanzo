@@ -40,7 +40,31 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
   final TextEditingController _pricePerUnit = TextEditingController();
   final TextEditingController _manualValue = TextEditingController();
   final TextEditingController _notes = TextEditingController();
+  final FocusNode _nameFocus = FocusNode();
+  final FocusNode _symbolFocus = FocusNode();
+  final FocusNode _quantityFocus = FocusNode();
+  final FocusNode _pricePerUnitFocus = FocusNode();
+  final FocusNode _manualValueFocus = FocusNode();
   bool _controllersPrimed = false;
+
+  Map<FocusNode, TextEditingController> get _requiredFields =>
+      switch (_viewModel!.form.valuationMode) {
+        ValuationMode.market => <FocusNode, TextEditingController>{
+          _symbolFocus: _symbol,
+          _quantityFocus: _quantity,
+        },
+        ValuationMode.quantity => <FocusNode, TextEditingController>{
+          _nameFocus: _name,
+          _quantityFocus: _quantity,
+          _pricePerUnitFocus: _pricePerUnit,
+        },
+        ValuationMode.flat => <FocusNode, TextEditingController>{
+          _manualValueFocus: _manualValue,
+          _nameFocus: _name,
+        },
+      };
+
+  void _focusNextRequired() => focusNextRequiredField(context, _requiredFields);
 
   @override
   void didChangeDependencies() {
@@ -103,6 +127,11 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     _pricePerUnit.dispose();
     _manualValue.dispose();
     _notes.dispose();
+    _nameFocus.dispose();
+    _symbolFocus.dispose();
+    _quantityFocus.dispose();
+    _pricePerUnitFocus.dispose();
+    _manualValueFocus.dispose();
     super.dispose();
   }
 
@@ -153,6 +182,12 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                     if (form.valuationMode == ValuationMode.flat)
                       LabeledTextField(
                         controller: _manualValue,
+                        focusNode: _manualValueFocus,
+                        textInputAction: requiredFieldInputAction(
+                          _requiredFields,
+                          current: _manualValueFocus,
+                        ),
+                        onSubmitted: (_) => _focusNextRequired(),
                         autofocus: !form.isEditing,
                         label: 'Value'.tr(context),
                         prefix: CurrencyUtil.symbol(form.currency),
@@ -192,6 +227,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                             viewModel.onTypeChange(type);
                             _name.text = viewModel.form.name;
                             _customName.text = viewModel.form.customName;
+                            _focusNextRequired();
                           },
                           compact: true,
                         ),
@@ -216,6 +252,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                             onSelected: (StockExchange exchange) {
                               viewModel.onExchangeChange(exchange);
                               _symbol.text = viewModel.form.symbol;
+                              _focusNextRequired();
                             },
                           ),
                       ],
@@ -224,6 +261,12 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                       const SizedBox(height: 12),
                       LabeledTextField(
                         controller: _name,
+                        focusNode: _nameFocus,
+                        textInputAction: requiredFieldInputAction(
+                          _requiredFields,
+                          current: _nameFocus,
+                        ),
+                        onSubmitted: (_) => _focusNextRequired(),
                         label: 'Name'.tr(context),
                         placeholder: 'e.g. Apple shares'.tr(context),
                         onChanged: viewModel.onNameChange,
@@ -268,6 +311,12 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
       case ValuationMode.market:
         final Widget quantityField = LabeledTextField(
           controller: _quantity,
+          focusNode: _quantityFocus,
+          textInputAction: requiredFieldInputAction(
+            _requiredFields,
+            current: _quantityFocus,
+          ),
+          onSubmitted: (_) => _focusNextRequired(),
           label: 'Quantity'.tr(context),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           onChanged: viewModel.onQuantityChange,
@@ -275,6 +324,12 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
         return <Widget>[
           StockSearchField(
             controller: _symbol,
+            focusNode: _symbolFocus,
+            textInputAction: requiredFieldInputAction(
+              _requiredFields,
+              current: _symbolFocus,
+            ),
+            onSubmitted: (_) => _focusNextRequired(),
             service: AppScope.of(context).stockSearchService,
             type: switch (form.type) {
               AssetType.crypto => StockSearchType.crypto,
@@ -286,6 +341,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
             onSelected: (result) {
               viewModel.onStockSelected(result);
               _symbol.text = viewModel.form.symbol;
+              _focusNextRequired();
             },
           ),
           Align(
@@ -321,6 +377,8 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
           const SizedBox(height: 12),
           LabeledTextField(
             controller: _customName,
+            textInputAction: requiredFieldInputAction(_requiredFields),
+            onSubmitted: (_) => _focusNextRequired(),
             label: 'Custom name (optional)'.tr(context),
             placeholder: form.name.trim().isNotEmpty ? form.name.trim() : null,
             onChanged: viewModel.onCustomNameChange,
@@ -331,6 +389,12 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
           FormFieldPair(
             first: LabeledTextField(
               controller: _quantity,
+              focusNode: _quantityFocus,
+              textInputAction: requiredFieldInputAction(
+                _requiredFields,
+                current: _quantityFocus,
+              ),
+              onSubmitted: (_) => _focusNextRequired(),
               label: 'Quantity'.tr(context),
               suffix: form.type.unitLabel,
               keyboardType: const TextInputType.numberWithOptions(
@@ -340,6 +404,12 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
             ),
             second: LabeledTextField(
               controller: _pricePerUnit,
+              focusNode: _pricePerUnitFocus,
+              textInputAction: requiredFieldInputAction(
+                _requiredFields,
+                current: _pricePerUnitFocus,
+              ),
+              onSubmitted: (_) => _focusNextRequired(),
               label: 'Price per {unit}'
                   .tr(context)
                   .replaceAll('{unit}', form.type.unitLabel ?? 'unit'),
@@ -362,6 +432,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
       selected: current,
     );
     if (picked != null && mounted) {
+      _focusNextRequired();
       await _viewModel?.onCurrencyChange(picked);
     }
   }

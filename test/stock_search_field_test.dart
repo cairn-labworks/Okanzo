@@ -116,7 +116,13 @@ void main() {
   ) async {
     await tester.pumpWidget(app());
     final TextField stockField = tester.widget<TextField>(getSearch());
-    expect(stockField.decoration?.labelText, 'Company or Ticker');
+    expect(
+      find.descendant(
+        of: getSearch(),
+        matching: find.text('Company or Ticker'),
+      ),
+      findsOneWidget,
+    );
     expect(stockField.decoration?.hintText, 'Search');
     expect(find.text('Search Yahoo Finance'), findsNothing);
 

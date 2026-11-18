@@ -105,7 +105,8 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 
 ### Focused forms & statistics
 
-- **Focused entry forms**: a large page heading leads into the value or live estimate, compact type/currency/exchange chips (long-press the exchange chip for suffix guidance), paired underlined valuation fields, expandable optional notes and an inline save button
+- **Focused entry forms**: a large page heading leads into the value or live estimate, compact type/currency/exchange chips (long-press the exchange chip for suffix guidance), paired underlined valuation fields with distinct labels and muted placeholders, expandable optional notes and an inline save button
+- **Guided field entry**: selecting an editor option or pressing **Next/Enter** in a single-line input moves to the next empty required field, skipping completed and optional fields. Finishing closes the keyboard; tap **Save** to save.
 - **Statistics**: interactive donut charts breaking down overview (assets vs. liabilities), assets by category and liabilities by category in your base currency
 - **What's new** highlights after installing or updating (`Settings → About → What's new`), separate from **Settings → About → Okanzo** app & licence details
 
@@ -401,7 +402,8 @@ temporary portfolios and remove them afterward without changing existing holding
 the default portfolio or preferences. They also support an empty debug installation.
 `stock_search_test.dart` requires internet access on the phone.
 
-For creation-time amount focus, blinking cursor and numeric keyboard checks
+For creation-time amount focus, blinking cursor, numeric keyboard and
+amount-to-name-to-Done progression checks
 with unsaved Cash, Real estate and Loan forms, use
 `--target integration_test/editor_focus_test.dart` and
 `--driver test_driver/editor_focus.dart` with the same data-preserving

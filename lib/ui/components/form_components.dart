@@ -5,12 +5,16 @@ import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import 'type_icons.dart';
 
+const EdgeInsets _editorFieldPadding = EdgeInsets.only(top: 24, bottom: 4);
+
 /// Underlined field with shared helper slots and optional amount emphasis.
 class LabeledTextField extends StatelessWidget {
   const LabeledTextField({
     required this.controller,
     required this.label,
     this.onChanged,
+    this.onSubmitted,
+    this.textInputAction,
     this.focusNode,
     this.autofocus = false,
     this.placeholder,
@@ -27,6 +31,8 @@ class LabeledTextField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final TextInputAction? textInputAction;
   final FocusNode? focusNode;
   final bool autofocus;
   final String? placeholder;
@@ -45,11 +51,13 @@ class LabeledTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    final Widget field = TextField(
       controller: controller,
       focusNode: focusNode,
       autofocus: autofocus,
       onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      textInputAction: textInputAction,
       maxLines: singleLine ? 1 : null,
       keyboardType: keyboardType,
       style: prominent
@@ -64,8 +72,12 @@ class LabeledTextField extends StatelessWidget {
         border: prominent ? InputBorder.none : null,
         enabledBorder: prominent ? InputBorder.none : null,
         focusedBorder: prominent ? InputBorder.none : null,
-        contentPadding: prominent ? EdgeInsets.zero : null,
-        labelText: label,
+        contentPadding: prominent ? EdgeInsets.zero : _editorFieldPadding,
+        label: Transform.translate(
+          // Scaled to -6px; the input's +2px makes the label move -4px overall.
+          offset: const Offset(0, -8),
+          child: Text(label),
+        ),
         hintText: placeholder,
         prefixText: prefix,
         prefixStyle: prominent
@@ -77,7 +89,33 @@ class LabeledTextField extends StatelessWidget {
         errorText: isError ? supportingText : null,
       ),
     );
+    return prominent
+        ? Transform.translate(offset: const Offset(0, 2), child: field)
+        : field;
   }
+}
+
+TextInputAction requiredFieldInputAction(
+  Map<FocusNode, TextEditingController> fields, {
+  FocusNode? current,
+}) =>
+    fields.entries.any(
+      (entry) => entry.key != current && entry.value.text.trim().isEmpty,
+    )
+    ? TextInputAction.next
+    : TextInputAction.done;
+
+void focusNextRequiredField(
+  BuildContext context,
+  Map<FocusNode, TextEditingController> fields,
+) {
+  for (final entry in fields.entries) {
+    if (entry.value.text.trim().isEmpty) {
+      entry.key.requestFocus();
+      return;
+    }
+  }
+  FocusScope.of(context).unfocus();
 }
 
 Widget buildPopupMenuOption(
@@ -377,17 +415,25 @@ class _OptionalNotesFieldState extends State<OptionalNotesField> {
   Widget build(BuildContext context) => ExpansionTile(
     tilePadding: EdgeInsets.zero,
     childrenPadding: const EdgeInsets.only(top: 8, bottom: 8),
-    title: Text(
-      'Notes (optional)'.tr(context),
-      style: Theme.of(context).textTheme.bodyMedium
-          ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+    title: Transform.translate(
+      offset: const Offset(0, -4),
+      child: Text(
+        'Notes (optional)'.tr(context),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     ),
     initiallyExpanded: _expanded,
     onExpansionChanged: (bool value) => setState(() => _expanded = value),
-    trailing: Icon(
-      _expanded ? Icons.remove : Icons.add,
-      size: 18,
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    trailing: Transform.translate(
+      offset: const Offset(0, -4),
+      child: Icon(
+        _expanded ? Icons.remove : Icons.add,
+        size: 18,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
     ),
     maintainState: true,
     shape: const Border(),
@@ -399,7 +445,10 @@ class _OptionalNotesFieldState extends State<OptionalNotesField> {
         minLines: 2,
         maxLines: null,
         style: Theme.of(context).textTheme.bodyLarge,
-        decoration: InputDecoration(hintText: 'Notes (optional)'.tr(context)),
+        decoration: InputDecoration(
+          hintText: 'Notes (optional)'.tr(context),
+          contentPadding: _editorFieldPadding,
+        ),
       ),
     ],
   );

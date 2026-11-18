@@ -15,6 +15,9 @@ class StockSearchField extends StatefulWidget {
     required this.quantityField,
     required this.onChanged,
     required this.onSelected,
+    this.focusNode,
+    this.textInputAction,
+    this.onSubmitted,
     super.key,
   });
 
@@ -24,13 +27,17 @@ class StockSearchField extends StatefulWidget {
   final Widget quantityField;
   final ValueChanged<String> onChanged;
   final ValueChanged<StockSearchResult> onSelected;
+  final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   State<StockSearchField> createState() => _StockSearchFieldState();
 }
 
 class _StockSearchFieldState extends State<StockSearchField> {
-  final FocusNode _focus = FocusNode();
+  final FocusNode _internalFocus = FocusNode();
+  FocusNode get _focus => widget.focusNode ?? _internalFocus;
   final GlobalKey _feedbackKey = GlobalKey();
   Timer? _debounce;
   Timer? _blurReset;
@@ -50,6 +57,10 @@ class _StockSearchFieldState extends State<StockSearchField> {
   @override
   void didUpdateWidget(StockSearchField oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode != widget.focusNode) {
+      (oldWidget.focusNode ?? _internalFocus).removeListener(_onFocusChange);
+      _focus.addListener(_onFocusChange);
+    }
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_onControllerChanged);
       _text = widget.controller.text;
@@ -121,8 +132,8 @@ class _StockSearchFieldState extends State<StockSearchField> {
 
   void _select(StockSearchResult result) {
     _reset();
-    widget.onSelected(result);
     _focus.unfocus();
+    widget.onSelected(result);
   }
 
   @override
@@ -131,7 +142,7 @@ class _StockSearchFieldState extends State<StockSearchField> {
     _blurReset?.cancel();
     widget.controller.removeListener(_onControllerChanged);
     _focus.removeListener(_onFocusChange);
-    _focus.dispose();
+    _internalFocus.dispose();
     super.dispose();
   }
 
@@ -154,6 +165,8 @@ class _StockSearchFieldState extends State<StockSearchField> {
                       .tr(context),
               placeholder: 'Search'.tr(context),
               onChanged: _onChanged,
+              textInputAction: widget.textInputAction,
+              onSubmitted: widget.onSubmitted,
             ),
             second: widget.quantityField,
           ),
