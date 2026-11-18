@@ -322,9 +322,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
           LabeledTextField(
             controller: _customName,
             label: 'Custom name (optional)'.tr(context),
-            placeholder: form.name.trim().isNotEmpty
-                ? form.name.trim()
-                : 'Uses fetched name if left blank'.tr(context),
+            placeholder: form.name.trim().isNotEmpty ? form.name.trim() : null,
             onChanged: viewModel.onCustomNameChange,
           ),
         ];
@@ -385,7 +383,7 @@ class _EstimatedValueSummary extends StatelessWidget {
         children: <Widget>[
           Text(
             'Estimated value'.tr(context),
-            style: theme.textTheme.bodySmall?.copyWith(
+            style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),

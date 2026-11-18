@@ -55,7 +55,7 @@ class LabeledTextField extends StatelessWidget {
       style: prominent
           ? Theme.of(context).textTheme.displaySmall
                 ?.copyWith(color: Theme.of(context).colorScheme.primary)
-          : Theme.of(context).textTheme.bodyMedium,
+          : Theme.of(context).textTheme.bodyLarge,
       inputFormatters:
           keyboardType == const TextInputType.numberWithOptions(decimal: true)
           ? _decimalFormatters
@@ -379,7 +379,7 @@ class _OptionalNotesFieldState extends State<OptionalNotesField> {
     childrenPadding: const EdgeInsets.only(top: 8, bottom: 8),
     title: Text(
       'Notes (optional)'.tr(context),
-      style: Theme.of(context).textTheme.bodySmall
+      style: Theme.of(context).textTheme.bodyMedium
           ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
     ),
     initiallyExpanded: _expanded,
@@ -398,6 +398,7 @@ class _OptionalNotesFieldState extends State<OptionalNotesField> {
         onChanged: widget.onChanged,
         minLines: 2,
         maxLines: null,
+        style: Theme.of(context).textTheme.bodyLarge,
         decoration: InputDecoration(hintText: 'Notes (optional)'.tr(context)),
       ),
     ],

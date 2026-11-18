@@ -326,7 +326,7 @@ void main() {
           await _select<AssetType>(tester, listing.type.displayName);
         }
         await _selectExchange(tester, listing.exchange);
-        await _enter(tester, 'Company or ticker', listing.ticker);
+        await _enter(tester, 'Company or Ticker', listing.ticker);
         await _enter(tester, 'Quantity', '2');
         await _enter(tester, 'Custom name (optional)', listing.name);
         await _pickCurrency(tester, listing.currency);
@@ -411,7 +411,7 @@ void main() {
         expect(
           tester
               .widget<TextField>(
-                find.widgetWithText(TextField, 'Company or ticker'),
+                find.widgetWithText(TextField, 'Company or Ticker'),
               )
               .controller
               ?.text,
@@ -475,7 +475,7 @@ void main() {
       expect(
         tester
             .widget<TextField>(
-              find.widgetWithText(TextField, 'Company or ticker'),
+              find.widgetWithText(TextField, 'Company or Ticker'),
             )
             .controller
             ?.text,
@@ -623,7 +623,7 @@ void main() {
         }
         await _enter(
           tester,
-          type == AssetType.crypto ? 'Coin or ticker' : 'Company or ticker',
+          type == AssetType.crypto ? 'Coin or ticker' : 'Company or Ticker',
           symbol,
         );
         await _enter(tester, 'Quantity', '2');

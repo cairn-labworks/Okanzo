@@ -211,7 +211,21 @@ ThemeData buildTheme({
       ),
       contentPadding: const EdgeInsets.symmetric(vertical: 14),
       floatingLabelBehavior: FloatingLabelBehavior.always,
-      labelStyle: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+      labelStyle: textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+      floatingLabelStyle: WidgetStateTextStyle.resolveWith((
+        Set<WidgetState> states,
+      ) {
+        final Color color = states.contains(WidgetState.error)
+            ? scheme.error
+            : states.contains(WidgetState.focused)
+            ? scheme.primary
+            : scheme.onSurfaceVariant;
+        final TextStyle base = textTheme.bodyMedium ?? const TextStyle();
+        return base.copyWith(
+          fontSize: (base.fontSize ?? 14) / 0.75,
+          color: color,
+        );
+      }),
       helperMaxLines: 3,
       errorMaxLines: 3,
     ),

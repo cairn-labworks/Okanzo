@@ -150,9 +150,9 @@ class _StockSearchFieldState extends State<StockSearchField> {
               label:
                   (widget.type == StockSearchType.crypto
                           ? 'Coin or ticker'
-                          : 'Company or ticker')
+                          : 'Company or Ticker')
                       .tr(context),
-              placeholder: 'Search Yahoo Finance'.tr(context),
+              placeholder: 'Search'.tr(context),
               onChanged: _onChanged,
             ),
             second: widget.quantityField,

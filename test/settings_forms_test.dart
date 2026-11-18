@@ -975,11 +975,11 @@ void main() {
         greaterThan(tester.getRect(find.byTooltip('Back')).bottom),
       );
       expect(
-        tester.getRect(_field('Company or ticker')).top,
+        tester.getRect(_field('Company or Ticker')).top,
         tester.getRect(_field('Quantity')).top,
       );
       expect(
-        tester.getRect(_field('Company or ticker')).left,
+        tester.getRect(_field('Company or Ticker')).left,
         lessThan(tester.getRect(_field('Quantity')).left),
       );
       final Scaffold scaffold = tester.widget<Scaffold>(
@@ -1356,9 +1356,57 @@ void main() {
           find.text('Price is fetched automatically on save when online.'),
           findsNothing,
         );
+        expect(find.text('Search Yahoo Finance'), findsNothing);
+        expect(find.text('Uses fetched name if left blank'), findsNothing);
+        final TextField customNameField = tester.widget<TextField>(
+          find.descendant(
+            of: _field('Custom name (optional)'),
+            matching: find.byType(TextField),
+          ),
+        );
+        expect(customNameField.decoration?.hintText, isNull);
+        expect(customNameField.decoration?.helperText, isNull);
+        expect(customNameField.style?.fontSize, 16);
       },
     );
   }
+
+  testWidgets('asset and liability fields use readable label and input sizes', (
+    WidgetTester tester,
+  ) async {
+    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+    final TextField tickerInput = tester.widget<TextField>(
+      find.descendant(
+        of: _field('Company or Ticker'),
+        matching: find.byType(TextField),
+      ),
+    );
+    final TextField quantityInput = tester.widget<TextField>(
+      find.descendant(of: _field('Quantity'), matching: find.byType(TextField)),
+    );
+    expect(tickerInput.decoration?.hintText, 'Search');
+    expect(tickerInput.style?.fontSize, 16);
+    expect(quantityInput.style?.fontSize, 16);
+    final ThemeData assetTheme = Theme.of(
+      tester.element(find.byType(AssetEditScreen)),
+    );
+    final TextStyle? floatingLabel = WidgetStateProperty.resolveAs(
+      assetTheme.inputDecorationTheme.floatingLabelStyle,
+      const <WidgetState>{},
+    );
+    expect(floatingLabel!.fontSize! * 0.75, 14);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await open(
+      tester,
+      const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
+    );
+    final TextField liabilityName = tester.widget<TextField>(
+      find.descendant(of: _field('Name'), matching: find.byType(TextField)),
+    );
+    expect(liabilityName.style?.fontSize, 16);
+  });
 
   for (final AssetType type in AssetType.values) {
     testWidgets('${type.name} keeps its valuation fields and currency', (
@@ -1391,7 +1439,7 @@ void main() {
           expect(find.text('Estimated value'), findsOneWidget);
           final String tickerLabel = type == AssetType.crypto
               ? 'Coin or ticker'
-              : 'Company or ticker';
+              : 'Company or Ticker';
           await tester.scrollUntilVisible(
             _field('Quantity'),
             100,
