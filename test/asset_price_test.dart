@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -959,6 +960,157 @@ void main() {
       expect(viewModel.event?.type, AssetEditEventType.error);
       expect(viewModel.event?.message, contains('Symbol not found'));
       expect(dao.updatedPrices, isEmpty);
+    },
+  );
+
+  for (final AssetType type in <AssetType>[
+    AssetType.stock,
+    AssetType.mutualFund,
+    AssetType.crypto,
+  ]) {
+    test(
+      'save automatically fetches and converts $type price when not manually fetched',
+      () async {
+        final AssetEditViewModel viewModel = await _editor(repository);
+        viewModel.onTypeChange(type);
+        viewModel.onNameChange('Holding');
+        viewModel.onSymbolChange('BTC');
+        viewModel.onQuantityChange('2');
+        expect(viewModel.form.lastPrice, isNull);
+
+        await viewModel.save();
+
+        final AssetEntity saved = dao.assets.last;
+        expect(requestedSymbols, <String>[
+          type == AssetType.crypto ? 'BTC-USD' : 'BTC',
+        ]);
+        expect(saved.currency, 'EUR');
+        expect(saved.lastPrice, type == AssetType.crypto ? 45000 : 18);
+        expect(saved.lastPriceTimestamp, greaterThan(0));
+        expect(viewModel.event?.type, AssetEditEventType.saved);
+        expect(viewModel.event?.message, isNull);
+      },
+    );
+  }
+
+  test(
+    'save reuses an already-fetched quote without calling the network again',
+    () async {
+      final AssetEditViewModel viewModel = await _editor(repository);
+      viewModel.onNameChange('Apple');
+      viewModel.onSymbolChange('AAPL');
+      viewModel.onQuantityChange('3');
+      await viewModel.fetchPrice();
+      expect(requestedSymbols, <String>['AAPL']);
+
+      await viewModel.save();
+
+      expect(requestedSymbols, <String>['AAPL']);
+      expect(dao.assets.last.lastPrice, 18);
+      expect(viewModel.event?.type, AssetEditEventType.saved);
+      expect(viewModel.event?.message, isNull);
+    },
+  );
+
+  test(
+    'save while offline still persists the holding and surfaces a calm notice',
+    () async {
+      final AssetRepository offlineRepository = AssetRepository(
+        dao,
+        StockPriceService(
+          StockApi(
+            client: MockClient(
+              (_) async =>
+                  throw const SocketException('Failed host lookup: yahoo'),
+            ),
+          ),
+        ),
+        fxRepository,
+      );
+      final AssetEditViewModel viewModel = await _editor(offlineRepository);
+      viewModel.onNameChange('Apple');
+      viewModel.onSymbolChange('AAPL');
+      viewModel.onQuantityChange('5');
+      final int before = dao.assets.length;
+
+      await viewModel.save();
+
+      expect(dao.assets.length, before + 1);
+      final AssetEntity saved = dao.assets.last;
+      expect(saved.name, 'Apple');
+      expect(saved.symbol, 'AAPL');
+      expect(saved.quantity, 5);
+      expect(saved.lastPrice, isNull);
+      expect(viewModel.event?.type, AssetEditEventType.saved);
+      expect(
+        viewModel.event?.message,
+        'No internet connection. Saved without latest price — refresh when online.',
+      );
+    },
+  );
+
+  test(
+    'editing symbol while auto-fetch on save is in flight cancels that save',
+    () async {
+      final Completer<http.Response> pending = Completer<http.Response>();
+      final AssetRepository slowRepository = AssetRepository(
+        dao,
+        StockPriceService(StockApi(client: MockClient((_) => pending.future))),
+        fxRepository,
+      );
+      final AssetEditViewModel viewModel = await _editor(slowRepository);
+      viewModel.onNameChange('Apple');
+      viewModel.onSymbolChange('AAPL');
+      viewModel.onQuantityChange('2');
+      final int before = dao.assets.length;
+
+      final Future<void> saving = viewModel.save();
+      expect(viewModel.form.isSaving, isTrue);
+      viewModel.onSymbolChange('MSFT');
+      expect(viewModel.form.isSaving, isFalse);
+      pending.complete(
+        http.Response(
+          '{"chart":{"result":[{"meta":{"regularMarketPrice":200,"currency":"USD"}}]}}',
+          200,
+        ),
+      );
+      await saving;
+
+      expect(dao.assets.length, before);
+      expect(viewModel.form.lastPrice, isNull);
+      expect(viewModel.event, isNull);
+    },
+  );
+
+  test(
+    'manual fetch and bulk refresh distinguish offline connectivity errors',
+    () async {
+      final AssetRepository offlineRepository = AssetRepository(
+        dao,
+        StockPriceService(
+          StockApi(
+            client: MockClient(
+              (_) async => throw TimeoutException('Connection timed out'),
+            ),
+          ),
+        ),
+        fxRepository,
+      );
+      final AssetEditViewModel viewModel = await _editor(offlineRepository);
+      viewModel.onSymbolChange('AAPL');
+      await viewModel.fetchPrice();
+      expect(viewModel.event?.type, AssetEditEventType.error);
+      expect(
+        viewModel.event?.message,
+        "Couldn't fetch price: No internet connection",
+      );
+
+      final PriceRefreshResult bulk = await offlineRepository.refreshAllPrices(
+        1,
+      );
+      expect(bulk.updated, 0);
+      expect(bulk.failed, 5);
+      expect(bulk.offline, isTrue);
     },
   );
 }

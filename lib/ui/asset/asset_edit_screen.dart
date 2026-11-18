@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../data/remote/stock/stock_search_service.dart';
@@ -59,11 +61,20 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     switch (event.type) {
       case AssetEditEventType.saved:
       case AssetEditEventType.deleted:
+        final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+        final String? notice = event.message?.tr(context);
         Navigator.of(context).pop();
+        if (notice != null && notice.isNotEmpty) {
+          messenger
+            ..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text(notice)));
+        }
       case AssetEditEventType.error:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text((event.message ?? '').tr(context))),
-        );
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text((event.message ?? '').tr(context))),
+          );
     }
   }
 
@@ -215,11 +226,19 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                       onChanged: viewModel.onNotesChange,
                     ),
                     const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: form.isSaving || form.isFetchingPrice
+                    FormActionRow(
+                      isSaving: form.isSaving,
+                      onCancel: () {
+                        FocusScope.of(context).unfocus();
+                        viewModel.cancel();
+                        Navigator.of(context).pop();
+                      },
+                      onSave: form.isSaving || form.isFetchingPrice
                           ? null
-                          : viewModel.save,
-                      child: Text('Save asset'.tr(context)),
+                          : () {
+                              FocusScope.of(context).unfocus();
+                              unawaited(viewModel.save());
+                            },
                     ),
                     const SizedBox(height: 24),
                   ],
@@ -262,7 +281,12 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: TextButton(
-              onPressed: form.isFetchingPrice ? null : viewModel.fetchPrice,
+              onPressed: form.isFetchingPrice || form.isSaving
+                  ? null
+                  : () {
+                      FocusScope.of(context).unfocus();
+                      unawaited(viewModel.fetchPrice());
+                    },
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
                 alignment: AlignmentDirectional.centerStart,
@@ -288,9 +312,9 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text(
-                'Fetch the latest closing price, or it will show as 0 '
-                        'until refreshed.'
-                    .tr(context),
+                'Price is fetched automatically on save when online.'.tr(
+                  context,
+                ),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

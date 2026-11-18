@@ -33,6 +33,7 @@ class _StockSearchFieldState extends State<StockSearchField> {
   final FocusNode _focus = FocusNode();
   final GlobalKey _feedbackKey = GlobalKey();
   Timer? _debounce;
+  Timer? _blurReset;
   int _request = 0;
   late String _text;
   bool _searching = false;
@@ -61,7 +62,12 @@ class _StockSearchFieldState extends State<StockSearchField> {
   }
 
   void _onFocusChange() {
-    if (!_focus.hasFocus) _reset();
+    _blurReset?.cancel();
+    if (!_focus.hasFocus) {
+      _blurReset = Timer(const Duration(milliseconds: 150), () {
+        if (mounted && !_focus.hasFocus) _reset();
+      });
+    }
   }
 
   void _onControllerChanged() {
@@ -72,6 +78,7 @@ class _StockSearchFieldState extends State<StockSearchField> {
 
   void _reset() {
     _debounce?.cancel();
+    _blurReset?.cancel();
     _request++;
     setState(() {
       _searching = false;
@@ -121,6 +128,7 @@ class _StockSearchFieldState extends State<StockSearchField> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _blurReset?.cancel();
     widget.controller.removeListener(_onControllerChanged);
     _focus.removeListener(_onFocusChange);
     _focus.dispose();
@@ -157,7 +165,34 @@ class _StockSearchFieldState extends State<StockSearchField> {
           if (result != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: result.isFailure || result.value.isEmpty
+              child: result.isOffline
+                  ? Row(
+                      key: _feedbackKey,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(
+                            top: 2,
+                            end: 6,
+                          ),
+                          child: Icon(
+                            Icons.cloud_off_outlined,
+                            size: 15,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        Flexible(
+                          child: Text(
+                            'No internet connection. Enter a ticker manually to save offline.'
+                                .tr(context),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : result.isFailure || result.value.isEmpty
                   ? Text(
                       key: _feedbackKey,
                       (result.isFailure

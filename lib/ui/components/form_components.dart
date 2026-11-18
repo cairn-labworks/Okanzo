@@ -199,6 +199,67 @@ class FormFieldPair extends StatelessWidget {
   );
 }
 
+/// Paired secondary Cancel and primary Save actions for editor forms.
+class FormActionRow extends StatelessWidget {
+  const FormActionRow({
+    required this.onCancel,
+    required this.onSave,
+    this.isSaving = false,
+    super.key,
+  });
+
+  final VoidCallback? onCancel;
+  final VoidCallback? onSave;
+  final bool isSaving;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget cancelButton = OutlinedButton(
+      onPressed: onCancel,
+      child: Text('Cancel'.tr(context)),
+    );
+    final Widget saveButton = FilledButton(
+      onPressed: onSave,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (isSaving) ...<Widget>[
+            const SizedBox(
+              height: 16,
+              width: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(child: Text('Save'.tr(context))),
+        ],
+      ),
+    );
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        if (constraints.maxWidth >= 260 &&
+            MediaQuery.textScalerOf(context).scale(14) <= 20) {
+          return Row(
+            children: <Widget>[
+              Expanded(child: cancelButton),
+              const SizedBox(width: 12),
+              Expanded(child: saveButton),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            cancelButton,
+            const SizedBox(height: 10),
+            saveButton,
+          ],
+        );
+      },
+    );
+  }
+}
+
 class CurrencySelector extends StatelessWidget {
   const CurrencySelector({
     required this.currency,

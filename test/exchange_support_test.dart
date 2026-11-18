@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -16,6 +19,7 @@ import 'package:okanzo/data/repository/settings_repository.dart';
 import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/stock_exchange.dart';
+import 'package:okanzo/l10n/app_localizations.dart';
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
 import 'package:okanzo/ui/asset/stock_exchange_field.dart';
@@ -307,8 +311,8 @@ void main() {
     await tester.tap(find.text('Fetch latest price'));
     await tester.pumpAndSettle();
     expect(requests, <String>['AAPL']);
-    await tester.ensureVisible(find.text('Save asset'));
-    await tester.tap(find.text('Save asset'));
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Save'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await tester.pumpAndSettle();
     expect(dao.assets.single.symbol, 'AAPL');
     expect(dao.assets.single.name, 'Apple Inc.');
@@ -783,7 +787,12 @@ void main() {
     await openEditor(tester);
     await openPreferences(tester);
     await togglePreference(tester, StockExchange.us);
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(TextButton, 'Cancel'),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(settings.current.preferredExchanges, <StockExchange>[
       StockExchange.us,
@@ -899,4 +908,238 @@ void main() {
     ]);
     expect(find.widgetWithText(TextButton, 'Save'), findsWidgets);
   });
+
+  testWidgets(
+    'tapping Save without manual Fetch latest price fetches quote and saves even with open suggestions',
+    (WidgetTester tester) async {
+      final StockSearchService search = StockSearchService(
+        client: MockClient(
+          (_) async => http.Response(
+            '{"quotes":['
+            '{"symbol":"AAPL","longname":"Apple Inc.","quoteType":"EQUITY","exchDisp":"NASDAQ","isYahooFinance":true},'
+            '{"symbol":"MSFT","longname":"Microsoft","quoteType":"EQUITY","exchDisp":"NASDAQ","isYahooFinance":true}'
+            ']}',
+            200,
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        AppScope(
+          container: _Container(repository, settings, searchService: search),
+          child: MaterialApp(
+            home: Builder(
+              builder: (BuildContext context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          const AssetEditScreen(portfolioId: 1, assetId: 0),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Apple');
+      await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '4');
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Company or ticker'),
+        'AAPL',
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(find.text('Apple Inc.'), findsOneWidget);
+
+      final Finder save = find.widgetWithText(FilledButton, 'Save');
+      await tester.scrollUntilVisible(
+        save,
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(save);
+      await tester.pumpAndSettle();
+      final TestGesture finger = await tester.startGesture(
+        tester.getCenter(save),
+        kind: PointerDeviceKind.touch,
+      );
+      await tester.pump(const Duration(milliseconds: 80));
+      await finger.up();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AssetEditScreen), findsNothing);
+      expect(requests, <String>['AAPL']);
+      expect(dao.assets.single.symbol, 'AAPL');
+      expect(dao.assets.single.quantity, 4);
+      expect(dao.assets.single.lastPrice, 50);
+    },
+  );
+
+  testWidgets(
+    'saving offline closes the editor and shows a localized non-intrusive SnackBar',
+    (WidgetTester tester) async {
+      final AssetRepository offlineRepo = AssetRepository(
+        dao,
+        StockPriceService(
+          StockApi(
+            client: MockClient(
+              (_) async => throw const SocketException('No internet'),
+            ),
+          ),
+        ),
+        fxRepositoryForTest(),
+      );
+      final StockSearchService offlineSearch = StockSearchService(
+        client: MockClient((_) async => throw const SocketException('Offline')),
+      );
+      await tester.pumpWidget(
+        AppScope(
+          container: _Container(
+            offlineRepo,
+            settings,
+            searchService: offlineSearch,
+          ),
+          child: MaterialApp(
+            locale: const Locale('es'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            home: Builder(
+              builder: (BuildContext context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          const AssetEditScreen(portfolioId: 1, assetId: 0),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      const AppLocalizations es = AppLocalizations(Locale('es'));
+      await tester.enterText(
+        find.widgetWithText(TextField, es.text('Name')),
+        'Apple',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, es.text('Company or ticker')),
+        'AAPL',
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          es.text(
+            'No internet connection. Enter a ticker manually to save offline.',
+          ),
+        ),
+        findsOneWidget,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, es.text('Quantity')),
+        '2',
+      );
+      final Finder save = find.widgetWithText(FilledButton, es.text('Save'));
+      await tester.scrollUntilVisible(
+        save,
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(save);
+      await tester.pumpAndSettle();
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AssetEditScreen), findsNothing);
+      expect(dao.assets.single.symbol, 'AAPL');
+      expect(dao.assets.single.lastPrice, isNull);
+      expect(
+        find.text(
+          es.text(
+            'No internet connection. Saved without latest price — refresh when online.',
+          ),
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'Cancel next to Save closes the asset editor and aborts an in-flight auto-fetch save',
+    (WidgetTester tester) async {
+      final Completer<http.Response> pendingQuote = Completer<http.Response>();
+      final AssetRepository slowRepo = AssetRepository(
+        dao,
+        StockPriceService(
+          StockApi(client: MockClient((_) => pendingQuote.future)),
+        ),
+        fxRepositoryForTest(),
+      );
+      await tester.pumpWidget(
+        AppScope(
+          container: _Container(slowRepo, settings),
+          child: MaterialApp(
+            home: Builder(
+              builder: (BuildContext context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          const AssetEditScreen(portfolioId: 1, assetId: 0),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Apple');
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Company or ticker'),
+        'AAPL',
+      );
+      await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '3');
+
+      final Finder save = find.widgetWithText(FilledButton, 'Save');
+      final Finder cancel = find.widgetWithText(OutlinedButton, 'Cancel');
+      await tester.scrollUntilVisible(
+        save,
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(save);
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await tester.tap(cancel);
+      await tester.pumpAndSettle();
+      expect(find.byType(AssetEditScreen), findsNothing);
+
+      pendingQuote.complete(_quote(200, 'USD'));
+      await tester.pumpAndSettle();
+      expect(dao.assets, isEmpty);
+    },
+  );
 }

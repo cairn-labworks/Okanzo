@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../../util/result.dart';
+import '../api_client.dart';
 import 'chart_response.dart';
 
 enum StockSearchType { stock, fund, crypto }
@@ -89,12 +90,13 @@ class StockSearchService {
         if (matches.length == 8) break;
       }
       return Result<List<StockSearchResult>>.success(matches);
-    } on TimeoutException {
-      return Result<List<StockSearchResult>>.failure('Search timed out');
-    } on http.ClientException catch (error) {
-      return Result<List<StockSearchResult>>.failure(error.toString());
     } on FormatException {
       return Result<List<StockSearchResult>>.failure('Invalid search response');
+    } on Object catch (error) {
+      if (isOfflineError(error)) {
+        return Result<List<StockSearchResult>>.offline();
+      }
+      return Result<List<StockSearchResult>>.failure(error.toString());
     }
   }
 

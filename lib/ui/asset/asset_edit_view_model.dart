@@ -45,6 +45,7 @@ class AssetEditViewModel extends ChangeNotifier {
   AssetEditEvent? _event;
   int _priceRequest = 0;
   bool _convertingCurrency = false;
+  bool _cancelled = false;
   bool _disposed = false;
 
   AssetFormState get form => _form;
@@ -89,7 +90,7 @@ class AssetEditViewModel extends ChangeNotifier {
   void _updateQuoteInput(AssetFormState next) {
     _priceRequest++;
     _convertingCurrency = false;
-    _update(next.copyWith(isFetchingPrice: false));
+    _update(next.copyWith(isFetchingPrice: false, isSaving: false));
   }
 
   void onTypeChange(AssetType type) {
@@ -120,12 +121,18 @@ class AssetEditViewModel extends ChangeNotifier {
     final double? price = _form.lastPrice;
     if (!_form.type.isMarketLinked || price == null) {
       _convertingCurrency = false;
-      _update(_form.copyWith(currency: value, isFetchingPrice: false));
+      _update(
+        _form.copyWith(
+          currency: value,
+          isFetchingPrice: false,
+          isSaving: false,
+        ),
+      );
       return;
     }
     final String from = _form.currency;
     _convertingCurrency = true;
-    _update(_form.copyWith(isFetchingPrice: true));
+    _update(_form.copyWith(isFetchingPrice: true, isSaving: false));
     final Result<double> converted = await _assetRepository.convertPrice(
       price,
       from,
@@ -242,6 +249,7 @@ class AssetEditViewModel extends ChangeNotifier {
   }
 
   Future<void> save() async {
+    if (_form.isSaving) return;
     if (_form.isFetchingPrice) {
       _emit(
         const AssetEditEvent(
@@ -257,8 +265,43 @@ class AssetEditViewModel extends ChangeNotifier {
       return;
     }
     _update(_form.copyWith(isSaving: true));
+    String? notice;
+    if (_form.valuationMode == ValuationMode.market &&
+        _form.lastPrice == null) {
+      final int request = ++_priceRequest;
+      _convertingCurrency = false;
+      final Result<StockQuote> quote = await _assetRepository.fetchQuote(
+        _form.quoteSymbol,
+        currency: _form.currency,
+        isCrypto: _form.type == AssetType.crypto,
+      );
+      if (_cancelled || _disposed || request != _priceRequest) {
+        if (!_cancelled && !_disposed && _form.isSaving) {
+          _update(_form.copyWith(isSaving: false));
+        }
+        return;
+      }
+      if (quote.isSuccess) {
+        _form = _form.copyWith(
+          lastPrice: quote.value.price,
+          lastPriceTimestamp: DateTime.now().millisecondsSinceEpoch,
+        );
+      } else {
+        notice = quote.isOffline
+            ? 'No internet connection. Saved without latest price — refresh when online.'
+            : 'Saved without latest price: ${quote.errorMessage}';
+      }
+    }
+    if (_cancelled || _disposed) return;
     await _assetRepository.save(_form.toEntity());
-    _emit(const AssetEditEvent(AssetEditEventType.saved));
+    if (_cancelled || _disposed) return;
+    _emit(AssetEditEvent(AssetEditEventType.saved, notice));
+  }
+
+  void cancel() {
+    _cancelled = true;
+    _priceRequest++;
+    _convertingCurrency = false;
   }
 
   Future<void> delete() async {

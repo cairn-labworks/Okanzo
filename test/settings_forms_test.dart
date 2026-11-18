@@ -6,6 +6,7 @@ import 'package:okanzo/data/backup/backup_repository.dart';
 import 'package:okanzo/data/local/entity/asset_entity.dart';
 import 'package:okanzo/data/local/entity/liability_entity.dart';
 import 'package:okanzo/data/local/entity/portfolio_entity.dart';
+import 'package:okanzo/data/remote/stock/stock_price_service.dart';
 import 'package:okanzo/data/remote/stock/stock_search_service.dart';
 import 'package:okanzo/data/repository/asset_repository.dart';
 import 'package:okanzo/data/repository/currency_converter.dart';
@@ -72,6 +73,13 @@ class _Assets extends Fake implements AssetRepository {
   @override
   Future<void> updateOrder(List<int> ids) async =>
       lastOrder = List<int>.of(ids);
+
+  @override
+  Future<Result<StockQuote>> fetchQuote(
+    String symbol, {
+    required String currency,
+    bool isCrypto = false,
+  }) async => Result<StockQuote>.offline();
 }
 
 class _Liabilities extends Fake implements LiabilityRepository {
@@ -978,13 +986,18 @@ void main() {
         ),
       );
       expect(scaffold.bottomNavigationBar, isNull);
-      final Finder save = find.widgetWithText(FilledButton, 'Save asset');
+      expect(find.text('Save asset'), findsNothing);
+      final Finder save = find.widgetWithText(FilledButton, 'Save');
+      final Finder cancel = find.widgetWithText(OutlinedButton, 'Cancel');
       await tester.scrollUntilVisible(
         save,
         120,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
+      expect(cancel, findsOneWidget);
+      expect(tester.getRect(cancel).top, tester.getRect(save).top);
+      expect(tester.getRect(cancel).right, lessThan(tester.getRect(save).left));
       expect(
         tester.getRect(save).top,
         greaterThanOrEqualTo(
@@ -1373,7 +1386,7 @@ void main() {
           expect(find.text('Estimated value'), findsNothing);
           expect(_field('Quantity'), findsNothing);
       }
-      await _tap(tester, find.text('Save asset'));
+      await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
       expect(container.assetRepository.saved?.type, type);
       expect(container.assetRepository.saved?.currency, 'USD');
       expect(find.byType(AssetEditScreen), findsNothing);
@@ -1415,7 +1428,7 @@ void main() {
     await _tap(tester, find.byType(CurrencySelector));
     await tester.tap(find.text('EUR — Euro'));
     await tester.pumpAndSettle();
-    await _tap(tester, find.text('Save asset'));
+    await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
     expect(container.assetRepository.saved?.name, 'Savings');
     expect(container.assetRepository.saved?.manualValue, 123);
     expect(container.assetRepository.saved?.notes, 'Keep this note');
@@ -1486,7 +1499,8 @@ void main() {
         'Existing note',
       );
       await _toggleNotes(tester);
-      await _tap(tester, find.text('Save liability'));
+      expect(find.text('Save liability'), findsNothing);
+      await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
       expect(container.liabilityRepository.saved?.type, type);
       expect(container.liabilityRepository.saved?.amount, 500);
       expect(container.liabilityRepository.saved?.notes, 'Existing note');
@@ -1507,7 +1521,16 @@ void main() {
       const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
     );
     expect(_notesInput, findsNothing);
-    await _tap(tester, find.text('Save liability'));
+    expect(find.widgetWithText(OutlinedButton, 'Cancel'), findsOneWidget);
+    await _tap(tester, find.widgetWithText(OutlinedButton, 'Cancel'));
+    expect(find.byType(LiabilityEditScreen), findsNothing);
+    expect(container.liabilityRepository.saved, isNull);
+
+    await open(
+      tester,
+      const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
+    );
+    await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
     await tester.pumpAndSettle();
     expect(find.text('Give this liability a name'), findsOneWidget);
     expect(container.liabilityRepository.saved, isNull);
@@ -1525,7 +1548,7 @@ void main() {
     await _tap(tester, find.byType(CurrencySelector));
     await tester.tap(find.text('EUR — Euro'));
     await tester.pumpAndSettle();
-    await _tap(tester, find.text('Save liability'));
+    await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
     expect(container.liabilityRepository.saved?.amount, 42);
     expect(container.liabilityRepository.saved?.currency, 'EUR');
     expect(container.liabilityRepository.saved?.notes, isNull);

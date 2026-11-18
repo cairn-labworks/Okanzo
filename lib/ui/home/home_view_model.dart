@@ -17,6 +17,7 @@ import '../../domain/model/liability_type.dart';
 import '../../domain/model/net_worth_summary.dart';
 import '../../util/category_order.dart';
 import '../../util/collections.dart';
+import '../../util/result.dart';
 import 'category_groups.dart';
 
 /// Everything the home screen renders.
@@ -160,15 +161,17 @@ class HomeViewModel extends ChangeNotifier {
     if (active == null || _refreshing) return;
     _refreshing = true;
     _rebuild();
-    await _fxRepository.refreshRates();
+    final Result<void> fxResult = await _fxRepository.refreshRates();
     final PriceRefreshResult result = await _assetRepository.refreshAllPrices(
       active.id,
     );
     _refreshing = false;
     _message = result.total == 0
-        ? 'Prices up to date'
+        ? (fxResult.isOffline ? Result.offlineMessage : 'Prices up to date')
         : result.failed == 0
         ? 'Updated ${result.updated} price(s)'
+        : result.offline
+        ? Result.offlineMessage
         : 'Updated ${result.updated}, ${result.failed} failed';
     _rebuild();
   }

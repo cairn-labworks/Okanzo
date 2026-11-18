@@ -1,4 +1,5 @@
 import '../../../util/result.dart';
+import '../api_client.dart';
 import 'chart_response.dart';
 
 /// A resolved quote for a market-linked symbol.
@@ -59,6 +60,7 @@ class StockPriceService {
         StockQuote(symbol: ticker, price: price / divisor, currency: currency),
       );
     } on Object catch (error) {
+      if (isOfflineError(error)) return Result<StockQuote>.offline();
       return Result<StockQuote>.failure(_describe(error));
     }
   }
