@@ -322,7 +322,8 @@ checkout, and the pipeline's actual project ID when inspecting fork CI jobs.
 
 ## Quality checks
 
-The **Pull request checks** workflow runs on every pull request targeting `main`,
+The **Pull request checks** workflow runs when pull requests targeting `main` are
+opened, updated, reopened, or edited (including retargeting to `main`),
 on pushes to `main`, and manually from the Actions tab. It checks formatting
 without changing files, runs static analysis and all unit/widget tests, and
 builds an Android debug APK in a separate job. Both jobs use Flutter 3.47.5,
