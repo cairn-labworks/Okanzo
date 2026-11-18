@@ -301,10 +301,6 @@ Required repository secrets:
 
 Invoke `/create-release` in Copilot, or ask to release the latest `main` and publish to F-Droid. The [release skill](.github/skills/create-release/SKILL.md) includes all merged changes since the previous release, validates signed artifacts, and publishes the GitHub release using F-Droid's expected APK filenames. Official F-Droid availability depends on its source build, reproducibility verification and index publication; Google Play is outside that workflow.
 
-</details>
-
----
-
 GitLab operations use the GitLab CLI (`glab`) rather than a browser session.
 Install it with your package manager and authenticate once using OAuth:
 
@@ -319,6 +315,10 @@ Authorize the device code directly in GitLab. Confirm that credentials are store
 in the OS keyring, not plaintext configuration; future sessions reuse that login.
 Use explicit GitLab project URLs for `glab --repo` commands from this GitHub
 checkout, and the pipeline's actual project ID when inspecting fork CI jobs.
+
+</details>
+
+---
 
 ## Quality checks
 
