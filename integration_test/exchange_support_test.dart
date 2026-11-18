@@ -5,12 +5,15 @@ import 'package:okanzo/data/local/entity/asset_entity.dart';
 import 'package:okanzo/data/repository/currency_converter.dart';
 import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
+import 'package:okanzo/domain/model/holding_type.dart';
 import 'package:okanzo/domain/model/stock_exchange.dart';
 import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
 import 'package:okanzo/ui/asset/stock_exchange_field.dart';
 import 'package:okanzo/ui/components/form_components.dart';
+import 'package:okanzo/ui/holding/holding_create_screen.dart';
+import 'package:okanzo/ui/holding/holding_create_view_model.dart';
 import 'package:okanzo/ui/home/home_screen.dart';
 import 'package:okanzo/ui/home/home_view_model.dart';
 import 'package:okanzo/util/currency_util.dart';
@@ -180,7 +183,14 @@ Future<void> _selectExchange(
 
 Future<void> _newAsset(WidgetTester tester) async {
   await _tap(tester, find.byType(FloatingActionButton));
-  await _tap(tester, find.text('New asset'));
+  await _waitUntil(
+    tester,
+    () => find.byType(HoldingCreateScreen).evaluate().isNotEmpty,
+    'new entry editor',
+  );
+  if (find.byType(StockExchangeField).evaluate().isEmpty) {
+    await _selectHoldingAssetType(tester, AssetType.stock);
+  }
   await _waitUntil(
     tester,
     () => find.byType(StockExchangeField).evaluate().isNotEmpty,
@@ -188,32 +198,89 @@ Future<void> _newAsset(WidgetTester tester) async {
   );
 }
 
+Future<void> _selectHoldingAssetType(
+  WidgetTester tester,
+  AssetType type,
+) async {
+  await _tap(tester, find.byKey(const ValueKey<String>('holding-type-chip')));
+  await _tap(
+    tester,
+    find.byKey(ValueKey<HoldingType>(HoldingType.asset(type))),
+  );
+}
+
 AppContainer _container(WidgetTester tester) =>
     AppScope.of(tester.element(find.byType(HomeScreen)));
 
-AssetEditViewModel _editor(WidgetTester tester) => tester
-    .widgetList<ListenableBuilder>(
-      find.descendant(
-        of: find.byType(AssetEditScreen),
-        matching: find.byType(ListenableBuilder),
-      ),
-    )
-    .map((ListenableBuilder builder) => builder.listenable)
-    .whereType<AssetEditViewModel>()
-    .single;
+class _MarketFormSnapshot {
+  const _MarketFormSnapshot({
+    required this.currency,
+    required this.loading,
+    required this.isFetchingPrice,
+    required this.lastPrice,
+    required this.estimatedValue,
+  });
+
+  final String currency;
+  final bool loading;
+  final bool isFetchingPrice;
+  final double? lastPrice;
+  final double estimatedValue;
+}
+
+_MarketFormSnapshot _editorForm(WidgetTester tester) {
+  if (find.byType(HoldingCreateScreen).evaluate().isNotEmpty) {
+    final HoldingCreateViewModel vm = tester
+        .widgetList<ListenableBuilder>(
+          find.descendant(
+            of: find.byType(HoldingCreateScreen),
+            matching: find.byType(ListenableBuilder),
+          ),
+        )
+        .map((ListenableBuilder builder) => builder.listenable)
+        .whereType<HoldingCreateViewModel>()
+        .single;
+    return _MarketFormSnapshot(
+      currency: vm.form.currency,
+      loading: vm.form.loading,
+      isFetchingPrice: vm.form.isFetchingPrice,
+      lastPrice: vm.form.lastPrice,
+      estimatedValue: vm.form.estimatedValue,
+    );
+  }
+  final AssetEditViewModel vm = tester
+      .widgetList<ListenableBuilder>(
+        find.descendant(
+          of: find.byType(AssetEditScreen),
+          matching: find.byType(ListenableBuilder),
+        ),
+      )
+      .map((ListenableBuilder builder) => builder.listenable)
+      .whereType<AssetEditViewModel>()
+      .single;
+  return _MarketFormSnapshot(
+    currency: vm.form.currency,
+    loading: vm.form.loading,
+    isFetchingPrice: vm.form.isFetchingPrice,
+    lastPrice: vm.form.lastPrice,
+    estimatedValue: vm.form.estimatedValue,
+  );
+}
+
+bool _editorClosed(WidgetTester tester) =>
+    find.byType(HoldingCreateScreen).evaluate().isEmpty &&
+    find.byType(AssetEditScreen).evaluate().isEmpty;
 
 Future<void> _pickCurrency(WidgetTester tester, String currency) async {
-  final String current = _editor(tester).form.currency;
+  final String current = _editorForm(tester).currency;
   if (current == currency) return;
   FocusManager.instance.primaryFocus?.unfocus();
+  final Finder host = find.byType(HoldingCreateScreen).evaluate().isNotEmpty
+      ? find.byType(HoldingCreateScreen)
+      : find.byType(AssetEditScreen);
   tester
       .state<ScrollableState>(
-        find
-            .descendant(
-              of: find.byType(AssetEditScreen),
-              matching: find.byType(Scrollable),
-            )
-            .first,
+        find.descendant(of: host, matching: find.byType(Scrollable)).first,
       )
       .position
       .jumpTo(0);
@@ -225,10 +292,10 @@ Future<void> _pickCurrency(WidgetTester tester, String currency) async {
   );
   await _waitUntil(
     tester,
-    () => !_editor(tester).form.isFetchingPrice,
+    () => !_editorForm(tester).isFetchingPrice,
     'conversion to $currency',
   );
-  expect(_editor(tester).form.currency, currency);
+  expect(_editorForm(tester).currency, currency);
   expect(find.textContaining("Couldn't convert currency:"), findsNothing);
 }
 
@@ -323,7 +390,7 @@ void main() {
       for (final _Listing listing in _listings) {
         await _newAsset(tester);
         if (listing.type != AssetType.stock) {
-          await _select<AssetType>(tester, listing.type.displayName);
+          await _selectHoldingAssetType(tester, listing.type);
         }
         await _selectExchange(tester, listing.exchange);
         await _enter(tester, 'Company or ticker', listing.ticker);
@@ -367,7 +434,7 @@ void main() {
         await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
         await _waitUntil(
           tester,
-          () => find.byType(AssetEditScreen).evaluate().isEmpty,
+          () => _editorClosed(tester),
           'saving ${listing.symbol}',
         );
         final AssetEntity asset =
@@ -454,7 +521,7 @@ void main() {
       await _selectExchange(tester, StockExchange.bse);
       await _tap(tester, find.text('Fetch latest price'));
       expect(find.text('Enter a ticker symbol first'), findsOneWidget);
-      await _select<AssetType>(tester, AssetType.crypto.displayName);
+      await _selectHoldingAssetType(tester, AssetType.crypto);
       expect(find.byType(StockExchangeField), findsNothing);
       await tester.pageBack();
       await tester.pumpAndSettle();
@@ -619,7 +686,7 @@ void main() {
       for (final (AssetType type, String symbol, String name) in holdings) {
         await _newAsset(tester);
         if (type != AssetType.stock) {
-          await _select<AssetType>(tester, type.displayName);
+          await _selectHoldingAssetType(tester, type);
         }
         await _enter(
           tester,
@@ -632,19 +699,19 @@ void main() {
         await _tap(tester, find.text('Fetch latest price'));
         await _waitUntil(
           tester,
-          () => !_editor(tester).form.isFetchingPrice,
+          () => !_editorForm(tester).isFetchingPrice,
           'USD quote for $symbol',
         );
-        expect(_editor(tester).form.lastPrice, greaterThan(0));
-        final double usdPrice = _editor(tester).form.lastPrice!;
+        expect(_editorForm(tester).lastPrice, greaterThan(0));
+        final double usdPrice = _editorForm(tester).lastPrice!;
 
         await _pickCurrency(tester, 'EUR');
         final double expectedEur = usdPrice * eurRate;
         expect(
-          _editor(tester).form.lastPrice,
+          _editorForm(tester).lastPrice,
           closeTo(expectedEur, expectedEur * 1e-12),
         );
-        expect(_editor(tester).form.estimatedValue, expectedEur * 2);
+        expect(_editorForm(tester).estimatedValue, expectedEur * 2);
         expect(
           find.text('2 × ${CurrencyUtil.format(expectedEur, 'EUR')}'),
           findsOneWidget,
@@ -652,16 +719,16 @@ void main() {
         await _tap(tester, find.text('Fetch latest price'));
         await _waitUntil(
           tester,
-          () => !_editor(tester).form.isFetchingPrice,
+          () => !_editorForm(tester).isFetchingPrice,
           'repeat quote for $symbol',
         );
-        expect(_editor(tester).form.currency, 'EUR');
-        expect(_editor(tester).form.lastPrice, greaterThan(0));
-        final double fetchedEur = _editor(tester).form.lastPrice!;
+        expect(_editorForm(tester).currency, 'EUR');
+        expect(_editorForm(tester).lastPrice, greaterThan(0));
+        final double fetchedEur = _editorForm(tester).lastPrice!;
         await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
         await _waitUntil(
           tester,
-          () => find.byType(AssetEditScreen).evaluate().isEmpty,
+          () => _editorClosed(tester),
           'saving $symbol in EUR',
         );
         final AssetEntity asset =
@@ -678,21 +745,21 @@ void main() {
         await _tap(tester, find.text(name));
         await _waitUntil(
           tester,
-          () => !_editor(tester).form.loading,
+          () => !_editorForm(tester).loading,
           'reopening $symbol',
         );
-        expect(_editor(tester).form.currency, 'EUR');
-        expect(_editor(tester).form.lastPrice, fetchedEur);
+        expect(_editorForm(tester).currency, 'EUR');
+        expect(_editorForm(tester).lastPrice, fetchedEur);
         await _pickCurrency(tester, 'GBP');
         final double expectedGbp = fetchedEur / eurRate * gbpRate;
         expect(
-          _editor(tester).form.lastPrice,
+          _editorForm(tester).lastPrice,
           closeTo(expectedGbp, expectedGbp * 1e-12),
         );
         await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
         await _waitUntil(
           tester,
-          () => find.byType(AssetEditScreen).evaluate().isEmpty,
+          () => _editorClosed(tester),
           'saving $symbol in GBP',
         );
         final AssetEntity updated = (await container.assetRepository.getById(

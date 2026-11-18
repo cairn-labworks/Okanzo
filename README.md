@@ -105,7 +105,7 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 
 ### Focused forms & statistics
 
-- **Focused entry forms**: a large page heading leads into the value or live estimate, compact type/currency/exchange chips (long-press the exchange chip for suffix guidance), paired underlined valuation fields, expandable optional notes and an inline save button
+- **Focused entry forms**: unified creation automatically classifies entries as an **Asset** or **Liability** from the selected type, with a large page heading leading into the value or live estimate, compact type/currency/exchange chips (long-press the exchange chip for suffix guidance), paired underlined valuation fields, expandable optional notes and an inline save button
 - **Statistics**: interactive donut charts breaking down overview (assets vs. liabilities), assets by category and liabilities by category in your base currency
 - **What's new** highlights after installing or updating (`Settings → About → What's new`), separate from **Settings → About → Okanzo** app & licence details
 
