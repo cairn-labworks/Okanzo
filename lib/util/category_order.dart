@@ -21,6 +21,14 @@ List<T> orderTypes<T extends Enum>(
   return result;
 }
 
+/// Returns the id of the default portfolio in [portfolios], if any.
+int? defaultPortfolioId(List<PortfolioEntity> portfolios) {
+  for (final PortfolioEntity portfolio in portfolios) {
+    if (portfolio.isDefault) return portfolio.id;
+  }
+  return null;
+}
+
 /// Picks the portfolio to show: the explicitly selected one, else the default,
 /// else the first available.
 PortfolioEntity? resolveActivePortfolio(

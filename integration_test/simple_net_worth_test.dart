@@ -259,9 +259,16 @@ void main() {
       container = null;
       await preferences.reload();
       await app.main();
-      await _expectHeadline(tester, '₹1.65 Cr');
+      await _waitUntil(
+        tester,
+        () => find.byType(NetWorthCard).evaluate().isNotEmpty,
+        'relaunched home screen',
+      );
       container = _container(tester);
       expect(container.settingsRepository.current.simpleNetWorth, isTrue);
+      expect(container.settingsRepository.current.selectedPortfolioId, isNull);
+      await container.settingsRepository.setSelectedPortfolioId(inrPortfolio);
+      await _expectHeadline(tester, '₹1.65 Cr');
       debugPrint(
         'DEVICE CHECK: persisted setting and database relaunch passed',
       );
