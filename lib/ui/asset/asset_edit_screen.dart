@@ -261,7 +261,6 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     AssetFormState form,
     AssetEditViewModel viewModel,
   ) {
-    final ThemeData theme = Theme.of(context);
     switch (form.valuationMode) {
       case ValuationMode.market:
         final Widget quantityField = LabeledTextField(
@@ -316,18 +315,6 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
               ),
             ),
           ),
-          if (form.lastPrice == null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                'Price is fetched automatically on save when online.'.tr(
-                  context,
-                ),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
           const SizedBox(height: 12),
           LabeledTextField(
             controller: _customName,

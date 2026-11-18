@@ -1331,6 +1331,33 @@ void main() {
     expect(reopened.current.appLockEnabled, isFalse);
   });
 
+  for (final AssetType type in AssetType.values.where(
+    (type) => type.isMarketLinked,
+  )) {
+    testWidgets(
+      '${type.name} shows fetch without automatic-price helper text',
+      (WidgetTester tester) async {
+        await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+        tester
+            .widget<DropdownSelector<AssetType>>(
+              find.byType(DropdownSelector<AssetType>),
+            )
+            .onSelected(type);
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          _field('Custom name (optional)'),
+          100,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.text('Fetch latest price'), findsOneWidget);
+        expect(
+          find.text('Price is fetched automatically on save when online.'),
+          findsNothing,
+        );
+      },
+    );
+  }
+
   for (final AssetType type in AssetType.values) {
     testWidgets('${type.name} keeps its valuation fields and currency', (
       WidgetTester tester,
