@@ -379,10 +379,12 @@ After device testing, rebuild and reinstall the normal debug entrypoint (`lib/ma
 
 For live company/coin/ticker typeahead, international listing selection, fund and crypto search,
 price fetching and saving on a physical device, use the same build-and-drive
-commands with `--target integration_test/stock_search_test.dart`. This test uses
-a temporary portfolio and removes it afterward without changing existing holdings,
-the default portfolio or preferences. It also supports an empty debug installation.
-The phone must have internet access.
+commands with `--target integration_test/stock_search_test.dart` (or
+`--target integration_test/default_portfolio_test.dart` for the default-portfolio
+home startup and switching regression). Both tests use
+temporary portfolios and remove them afterward without changing existing holdings,
+the default portfolio or preferences. They also support an empty debug installation.
+`stock_search_test.dart` requires internet access on the phone.
 
 </details>
 

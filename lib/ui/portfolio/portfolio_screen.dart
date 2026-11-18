@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../data/local/entity/portfolio_entity.dart';
@@ -89,7 +91,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
               final PortfolioRow row = rows[index];
               return _PortfolioCard(
                 row: row,
-                onSetDefault: () => viewModel.setDefault(row.portfolio.id),
+                onSetDefault: () =>
+                    unawaited(viewModel.setDefault(row.portfolio.id)),
                 onRename: () => _showRenameDialog(row.portfolio),
                 onDelete: () => _showDeleteDialog(row.portfolio),
               );

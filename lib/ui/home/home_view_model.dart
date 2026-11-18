@@ -89,6 +89,7 @@ class HomeViewModel extends ChangeNotifier {
   CurrencyConverter _converter = const CurrencyConverter.empty();
   List<AssetEntity> _assets = const <AssetEntity>[];
   List<LiabilityEntity> _liabilities = const <LiabilityEntity>[];
+  int? _defaultPortfolioId;
   int? _watchedPortfolioId;
   bool _refreshing = false;
   bool _loadedPortfolios = false;
@@ -118,6 +119,17 @@ class HomeViewModel extends ChangeNotifier {
     _portfolioSub = _portfolioRepository.observeAll().listen((
       List<PortfolioEntity> portfolios,
     ) {
+      final int? nextDefaultId = defaultPortfolioId(portfolios);
+      if (nextDefaultId != null) {
+        final int? previousDefaultId = _defaultPortfolioId;
+        _defaultPortfolioId = nextDefaultId;
+        if (previousDefaultId != null &&
+            previousDefaultId != nextDefaultId &&
+            _settingsRepository.current.selectedPortfolioId != null) {
+          unawaited(_settingsRepository.setSelectedPortfolioId(null));
+          _settings = _settingsRepository.current;
+        }
+      }
       _portfolios = portfolios;
       _loadedPortfolios = true;
       _rebuild();

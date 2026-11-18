@@ -67,15 +67,14 @@ class SettingsRepository {
   static const String _keyBlockScreenshots = 'block_screenshots';
   static const String _keyHideBalances = 'hide_balances';
   static const String _keySimpleNetWorth = 'simple_net_worth';
-  static const String _keySelectedPortfolio = 'selected_portfolio_id';
   static const String _keyPreferredExchanges = 'preferred_stock_exchanges';
   static const String _keyLanguage = 'app_language';
   static const String _keyLastSeenVersion = 'last_seen_version';
-
   final SharedPreferences _prefs;
   // SharedPreferences updates its cache before confirming a write.
   bool? _blockScreenshots;
   bool? _simpleNetWorth;
+  int? _selectedPortfolioId;
   List<String>? _cachedExchangeNames;
   List<StockExchange>? _cachedPreferredExchanges;
   final StreamController<AppSettings> _controller =
@@ -162,11 +161,6 @@ class SettingsRepository {
       if (!saved) await _prefs.reload();
     }
     _emit();
-  }
-
-  int? get _selectedPortfolioId {
-    final int? id = _prefs.getInt(_keySelectedPortfolio);
-    return (id != null && id > 0) ? id : null;
   }
 
   Future<void> setThemeMode(AppThemeMode mode) async {
@@ -285,11 +279,7 @@ class SettingsRepository {
   }
 
   Future<void> setSelectedPortfolioId(int? id) async {
-    if (id == null) {
-      await _prefs.remove(_keySelectedPortfolio);
-    } else {
-      await _prefs.setInt(_keySelectedPortfolio, id);
-    }
+    _selectedPortfolioId = (id != null && id > 0) ? id : null;
     _emit();
   }
 

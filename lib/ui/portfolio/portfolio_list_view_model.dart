@@ -155,13 +155,20 @@ class PortfolioListViewModel extends ChangeNotifier {
     unawaited(_portfolioRepository.rename(id, name));
   }
 
-  void setDefault(int id) => unawaited(_portfolioRepository.setDefault(id));
+  Future<void> setDefault(int id) async {
+    await _portfolioRepository.setDefault(id);
+    await _settingsRepository.setSelectedPortfolioId(null);
+  }
 
   Future<void> delete(int id) async {
     final bool removed = await _portfolioRepository.delete(id);
     if (!removed) {
       _message = 'You must keep at least one portfolio';
       notifyListeners();
+      return;
+    }
+    if (_settingsRepository.current.selectedPortfolioId == id) {
+      await _settingsRepository.setSelectedPortfolioId(null);
     }
   }
 

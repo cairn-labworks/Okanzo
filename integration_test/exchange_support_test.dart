@@ -264,6 +264,7 @@ void main() {
           : 'Exchange smoke ${DateTime.now().millisecondsSinceEpoch}';
       final int portfolioId = await container.portfolioRepository.create(
         portfolioName,
+        makeDefault: true,
       );
       await container.settingsRepository.setSelectedPortfolioId(portfolioId);
       await _waitUntil(
@@ -574,6 +575,7 @@ void main() {
           'Currency smoke ${DateTime.now().millisecondsSinceEpoch}';
       final int portfolioId = await container.portfolioRepository.create(
         portfolioName,
+        makeDefault: true,
       );
       await container.settingsRepository.setBaseCurrency('EUR');
       await container.settingsRepository.setSelectedPortfolioId(portfolioId);
