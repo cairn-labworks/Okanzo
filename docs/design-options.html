@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Okanzo - design directions</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #16191e; color: #f4f5f7; }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid #958bff; outline-offset: 4px; }
+    svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .canvas { max-width: 1260px; margin: auto; padding: 42px 40px 32px; }
+    .eyebrow { margin: 0 0 12px; color: #abb1bd; font-size: 11px; letter-spacing: 2px; font-weight: 600; text-transform: uppercase; }
+    h1 { font-size: 34px; font-weight: 600; letter-spacing: -1.2px; margin: 0 0 12px; }
+    .intro { color: #a9afbb; font-size: 14px; line-height: 1.6; margin: 0; max-width: 730px; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 28px 0 30px; }
+    .tabs { display: flex; gap: 4px; padding: 4px; background: #23272f; border-radius: 30px; }
+    .tabs button { border: 0; background: none; color: #aeb4bf; padding: 10px 20px; border-radius: 24px; font-size: 13px; }
+    .tabs button[aria-pressed="true"] { background: #f0f1f4; color: #1b1e24; font-weight: 600; }
+    .preview-note { color: #7f8899; font-size: 12px; }
+    .directions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+    .option-head { min-height: 94px; }
+    .option-name { font-size: 19px; letter-spacing: -.4px; font-weight: 600; margin: 0 0 8px; }
+    .number { color: #8e98aa; font-weight: 400; margin-right: 8px; font-size: 14px; }
+    .tag { display: inline-block; font-size: 9px; letter-spacing: .5px; padding: 5px 7px; border-radius: 6px; background: #394034; color: #d5e6be; vertical-align: middle; margin-left: 5px; }
+    .description { font-size: 12px; color: #9da6b5; line-height: 1.6; margin: 0; }
+    .phone { height: 624px; border-radius: 30px; overflow: hidden; color: var(--ink); background: var(--bg); position: relative; box-shadow: 0 14px 35px #0003; }
+    .editorial { --bg: #faf9f6; --ink: #252820; --muted: #898c82; --line: #e5e6de; --outline: #b9bcb0; --soft: #efefe8; --accent: #384638; --on-accent: #fff; --icon-bg: transparent; --hero-font: Georgia, "Times New Roman", serif; }
+    .soft { --bg: #f5f6fa; --ink: #242633; --muted: #9094a6; --line: #e6e8f0; --outline: #c7ccdd; --soft: #fff; --accent: #7263df; --on-accent: #fff; --icon-bg: #eeebfb; --hero-font: inherit; }
+    .night { --bg: #172220; --ink: #e8f0e9; --muted: #88a196; --line: #2a3934; --outline: #779184; --soft: #20302a; --accent: #c1e1bd; --on-accent: #1e3025; --icon-bg: #24372e; --hero-font: inherit; }
+    .status { display: flex; justify-content: space-between; padding: 18px 26px 4px; font-size: 11px; font-weight: 600; letter-spacing: .3px; }
+    .status-icons { display: flex; gap: 6px; align-items: center; }
+    .status-icons svg { width: 14px; height: 14px; stroke-width: 2; }
+    .nav { height: 38px; margin: 8px 20px 0; display: flex; justify-content: space-between; align-items: center; }
+    .icon-button { display: grid; place-items: center; width: 32px; height: 32px; border: 0; color: var(--ink); background: none; padding: 0; }
+    .nav-caption { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+    .screen { height: 513px; overflow-y: auto; padding: 12px 26px 26px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+    .screen h2 { font-size: 31px; font-weight: 600; letter-spacing: -1px; line-height: 1.2; margin: 0 0 8px; }
+    .editorial .screen h2 { font-family: var(--hero-font); font-size: 34px; font-weight: 400; letter-spacing: -.8px; }
+    .screen-subtitle { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0 0 26px; }
+    .section-label { font-size: 9px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin: 24px 0 12px; font-weight: 600; }
+    .setting { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: none; color: var(--ink); padding: 19px 0; text-align: left; }
+    .setting + .setting { border-top: 1px solid var(--line); }
+    .setting-icon { display: grid; place-items: center; height: 34px; width: 34px; border-radius: 12px; background: var(--icon-bg); color: var(--accent); flex-shrink: 0; }
+    .setting-label { flex: 1; font-weight: 500; font-size: 13px; }
+    .setting-label small { display: block; font-size: 10px; color: var(--muted); margin-top: 5px; font-weight: 400; line-height: 1.4; }
+    .chevron { width: 14px; height: 14px; color: var(--muted); }
+    .soft .settings-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .soft .settings-list .setting { background: #fff; border: 0; border-radius: 20px; padding: 16px; min-height: 121px; align-items: start; flex-direction: column; gap: 13px; position: relative; }
+    .soft .settings-list .setting:last-child { grid-column: span 2; min-height: 77px; flex-direction: row; align-items: center; gap: 12px; }
+    .soft .settings-list .chevron { position: absolute; top: 26px; right: 16px; }
+    .soft .settings-list .setting:last-child .chevron { top: 32px; }
+    .night .settings-list { background: var(--soft); border-radius: 20px; padding: 0 16px; }
+    .night .setting { padding: 18px 0; }
+    .night .setting-icon { color: #b8cfbb; }
+    .settings-foot { color: var(--muted); font-size: 10px; line-height: 1.6; margin: 24px 0 0; display: flex; align-items: center; gap: 8px; }
+    .settings-foot svg { width: 14px; height: 14px; }
+    .home-indicator { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 94px; height: 4px; background: var(--ink); opacity: .16; border-radius: 4px; }
+    .value { margin: 20px 0; }
+    .value-label { color: var(--muted); font-size: 10px; margin-bottom: 9px; }
+    .value-number { font-size: 38px; font-weight: 500; letter-spacing: -1.7px; line-height: 1.2; margin: 0; font-variant-numeric: tabular-nums; }
+    .editorial .value-number { font-family: var(--hero-font); font-weight: 400; font-size: 42px; }
+    .value small { font-size: 10px; color: var(--muted); display: block; margin-top: 8px; }
+    .soft .value { background: #ebe8fb; padding: 16px; margin: 16px 0; border-radius: 22px; color: #514697; }
+    .soft .value .value-label, .soft .value small { color: #8a80b3; }
+    .night .value-number { color: var(--accent); }
+    .chips { display: flex; gap: 7px; margin: 16px 0 14px; flex-wrap: wrap; }
+    .chip { border: 0; background: var(--soft); border-radius: 20px; color: var(--ink); padding: 9px 12px; font-size: 10px; display: flex; align-items: center; gap: 7px; }
+    .chip svg { width: 12px; height: 12px; }
+    .editorial .chip { background: transparent; border: 1px solid var(--line); }
+    .field { display: block; border-bottom: 1px solid var(--line); padding: 12px 0; }
+    .field span { display: block; font-size: 10px; color: var(--muted); margin-bottom: 7px; }
+    .field input { width: 100%; min-width: 0; border: 0; padding: 0; background: transparent; color: var(--ink); font-size: 14px; line-height: 1.5; outline-offset: 1px; }
+    .field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    .soft .field { background: #fff; padding: 10px 14px; border-radius: 15px; border: 0; margin-bottom: 8px; }
+    .soft .field span { margin-bottom: 5px; }
+    .soft .field-pair { gap: 10px; }
+    .inline-action { border: 0; background: none; color: var(--accent); font-size: 11px; font-weight: 500; padding: 10px 0 3px; display: flex; gap: 6px; align-items: center; }
+    .inline-action svg { width: 14px; height: 14px; }
+    .helper-note { font-size: 10px; color: var(--muted); line-height: 1.45; margin: 5px 0 0; }
+    .suggestions { margin-top: 8px; background: var(--soft); border-radius: 12px; overflow: hidden; }
+    .suggestion { width: 100%; border: 0; background: none; color: var(--ink); padding: 9px 12px; text-align: left; display: block; }
+    .suggestion + .suggestion { border-top: 1px solid var(--line); }
+    .suggestion strong { display: block; font-size: 11px; font-weight: 500; }
+    .suggestion small { display: block; font-size: 10px; color: var(--muted); margin-top: 2px; }
+    details { margin-top: 8px; }
+    summary { cursor: pointer; font-size: 11px; color: var(--muted); list-style: none; padding: 10px 0; display: flex; align-items: center; justify-content: space-between; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "+"; font-size: 17px; font-weight: 300; }
+    details[open] summary::after { content: "−"; }
+    textarea { width: 100%; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 8px 0; resize: vertical; background: transparent; color: var(--ink); font-size: 12px; }
+    .soft textarea { background: #fff; border: 0; border-radius: 12px; padding: 10px 12px; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .cancel, .save { width: 100%; min-height: 44px; border-radius: 16px; padding: 12px 16px; font-weight: 500; font-size: 12px; }
+    .cancel { border: 1px solid var(--outline); background: transparent; color: var(--ink); }
+    .save { border: 0; color: var(--on-accent); background: var(--accent); }
+    .editorial .cancel, .editorial .save { border-radius: 24px; }
+    .soft .save { box-shadow: 0 5px 15px #7263df20; }
+    .preview-feedback { font-size: 10px; color: var(--muted); text-align: center; min-height: 12px; margin: 8px 0 0; }
+    .amount-row { display: flex; align-items: baseline; gap: 2px; color: inherit; }
+    .night .amount-row { color: var(--accent); }
+    .amount-prefix { font-size: 38px; font-weight: 500; letter-spacing: -1.7px; line-height: 1.2; }
+    .editorial .amount-prefix { font-family: var(--hero-font); font-weight: 400; font-size: 42px; }
+    .amount-input { width: 100%; min-width: 0; border: 0; padding: 0; background: transparent; color: inherit; outline-offset: 2px; }
+    .detail-row { display: flex; align-items: center; gap: 10px; padding: 16px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+    .detail-row .setting-label { font-size: 12px; }
+    .detail-row select { max-width: 128px; border: 0; color: var(--accent); background: var(--soft); border-radius: 8px; padding: 7px; font-size: 10px; }
+    .detail-row input[type="checkbox"] { appearance: none; width: 34px; height: 20px; border-radius: 12px; background: var(--line); position: relative; margin: 0; flex-shrink: 0; cursor: pointer; }
+    .detail-row input[type="checkbox"]:disabled { opacity: .45; cursor: default; }
+    .detail-row input[type="checkbox"]::after { content: ""; width: 14px; height: 14px; position: absolute; left: 3px; top: 3px; border-radius: 50%; background: #fff; transition: transform .15s; }
+    .detail-row input[type="checkbox"]:checked { background: var(--accent); }
+    .detail-row input[type="checkbox"]:checked::after { transform: translateX(14px); }
+    .detail-row button { border: 0; background: none; color: var(--accent); padding: 5px; font-size: 10px; display: inline-flex; align-items: center; gap: 4px; }
+    .about-note { font-size: 10px; color: var(--muted); line-height: 1.55; margin: 16px 0 0; }
+    .design-note { color: #7d8797; font-size: 11px; line-height: 1.6; margin-top: 16px; }
+    footer { color: #748093; font-size: 11px; line-height: 1.6; padding-top: 26px; }
+    @media (max-width: 950px) { .canvas { padding: 28px 20px; } .directions { gap: 16px; } .screen { padding-left: 20px; padding-right: 20px; } .option-name { font-size: 16px; } .tag { display: block; width: fit-content; margin: 8px 0; } .option-head { min-height: 124px; } }
+    @media (max-width: 740px) { .directions { grid-template-columns: 1fr; max-width: 390px; margin: auto; gap: 32px; } .toolbar { align-items: start; flex-direction: column; } .option-head { min-height: 88px; } h1 { font-size: 29px; } .tag { display: inline-block; margin: 0 0 0 6px; } }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <defs>
+      <symbol id="back" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6M8 12h12"/></symbol>
+      <symbol id="arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+      <symbol id="down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="appearance" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z"/></symbol>
+      <symbol id="currency" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 8h-4a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4H9m3-10v12"/></symbol>
+      <symbol id="security" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></symbol>
+      <symbol id="data" viewBox="0 0 24 24"><path d="M8 17H6a4 4 0 0 1-.5-8A6.5 6.5 0 0 1 18 8a4.5 4.5 0 0 1 0 9h-2m-4 3V10m-3 3 3-3 3 3"/></symbol>
+      <symbol id="about" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.2"/></symbol>
+      <symbol id="refresh" viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6"/></symbol>
+      <symbol id="battery" viewBox="0 0 24 24"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 10v4M5 10h10v4H5Z"/></symbol>
+      <symbol id="signal" viewBox="0 0 24 24"><path d="M4 20v-4m5 4v-8m5 8V8m5 12V4"/></symbol>
+    </defs>
+  </svg>
+  <main class="canvas">
+    <p class="eyebrow">Okanzo / visual exploration</p>
+    <h1>Three modern directions.</h1>
+    <p class="intro">Less chrome, stronger typography, quieter forms. These explore presentation only: all settings, feature flags, asset types and liability types would stay.</p>
+    <div class="toolbar">
+      <nav class="tabs" aria-label="Preview screen">
+        <button aria-pressed="true" data-view="settings">Settings</button>
+        <button aria-pressed="false" data-view="asset">Add asset</button>
+        <button aria-pressed="false" data-view="liability">Add liability</button>
+      </nav>
+      <span class="preview-note">Interactive concepts - not the running app</span>
+    </div>
+    <div class="directions">
+      <section>
+        <header class="option-head">
+          <h2 class="option-name"><span class="number">01</span>Quiet editorial</h2>
+          <p class="description">Warm paper. Big numbers. Almost no containers.<br>Calm, understated and deliberately unboxed.</p>
+        </header>
+        <article class="phone editorial" aria-label="Quiet editorial preview" data-style="editorial"></article>
+        <p class="design-note">Borderless category list / serif value typography /<br>underline fields / restrained forest accent</p>
+      </section>
+      <section>
+        <header class="option-head">
+          <h2 class="option-name"><span class="number">02</span>Soft modern</h2>
+          <p class="description">Airy surfaces. Friendly geometry. Clear hierarchy.<br>Contemporary without feeling ornamental.</p>
+        </header>
+        <article class="phone soft" aria-label="Soft modern preview" data-style="soft"></article>
+        <p class="design-note">Category tiles / softly filled fields /<br>tonal value panel / lavender accent</p>
+      </section>
+      <section>
+        <header class="option-head">
+          <h2 class="option-name"><span class="number">03</span>Midnight precision <span class="tag">SELECTED</span></h2>
+          <p class="description">Deep green. Crisp numbers. A focused finance feel.<br>Low contrast surfaces, high clarity.</p>
+        </header>
+        <article class="phone night" aria-label="Midnight precision preview" data-style="night"></article>
+        <p class="design-note">Inset settings list / number-led layout /<br>fine separators / pale sage accent</p>
+      </section>
+    </div>
+    <footer>Try the screen tabs, open a settings category, search a company or ticker, expand notes, or test Cancel &amp; Save. Controls are illustrative; this page does not store data or contact any service.</footer>
+  </main>
+  <script>
+    const icon = (name, cls = '') => `<svg class="${cls}" aria-hidden="true"><use href="#${name}"></use></svg>`;
+    const categories = [
+      ['Appearance', 'Language, theme & colour', 'appearance'],
+      ['Currency', 'Base currency & number display', 'currency'],
+      ['Security', 'App lock & screenshot protection', 'security'],
+      ['Data', 'Exchange rates, export & import', 'data'],
+      ['About', 'Release notes & privacy', 'about'],
+    ];
+    const sampleListings = [
+      { symbol: 'AAPL', name: 'Apple Inc.', exchange: 'NASDAQ', price: 322, exchangeLabel: 'US exchange', currency: 'USD' },
+      { symbol: 'MSFT', name: 'Microsoft Corporation', exchange: 'NASDAQ', price: 418, exchangeLabel: 'US exchange', currency: 'USD' },
+      { symbol: 'AIR.PA', name: 'Airbus SE', exchange: 'Paris', price: 164, exchangeLabel: 'Euronext Paris', currency: 'EUR' },
+      { symbol: 'VOO', name: 'Vanguard S&P 500 ETF', exchange: 'NYSEArca', price: 512, exchangeLabel: 'US exchange', currency: 'USD' },
+      { symbol: 'BTC-USD', name: 'Bitcoin USD', exchange: '', price: 90000, exchangeLabel: '', currency: 'USD' },
+    ];
+    const currencyMeta = {
+      USD: { symbol: '$', name: 'US Dollar' },
+      EUR: { symbol: '€', name: 'Euro' },
+      GBP: { symbol: '£', name: 'British Pound' },
+      INR: { symbol: '₹', name: 'Indian Rupee' },
+    };
+    const formatMoney = (amount, code = 'USD') => {
+      const sym = (currencyMeta[code] || currencyMeta.USD).symbol;
+      const rounded = Math.round(Number.isFinite(amount) ? amount : 0);
+      return `${rounded < 0 ? '-' : ''}${sym}${Math.abs(rounded).toLocaleString('en-US')}`;
+    };
+    let activeView = 'settings';
+    function shell(phone, title, content, subtitle = '') {
+      phone.innerHTML = `<div class="status"><span>9:41</span><span class="status-icons">${icon('signal')}${icon('battery')}</span></div>
+        <div class="nav"><button class="icon-button" aria-label="Back" data-back>${icon('back')}</button><span class="nav-caption">OKANZO</span></div>
+        <div class="screen"><h2>${title}</h2>${subtitle ? `<p class="screen-subtitle">${subtitle}</p>` : ''}${content}</div><div class="home-indicator"></div>`;
+      phone.querySelector('[data-back]').addEventListener('click', () => render(phone));
+    }
+    function render(phone) {
+      if (activeView !== 'settings') return renderForm(phone, activeView);
+      const heading = phone.dataset.style === 'editorial' ? '<p class="section-label">Your preferences</p>' : '<div style="height:20px"></div>';
+      shell(phone, 'Settings', `${heading}<div class="settings-list">${categories.map(([name, sub, glyph]) =>
+        `<button class="setting" data-category="${name}"><span class="setting-icon">${icon(glyph)}</span><span class="setting-label">${name}<small>${sub}</small></span>${icon('arrow', 'chevron')}</button>`
+      ).join('')}</div><p class="settings-foot">${icon('security')}Private by design. Stored on your device.</p>`);
+      phone.querySelectorAll('[data-category]').forEach(button => button.addEventListener('click', () => renderCategory(phone, button.dataset.category)));
+    }
+    function row(label, description, control, id = '') {
+      return `<div class="detail-row"${id ? ` data-row="${id}"` : ''}><span class="setting-label">${label}<small>${description}</small></span>${control}</div>`;
+    }
+    const toggle = (label, checked = false, disabled = false) => `<input type="checkbox" aria-label="${label}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>`;
+    const select = (label, values, selected = values[0]) => `<select aria-label="${label}">${values.map(value => `<option${value === selected ? ' selected' : ''}>${value}</option>`).join('')}</select>`;
+    const action = label => `<button data-action="${label}">Open ${icon('arrow', 'chevron')}</button>`;
+    function renderCategory(phone, category) {
+      let content = '';
+      if (category === 'Appearance') content = [
+        row('App language', 'Use device language', select('App language', ['System default', 'English', 'Español', 'हिन्दी', 'العربية'])),
+        row('Theme', 'Light or Midnight dark', select('Theme', ['System default', 'Light', 'Dark (Midnight)'], phone.dataset.style === 'night' ? 'Dark (Midnight)' : 'System default')),
+        row(
+          'Dynamic color',
+          phone.dataset.style === 'night' ? 'Not used in dark mode' : 'Use wallpaper colors in light mode (Android 12+)',
+          toggle('Dynamic color', phone.dataset.style !== 'night', phone.dataset.style === 'night'),
+          'dynamic-color'
+        ),
+      ].join('');
+      if (category === 'Currency') content = [
+        row('Base currency', 'US Dollar', select('Base currency', ['USD', 'EUR', 'GBP', 'INR']), 'base-currency'),
+        row('Simple net worth', 'Shorten the home net worth using currency-specific units', toggle('Simple net worth')),
+      ].join('');
+      if (category === 'Security') content = [
+        row('App lock', 'Require fingerprint or device PIN to open Okanzo', toggle('App lock')),
+        row('Block screenshots', 'Prevent screenshots and hide Okanzo in recent apps', toggle('Block screenshots', true)),
+      ].join('');
+      if (category === 'Data') content = [
+        row('Exchange rates', 'Updated just now', `<button data-action="Refresh rates">${icon('refresh')}Refresh</button>`),
+        row('Export portfolios', 'Save an encrypted, password-protected backup', action('Export portfolios')),
+        row('Import portfolios', 'Restore from an encrypted backup file', action('Import portfolios')),
+      ].join('');
+      if (category === 'About') content = [
+        row('Okanzo', 'Version 1.5.0 · Open source (MIT)', action('Okanzo')),
+        row("What's new", 'See the latest release highlights', action("What's new")),
+        row('Privacy policy', 'How your data stays private', action('Privacy policy')),
+        `<p class="about-note">Your data is stored encrypted on this device and never leaves it, except when you export a backup. Stock and exchange-rate lookups send only the ticker or currency code.<br>Company/ticker search sends the text you type to Yahoo Finance.</p>`,
+      ].join('');
+      shell(phone, category, `<div style="margin-top:22px">${content}</div><p class="preview-feedback" role="status"></p>`);
+      const themeSelect = phone.querySelector('[aria-label="Theme"]');
+      if (themeSelect) {
+        themeSelect.addEventListener('change', () => {
+          const dark = themeSelect.value.startsWith('Dark');
+          const dynRow = phone.querySelector('[data-row="dynamic-color"]');
+          const dynInput = dynRow.querySelector('input');
+          dynRow.querySelector('small').textContent = dark ? 'Not used in dark mode' : 'Use wallpaper colors in light mode (Android 12+)';
+          dynInput.disabled = dark;
+          dynInput.checked = !dark;
+        });
+      }
+      const baseCurrency = phone.querySelector('[aria-label="Base currency"]');
+      if (baseCurrency) {
+        baseCurrency.addEventListener('change', () => {
+          phone.querySelector('[data-row="base-currency"] small').textContent = currencyMeta[baseCurrency.value].name;
+        });
+      }
+      phone.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => {
+        phone.querySelector('[role="status"]').textContent = `${button.dataset.action}: illustrative preview only`;
+      }));
+    }
+    const field = (label, value, placeholder = '', mode = 'text') =>
+      `<label class="field"><span>${label}</span><input aria-label="${label}" value="${value}" placeholder="${placeholder}" inputmode="${mode}"></label>`;
+    function renderForm(phone, view) {
+      const asset = view === 'asset';
+      const state = {
+        type: asset ? 'Stock' : 'Loan',
+        currency: 'USD',
+        exchange: 'US exchange',
+        lastPrice: 322,
+      };
+      const chips = `<div class="chips">
+        <button class="chip" data-chip="type"><span data-type-label>${state.type}</span>${icon('down')}</button>
+        <button class="chip" data-chip="currency"><span data-currency-label>${state.currency}</span>${icon('down')}</button>
+        ${asset ? `<button class="chip" data-chip="exchange"><span data-exchange-label>${state.exchange}</span>${icon('down')}</button>` : ''}
+      </div>`;
+      const value = asset
+        ? `<div class="value"><div class="value-label">Estimated value</div><p class="value-number">$3,864</p><small data-caption>12 &times; $322</small></div>`
+        : `<div class="value"><div class="value-label">Outstanding amount</div><div class="amount-row"><span class="amount-prefix" data-prefix>$</span><input class="value-number amount-input" aria-label="Outstanding amount" inputmode="decimal" value="4,200"></div><small>The amount you still owe</small></div>`;
+      const fields = asset
+        ? `${field('Name', 'Apple shares', 'e.g. Apple shares')}
+           <div class="field-pair">${field('Company or ticker', 'AAPL', 'Search Yahoo Finance')}${field('Quantity', '12', '', 'decimal')}</div>
+           <div data-suggestions hidden class="suggestions"></div>
+           <button class="inline-action" data-refresh>${icon('refresh')}Fetch latest price</button>
+           <p class="helper-note" data-auto-note hidden>Price is fetched automatically on save when online.</p>`
+        : field('Name', 'Home loan', 'e.g. Home loan');
+      shell(
+        phone,
+        asset ? 'Add asset' : 'Add liability',
+        `${value}${chips}${fields}<details><summary>Notes (optional)</summary><textarea aria-label="Notes" rows="2" placeholder="Notes (optional)"></textarea></details><div class="actions"><button class="cancel" data-cancel>Cancel</button><button class="save" data-save>Save</button></div><p class="preview-feedback" role="status"></p>`
+      );
+      const status = phone.querySelector('[role="status"]');
+      phone.querySelector('[data-cancel]').addEventListener('click', () => {
+        renderForm(phone, view);
+        phone.querySelector('[role="status"]').textContent = 'Cancelled — discarded unsaved edits (preview)';
+      });
+      phone.querySelectorAll('[data-chip]').forEach(button => button.addEventListener('click', () => {
+        if (button.dataset.chip === 'currency') {
+          const codes = Object.keys(currencyMeta);
+          state.currency = codes[(codes.indexOf(state.currency) + 1) % codes.length];
+          phone.querySelector('[data-currency-label]').textContent = state.currency;
+          const prefix = phone.querySelector('[data-prefix]');
+          if (prefix) prefix.textContent = currencyMeta[state.currency].symbol;
+          if (asset) syncEstimate();
+          status.textContent = `Currency set to ${state.currency} (preview)`;
+          return;
+        }
+        status.textContent = `The ${button.dataset.chip} menu opens here in the app`;
+      }));
+      if (!asset) {
+        phone.querySelector('[data-save]').addEventListener('click', () => {
+          status.textContent = 'Saved liability — preview only';
+        });
+        return;
+      }
+      const tickerInput = phone.querySelector('[aria-label="Company or ticker"]');
+      const nameInput = phone.querySelector('[aria-label="Name"]');
+      const quantityInput = phone.querySelector('[aria-label="Quantity"]');
+      const suggestionsBox = phone.querySelector('[data-suggestions]');
+      const autoNote = phone.querySelector('[data-auto-note]');
+      const caption = phone.querySelector('[data-caption]');
+      function syncEstimate() {
+        const qty = Number(quantityInput.value) || 0;
+        if (state.lastPrice == null) {
+          phone.querySelector('.value-number').textContent = formatMoney(0, state.currency);
+          caption.hidden = true;
+          autoNote.hidden = false;
+        } else {
+          phone.querySelector('.value-number').textContent = formatMoney(qty * state.lastPrice, state.currency);
+          caption.hidden = false;
+          caption.textContent = `${quantityInput.value || '0'} × ${formatMoney(state.lastPrice, state.currency)}`;
+          autoNote.hidden = true;
+        }
+      }
+      function lookupPrice(raw) {
+        const cleaned = raw.trim().toUpperCase();
+        const found = sampleListings.find(item => item.symbol === cleaned);
+        return found ? found.price : 100;
+      }
+      tickerInput.addEventListener('input', () => {
+        state.lastPrice = null;
+        syncEstimate();
+        const query = tickerInput.value.trim().toLowerCase();
+        if (query.length < 2) {
+          suggestionsBox.hidden = true;
+          suggestionsBox.innerHTML = '';
+          return;
+        }
+        const matches = sampleListings.filter(item =>
+          item.symbol.toLowerCase().includes(query) || item.name.toLowerCase().includes(query)
+        );
+        if (!matches.length) {
+          suggestionsBox.hidden = true;
+          return;
+        }
+        suggestionsBox.hidden = false;
+        suggestionsBox.innerHTML = matches.slice(0, 3).map(item =>
+          `<button type="button" class="suggestion" data-symbol="${item.symbol}"><strong>${item.name}</strong><small>${[item.symbol, item.exchange].filter(Boolean).join(' · ')}</small></button>`
+        ).join('');
+        suggestionsBox.querySelectorAll('[data-symbol]').forEach(option => option.addEventListener('click', () => {
+          const picked = sampleListings.find(item => item.symbol === option.dataset.symbol);
+          tickerInput.value = picked.symbol;
+          if (!nameInput.value.trim()) nameInput.value = picked.name;
+          if (picked.exchangeLabel) {
+            state.exchange = picked.exchangeLabel;
+            phone.querySelector('[data-exchange-label]').textContent = picked.exchangeLabel;
+          }
+          suggestionsBox.hidden = true;
+          state.lastPrice = null;
+          syncEstimate();
+        }));
+      });
+      quantityInput.addEventListener('input', syncEstimate);
+      phone.querySelector('[data-refresh]').addEventListener('click', () => {
+        if (!tickerInput.value.trim()) {
+          status.textContent = 'Enter a ticker symbol first';
+          return;
+        }
+        suggestionsBox.hidden = true;
+        state.lastPrice = lookupPrice(tickerInput.value);
+        syncEstimate();
+        status.textContent = 'Fetched latest quote — preview only';
+      });
+      phone.querySelector('[data-save]').addEventListener('click', () => {
+        suggestionsBox.hidden = true;
+        if (state.lastPrice == null && tickerInput.value.trim()) {
+          state.lastPrice = lookupPrice(tickerInput.value);
+          syncEstimate();
+          status.textContent = 'Auto-fetched latest price & saved — preview only';
+        } else {
+          status.textContent = 'Saved — preview only';
+        }
+      });
+    }
+    document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => {
+      activeView = button.dataset.view;
+      document.querySelectorAll('[data-view]').forEach(tab => tab.setAttribute('aria-pressed', String(tab === button)));
+      document.querySelectorAll('.phone').forEach(render);
+    }));
+    document.querySelectorAll('.phone').forEach(render);
+  </script>
+</body>
+</html>
