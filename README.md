@@ -322,11 +322,25 @@ checkout, and the pipeline's actual project ID when inspecting fork CI jobs.
 
 ## Quality checks
 
+The **Pull request checks** workflow runs on every pull request targeting `main`,
+on pushes to `main`, and manually from the Actions tab. It checks formatting
+without changing files, runs static analysis and all unit/widget tests, and
+builds an Android debug APK in a separate job. Both jobs use Flutter 3.47.5,
+matching the Release workflow, and enforce `pubspec.lock`. The Android job uses
+JDK 21 and needs no release signing secrets, so fork pull requests can run the
+same checks. Live-network and device integration tests remain manual.
+
+Run the same quality checks locally:
+
 ```bash
-dart format .
-flutter analyze
-flutter test
+flutter pub get --enforce-lockfile
+dart format --output=none --set-exit-if-changed .
+flutter analyze --no-pub
+flutter test --no-pub
+flutter build apk --debug --no-pub
 ```
+
+Use `dart format .` to fix formatting before committing.
 
 The test suite covers currency formatting and rounding, net-worth and FX conversion, asset/liability form validation and entity mapping, category ordering, list labels, 21-locale localization coverage, quote/FX response parsing, and byte-for-byte verification of the `MWB1` encrypted backup format.
 
