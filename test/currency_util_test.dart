@@ -51,20 +51,25 @@ void main() {
       expect(CurrencyUtil.formatCompact(-999.0, 'USD'), '-\$999');
     });
 
-    test('uses M and B for larger magnitudes', () {
+    test('uses M, B and T for larger magnitudes', () {
       expect(CurrencyUtil.formatCompact(1250000.0, 'USD'), '\$1.2M');
       expect(CurrencyUtil.formatCompact(-2500000000.0, 'USD'), '-\$2.5B');
+      expect(CurrencyUtil.formatCompact(1250000000000.0, 'USD'), '\$1.2T');
+      expect(CurrencyUtil.formatCompact(1500000000000000.0, 'USD'), '\$1,500T');
     });
 
     test('truncates rather than rounds the single decimal', () {
       expect(CurrencyUtil.formatCompact(1290000.0, 'USD'), '\$1.2M');
     });
 
-    test('uses lakh and crore for INR with up to two truncated decimals', () {
+    test('uses lakh, crore and lakh-crore for INR with grouped thousands', () {
       expect(CurrencyUtil.formatCompact(16534234, 'INR'), '₹1.65 Cr');
       expect(CurrencyUtil.formatCompact(123456, 'INR'), '₹1.23 L');
       expect(CurrencyUtil.formatCompact(19999999, 'INR'), '₹1.99 Cr');
       expect(CurrencyUtil.formatCompact(1000000000, 'INR'), '₹100 Cr');
+      expect(CurrencyUtil.formatCompact(68731727181, 'INR'), '₹6,873.17 Cr');
+      expect(CurrencyUtil.formatCompact(1250000000000, 'INR'), '₹1.25 L Cr');
+      expect(CurrencyUtil.formatCompact(-1250000000000, 'INR'), '-₹1.25 L Cr');
       expect(CurrencyUtil.formatCompact(-16534234, 'INR'), '-₹1.65 Cr');
       expect(CurrencyUtil.formatCompact(-123456, 'INR'), '-₹1.23 L');
     });

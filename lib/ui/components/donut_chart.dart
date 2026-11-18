@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 /// One wedge of a [DonutChart].
 @immutable
@@ -35,6 +36,7 @@ class DonutChart extends StatelessWidget {
     required this.child,
     this.diameter = 220,
     this.thicknessRatio = 0.42,
+    this.holePadding = 8,
     super.key,
   });
 
@@ -45,7 +47,13 @@ class DonutChart extends StatelessWidget {
   final double diameter;
   final double thicknessRatio;
 
+  /// Radial clearance kept between the inner edge of the ring and [child].
+  final double holePadding;
+
   static const double _gapDegrees = 1.5;
+
+  /// Radius of the unpainted inner hole before [holePadding] is subtracted.
+  double get innerRadius => (diameter / 2) * (1 - thicknessRatio);
 
   double get _total =>
       slices.fold<double>(0, (double sum, PieSlice s) => sum + s.value);
@@ -58,7 +66,7 @@ class DonutChart extends StatelessWidget {
     final double dy = local.dy - center.dy;
     final double distance = math.sqrt(dx * dx + dy * dy);
     final double outer = diameter / 2;
-    final double inner = outer * (1 - thicknessRatio);
+    final double inner = innerRadius;
     if (distance < inner || distance > outer) {
       onSelect(null);
       return;
@@ -79,6 +87,7 @@ class DonutChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double safeHoleRadius = math.max(0, innerRadius - holePadding);
     return SizedBox(
       width: diameter,
       height: diameter,
@@ -94,11 +103,137 @@ class DonutChart extends StatelessWidget {
               thicknessRatio: thicknessRatio,
               gapDegrees: _gapDegrees,
             ),
-            child: Center(child: child),
+            child: _DonutHoleSlot(holeRadius: safeHoleRadius, child: child),
           ),
         ),
       ),
     );
+  }
+}
+
+/// Centers [child] inside the circular donut hole of [holeRadius], scaling it
+/// down uniformly only when its bounding-box diagonal would cross [holeRadius].
+class _DonutHoleSlot extends SingleChildRenderObjectWidget {
+  const _DonutHoleSlot({required this.holeRadius, required super.child});
+
+  final double holeRadius;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderDonutHoleSlot(holeRadius: holeRadius);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderDonutHoleSlot renderObject,
+  ) {
+    renderObject.holeRadius = holeRadius;
+  }
+}
+
+class _RenderDonutHoleSlot extends RenderBox
+    with RenderObjectWithChildMixin<RenderBox> {
+  _RenderDonutHoleSlot({required double holeRadius}) : _holeRadius = holeRadius;
+
+  static const double _preferredWidthFactor = 1.85;
+
+  double _holeRadius;
+  double _scale = 1;
+  final LayerHandle<TransformLayer> _transformLayer =
+      LayerHandle<TransformLayer>();
+
+  double get holeRadius => _holeRadius;
+
+  set holeRadius(double value) {
+    if (_holeRadius == value) return;
+    _holeRadius = value;
+    markNeedsLayout();
+  }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) => constraints.biggest;
+
+  @override
+  void performLayout() {
+    size = constraints.biggest;
+    final RenderBox? currentChild = child;
+    if (currentChild == null) {
+      _scale = 1;
+      return;
+    }
+    final double maxWidth = math.max(0, _holeRadius * _preferredWidthFactor);
+    currentChild.layout(
+      BoxConstraints(maxWidth: maxWidth),
+      parentUsesSize: true,
+    );
+    final Size childSize = currentChild.size;
+    final double halfDiagonal =
+        math.sqrt(
+          childSize.width * childSize.width +
+              childSize.height * childSize.height,
+        ) /
+        2;
+    _scale = (halfDiagonal > 0 && halfDiagonal > _holeRadius)
+        ? (_holeRadius / halfDiagonal)
+        : 1;
+  }
+
+  Matrix4 _buildTransform() {
+    final Size childSize = child!.size;
+    final double dx = (size.width - childSize.width * _scale) / 2;
+    final double dy = (size.height - childSize.height * _scale) / 2;
+    return Matrix4.translationValues(dx, dy, 0)
+      ..multiply(Matrix4.diagonal3Values(_scale, _scale, 1));
+  }
+
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    transform.multiply(_buildTransform());
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final RenderBox? currentChild = child;
+    if (currentChild == null || _holeRadius <= 0) {
+      _transformLayer.layer = null;
+      return;
+    }
+    if (_scale == 1) {
+      _transformLayer.layer = null;
+      final Offset childOffset = Offset(
+        (size.width - currentChild.size.width) / 2,
+        (size.height - currentChild.size.height) / 2,
+      );
+      context.paintChild(currentChild, offset + childOffset);
+      return;
+    }
+    _transformLayer.layer = context.pushTransform(
+      needsCompositing,
+      offset,
+      _buildTransform(),
+      (PaintingContext innerContext, Offset innerOffset) {
+        innerContext.paintChild(currentChild, innerOffset);
+      },
+      oldLayer: _transformLayer.layer,
+    );
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    final RenderBox? currentChild = child;
+    if (currentChild == null || _holeRadius <= 0) return false;
+    return result.addWithPaintTransform(
+      transform: _buildTransform(),
+      position: position,
+      hitTest: (BoxHitTestResult res, Offset transformed) =>
+          currentChild.hitTest(res, position: transformed),
+    );
+  }
+
+  @override
+  void dispose() {
+    _transformLayer.layer = null;
+    super.dispose();
   }
 }
 

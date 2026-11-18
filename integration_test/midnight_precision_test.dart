@@ -2,23 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:okanzo/data/local/entity/asset_entity.dart';
+import 'package:okanzo/data/local/entity/liability_entity.dart';
 import 'package:okanzo/data/repository/settings_repository.dart';
 import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/app_language.dart';
 import 'package:okanzo/domain/model/app_theme.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
+import 'package:okanzo/domain/model/liability_type.dart';
 import 'package:okanzo/domain/model/release_notes.dart';
 import 'package:okanzo/domain/model/stock_exchange.dart';
 import 'package:okanzo/domain/model/theme_mode.dart';
 import 'package:okanzo/l10n/app_localizations.dart';
 import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
+import 'package:okanzo/ui/components/donut_chart.dart';
 import 'package:okanzo/ui/components/form_components.dart';
 import 'package:okanzo/ui/components/ui_components.dart';
 import 'package:okanzo/ui/components/whats_new_dialog.dart';
 import 'package:okanzo/ui/home/home_screen.dart';
 import 'package:okanzo/ui/home/net_worth_card.dart';
 import 'package:okanzo/ui/settings/settings_screen.dart';
+import 'package:okanzo/ui/statistics/statistics_screen.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -200,6 +204,7 @@ void main() {
 
     AppContainer? container;
     int? portfolioId;
+    int? largeStatsPortfolioId;
     try {
       final SettingsRepository settings = SettingsRepository(preferences);
       try {
@@ -526,6 +531,111 @@ void main() {
       );
       passed('Quiet overview retains category and holding drag ordering');
 
+      largeStatsPortfolioId = await container.portfolioRepository.create(
+        'Stats Large ${DateTime.now().millisecondsSinceEpoch}',
+      );
+      await container.assetRepository.save(
+        AssetEntity(
+          portfolioId: largeStatsPortfolioId,
+          type: AssetType.cash,
+          name: 'Large INR reserve',
+          currency: 'INR',
+          manualValue: 68731747181,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      );
+      await container.liabilityRepository.save(
+        LiabilityEntity(
+          portfolioId: largeStatsPortfolioId,
+          type: LiabilityType.loan,
+          name: 'Small INR loan',
+          currency: 'INR',
+          amount: 20000,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      );
+      await container.settingsRepository.setBaseCurrency('INR');
+      await container.settingsRepository.setSelectedPortfolioId(
+        largeStatsPortfolioId,
+      );
+      await _tap(tester, find.text('Statistics'));
+      await _wait(
+        tester,
+        () => find.byType(StatisticsScreen).evaluate().isNotEmpty,
+        'statistics screen',
+      );
+
+      void expectDonutHoleContained(Finder donutFinder) {
+        final DonutChart donut = tester.widget<DonutChart>(donutFinder);
+        final Offset center = tester.getCenter(donutFinder);
+        for (final Element element
+            in find
+                .descendant(of: donutFinder, matching: find.byType(Text))
+                .evaluate()) {
+          final Rect rect = tester.getRect(find.byWidget(element.widget));
+          for (final Offset corner in <Offset>[
+            rect.topLeft,
+            rect.topRight,
+            rect.bottomLeft,
+            rect.bottomRight,
+          ]) {
+            expect((corner - center).distance, lessThan(donut.innerRadius));
+          }
+        }
+      }
+
+      final Finder overviewDonut = find.byType(DonutChart).first;
+      await _wait(
+        tester,
+        () => find
+            .descendant(of: overviewDonut, matching: find.text('₹6,873.17 Cr'))
+            .evaluate()
+            .isNotEmpty,
+        'compact INR net worth in donut hole',
+      );
+      expectDonutHoleContained(overviewDonut);
+      final Finder overviewCard = find.byType(Card).first;
+      expect(
+        find.descendant(
+          of: overviewCard,
+          matching: find.text(CurrencyUtil.format(68731747181, 'INR')),
+        ),
+        findsOneWidget,
+      );
+      await _tap(
+        tester,
+        find.descendant(of: overviewCard, matching: find.text('Liabilities')),
+      );
+      expect(
+        find.descendant(
+          of: overviewDonut,
+          matching: find.text(CurrencyUtil.format(20000, 'INR')),
+        ),
+        findsOneWidget,
+      );
+      expectDonutHoleContained(overviewDonut);
+      await tester.tapAt(tester.getCenter(overviewDonut));
+      await tester.pumpAndSettle();
+      await container.settingsRepository.setAppearanceMode(AppThemeMode.light);
+      await tester.pumpAndSettle();
+      expectDonutHoleContained(find.byType(DonutChart).first);
+      await container.settingsRepository.setAppearanceMode(AppThemeMode.dark);
+      await tester.pumpAndSettle();
+      passed(
+        'Statistics keeps large amounts readable and strictly inside donut holes in Midnight and Light',
+      );
+      await _tap(tester, find.text('Home'));
+      await _wait(
+        tester,
+        () => find.byType(HomeScreen).evaluate().isNotEmpty,
+        'returned home from statistics',
+      );
+      await container.settingsRepository.setBaseCurrency('USD');
+      await container.settingsRepository.setSelectedPortfolioId(portfolioId);
+      await tester.pumpAndSettle();
+
       await container.settingsRepository.setLanguage(AppLanguage.arabic);
       const AppLocalizations strings = AppLocalizations(Locale('ar'));
       await tester.pumpWidget(
@@ -543,6 +653,27 @@ void main() {
         () => find.byType(HomeScreen).evaluate().isNotEmpty,
         'large RTL home',
       );
+      await container.settingsRepository.setBaseCurrency('INR');
+      await container.settingsRepository.setSelectedPortfolioId(
+        largeStatsPortfolioId,
+      );
+      await tester.pumpAndSettle();
+      await _tap(tester, find.text(strings.text('Statistics')));
+      await _wait(
+        tester,
+        () => find.byType(StatisticsScreen).evaluate().isNotEmpty,
+        'large RTL statistics',
+      );
+      expectDonutHoleContained(find.byType(DonutChart).first);
+      await _tap(tester, find.text(strings.text('Home')));
+      await _wait(
+        tester,
+        () => find.byType(HomeScreen).evaluate().isNotEmpty,
+        'large RTL home after statistics',
+      );
+      await container.settingsRepository.setBaseCurrency('USD');
+      await container.settingsRepository.setSelectedPortfolioId(portfolioId);
+      await tester.pumpAndSettle();
       await _tap(tester, find.byTooltip(strings.text('Settings')));
       await _tap(tester, find.text(strings.text('Appearance')));
       await _back(tester);
@@ -575,20 +706,19 @@ void main() {
       try {
         await _restore(preferences, original);
         report['preferencesRestored'] = true;
-        if (portfolioId != null) {
-          expect(container, isNotNull);
-          expect(
-            await container!.portfolioRepository.delete(portfolioId),
-            isTrue,
-          );
-          expect(
-            await container.assetRepository.getForPortfolio(portfolioId),
-            isEmpty,
-          );
-          expect(
-            await container.liabilityRepository.getForPortfolio(portfolioId),
-            isEmpty,
-          );
+        for (final int? id in <int?>[portfolioId, largeStatsPortfolioId]) {
+          if (id != null) {
+            expect(container, isNotNull);
+            expect(await container!.portfolioRepository.delete(id), isTrue);
+            expect(
+              await container.assetRepository.getForPortfolio(id),
+              isEmpty,
+            );
+            expect(
+              await container.liabilityRepository.getForPortfolio(id),
+              isEmpty,
+            );
+          }
         }
         report['testDataRemoved'] = true;
       } finally {

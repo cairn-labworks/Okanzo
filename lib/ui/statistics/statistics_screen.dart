@@ -295,39 +295,14 @@ class _ChartCard extends StatelessWidget {
                 slices: slices,
                 selectedIndex: selected,
                 onSelect: onSelectedChange,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        selectedSlice?.label ?? defaultCenterLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          _money(selectedSlice?.value ?? defaultCenterValue),
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      if (selectedSlice != null)
-                        Text(
-                          percentageLabel(selectedSlice.value, total),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
-                  ),
+                child: _DonutCenterReadout(
+                  label: selectedSlice?.label ?? defaultCenterLabel,
+                  amount: selectedSlice?.value ?? defaultCenterValue,
+                  baseCurrency: baseCurrency,
+                  hideBalances: hideBalances,
+                  percentageText: selectedSlice == null
+                      ? null
+                      : percentageLabel(selectedSlice.value, total),
                 ),
               ),
             ),
@@ -347,6 +322,113 @@ class _ChartCard extends StatelessWidget {
   }
 }
 
+class _DonutCenterReadout extends StatelessWidget {
+  const _DonutCenterReadout({
+    required this.label,
+    required this.amount,
+    required this.baseCurrency,
+    required this.hideBalances,
+    this.percentageText,
+  });
+
+  final String label;
+  final double amount;
+  final String baseCurrency;
+  final bool hideBalances;
+  final String? percentageText;
+
+  static const List<FontFeature> _tabular = <FontFeature>[
+    FontFeature.tabularFigures(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final TextStyle? valueStyle = theme.textTheme.titleLarge?.copyWith(
+      fontWeight: FontWeight.w600,
+      fontFeatures: _tabular,
+    );
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final String fullValue = hideBalances
+            ? CurrencyUtil.masked(baseCurrency)
+            : CurrencyUtil.format(amount, baseCurrency);
+        String displayValue = fullValue;
+        if (!hideBalances && constraints.maxWidth.isFinite) {
+          final String compactValue = CurrencyUtil.formatCompact(
+            amount,
+            baseCurrency,
+          );
+          if (compactValue != fullValue &&
+              compactValue.length < fullValue.length) {
+            final TextPainter painter = TextPainter(
+              text: TextSpan(text: fullValue, style: valueStyle),
+              textDirection: TextDirection.ltr,
+              textScaler: MediaQuery.textScalerOf(context),
+              maxLines: 1,
+            )..layout();
+            final double fullWidth = painter.width;
+            painter.dispose();
+            displayValue = selectDonutCenterAmount(
+              fullText: fullValue,
+              compactText: compactValue,
+              fullTextWidth: fullWidth,
+              maxWidth: constraints.maxWidth,
+            );
+          }
+        }
+        final bool isCompacted = displayValue != fullValue;
+        Widget valueWidget = FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            displayValue,
+            semanticsLabel: isCompacted ? fullValue : null,
+            textDirection: TextDirection.ltr,
+            maxLines: 1,
+            softWrap: false,
+            textAlign: TextAlign.center,
+            style: valueStyle,
+          ),
+        );
+        if (isCompacted) {
+          valueWidget = Tooltip(
+            message: fullValue,
+            triggerMode: TooltipTriggerMode.longPress,
+            child: valueWidget,
+          );
+        }
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            valueWidget,
+            if (percentageText != null && percentageText!.isNotEmpty)
+              Text(
+                percentageText!,
+                textDirection: TextDirection.ltr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  fontFeatures: _tabular,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _LegendRow extends StatelessWidget {
   const _LegendRow({
     required this.color,
@@ -362,6 +444,10 @@ class _LegendRow extends StatelessWidget {
   final bool highlighted;
   final VoidCallback onTap;
 
+  static const List<FontFeature> _tabular = <FontFeature>[
+    FontFeature.tabularFigures(),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
@@ -371,33 +457,55 @@ class _LegendRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(shapeSmall),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Row(
-          children: <Widget>[
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: weight,
-                  color: theme.colorScheme.onSurface,
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double maxValueWidth = constraints.maxWidth.isFinite
+                ? constraints.maxWidth * 0.58
+                : double.infinity;
+            return Row(
+              children: <Widget>[
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-            ),
-            Text(
-              valueText,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: weight,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-          ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: weight,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxValueWidth),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: Text(
+                      valueText,
+                      textDirection: TextDirection.ltr,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: weight,
+                        color: theme.colorScheme.onSurface,
+                        fontFeatures: _tabular,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
