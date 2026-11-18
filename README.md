@@ -401,6 +401,14 @@ temporary portfolios and remove them afterward without changing existing holding
 the default portfolio or preferences. They also support an empty debug installation.
 `stock_search_test.dart` requires internet access on the phone.
 
+For creation-time amount focus, blinking cursor and numeric keyboard checks
+with unsaved Cash, Real estate and Loan forms, use
+`--target integration_test/editor_focus_test.dart` and
+`--driver test_driver/editor_focus.dart` with the same data-preserving
+build-and-drive commands. Screenshots are saved under
+`build/editor-focus-evidence` by default; set `EDITOR_FOCUS_EVIDENCE` on the
+driver process to choose another directory. Existing holdings are not modified.
+
 </details>
 
 ### Addressing GitHub issues

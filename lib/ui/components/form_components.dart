@@ -11,6 +11,7 @@ class LabeledTextField extends StatelessWidget {
     required this.label,
     this.onChanged,
     this.focusNode,
+    this.autofocus = false,
     this.placeholder,
     this.prefix,
     this.suffix,
@@ -26,6 +27,7 @@ class LabeledTextField extends StatelessWidget {
   final String label;
   final ValueChanged<String>? onChanged;
   final FocusNode? focusNode;
+  final bool autofocus;
   final String? placeholder;
   final String? prefix;
   final String? suffix;
@@ -45,6 +47,7 @@ class LabeledTextField extends StatelessWidget {
     return TextField(
       controller: controller,
       focusNode: focusNode,
+      autofocus: autofocus,
       onChanged: onChanged,
       maxLines: singleLine ? 1 : null,
       keyboardType: keyboardType,
