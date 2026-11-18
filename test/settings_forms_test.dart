@@ -19,6 +19,7 @@ import 'package:okanzo/domain/model/app_theme.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/liability_type.dart';
 import 'package:okanzo/domain/model/release_notes.dart';
+import 'package:okanzo/domain/model/stock_exchange.dart';
 import 'package:okanzo/domain/model/theme_mode.dart';
 import 'package:okanzo/l10n/app_localizations.dart';
 import 'package:okanzo/main.dart' as app;
@@ -26,6 +27,7 @@ import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/components/donut_chart.dart';
 import 'package:okanzo/ui/components/form_components.dart';
 import 'package:okanzo/ui/components/drag_reorder_column.dart';
+import 'package:okanzo/ui/components/type_icons.dart';
 import 'package:okanzo/ui/components/ui_components.dart';
 import 'package:okanzo/ui/components/whats_new_dialog.dart';
 import 'package:okanzo/ui/home/home_screen.dart';
@@ -1966,6 +1968,136 @@ void main() {
         }
       }
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'asset, liability and settings property dropdowns and currency picker display intuitive icons',
+    (WidgetTester tester) async {
+      await container.settingsRepository.setBaseCurrency('USD');
+
+      // 1. Asset editor property chips & Type dropdown items
+      await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+      final List<IconData?> assetChipIcons = tester
+          .widgetList<PickerChip>(find.byType(PickerChip))
+          .map((PickerChip chip) => chip.icon)
+          .toList();
+      expect(assetChipIcons, <IconData?>[
+        assetTypeIcon(AssetType.stock),
+        currencyIcon('USD'),
+        stockExchangeIcon(StockExchange.us),
+      ]);
+
+      final Finder assetTypeMenuFinder = find.byType(
+        PopupMenuButton<AssetType>,
+      );
+      final PopupMenuButton<AssetType> assetTypeMenu = tester.widget(
+        assetTypeMenuFinder,
+      );
+      final List<IconData> assetMenuIcons = assetTypeMenu
+          .itemBuilder(tester.element(assetTypeMenuFinder))
+          .whereType<PopupMenuItem<AssetType>>()
+          .map(
+            (PopupMenuItem<AssetType> item) =>
+                (item.child! as Row).children.whereType<Icon>().single.icon!,
+          )
+          .toList();
+      expect(assetMenuIcons, AssetType.values.map(assetTypeIcon).toList());
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+
+      // 2. Liability editor property chips & Type dropdown items
+      await open(
+        tester,
+        const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
+      );
+      final List<IconData?> liabilityChipIcons = tester
+          .widgetList<PickerChip>(find.byType(PickerChip))
+          .map((PickerChip chip) => chip.icon)
+          .toList();
+      expect(liabilityChipIcons, <IconData?>[
+        liabilityTypeIcon(LiabilityType.loan),
+        currencyIcon('USD'),
+      ]);
+
+      final Finder liabilityTypeMenuFinder = find.byType(
+        PopupMenuButton<LiabilityType>,
+      );
+      final PopupMenuButton<LiabilityType> liabilityTypeMenu = tester.widget(
+        liabilityTypeMenuFinder,
+      );
+      final List<IconData> liabilityMenuIcons = liabilityTypeMenu
+          .itemBuilder(tester.element(liabilityTypeMenuFinder))
+          .whereType<PopupMenuItem<LiabilityType>>()
+          .map(
+            (PopupMenuItem<LiabilityType> item) =>
+                (item.child! as Row).children.whereType<Icon>().single.icon!,
+          )
+          .toList();
+      expect(
+        liabilityMenuIcons,
+        LiabilityType.values.map(liabilityTypeIcon).toList(),
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+
+      // 3. Settings -> Currency -> Base currency chip & Choose currency picker
+      await open(tester, SettingsScreen(onClose: () {}));
+      await _tap(tester, find.text('Currency'));
+      expect(
+        tester.widget<PickerChip>(find.byType(PickerChip)).icon,
+        Icons.attach_money,
+      );
+
+      await _tap(tester, find.text('Base currency'));
+      expect(find.text('Choose currency'), findsOneWidget);
+      for (final (String code, IconData expected) in <(String, IconData)>[
+        ('USD', Icons.attach_money),
+        ('EUR', Icons.euro),
+        ('GBP', Icons.currency_pound),
+        ('INR', Icons.currency_rupee),
+        ('JPY', Icons.currency_yen),
+        ('CNY', Icons.currency_yuan),
+      ]) {
+        final ListTile tile = tester.widget<ListTile>(
+          find.widgetWithText(
+            ListTile,
+            '$code — ${CurrencyUtil.displayName(code)}',
+          ),
+        );
+        expect((tile.leading! as Icon).icon, expected, reason: code);
+      }
+
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(TextField),
+        ),
+        'AED',
+      );
+      await tester.pumpAndSettle();
+      final ListTile aedTile = tester.widget<ListTile>(
+        find.widgetWithText(
+          ListTile,
+          'AED — ${CurrencyUtil.displayName('AED')}',
+        ),
+      );
+      expect((aedTile.leading! as Icon).icon, Icons.payments_outlined);
+
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(TextField),
+        ),
+        'EUR',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('EUR — Euro'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<PickerChip>(find.byType(PickerChip)).icon,
+        Icons.euro,
+      );
     },
   );
 }

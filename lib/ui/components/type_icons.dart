@@ -32,7 +32,7 @@ IconData assetTypeIcon(AssetType type) {
 }
 
 IconData liabilityTypeIcon(LiabilityType type) {
-  switch (LiabilityType.values[type.index]) {
+  switch (type) {
     case LiabilityType.loan:
       return Icons.account_balance_wallet;
     case LiabilityType.mortgage:
