@@ -375,9 +375,27 @@ void main() {
       expect(chips[1].top, chips[2].top);
       expect(find.byType(DropdownMenu<AssetType>), findsNothing);
       expect(
-        tester.getRect(_field('Company or ticker')).top,
+        tester.getRect(_field('Company or Ticker')).top,
         tester.getRect(_field('Quantity')).top,
       );
+      final TextField tickerField = tester.widget<TextField>(
+        find.descendant(
+          of: _field('Company or Ticker'),
+          matching: find.byType(TextField),
+        ),
+      );
+      expect(tickerField.decoration?.hintText, 'Search');
+      expect(tickerField.style?.fontSize, 16);
+      expect(find.text('Search Yahoo Finance'), findsNothing);
+      expect(find.text('Uses fetched name if left blank'), findsNothing);
+      final ThemeData editorTheme = Theme.of(
+        tester.element(find.byType(AssetEditScreen)),
+      );
+      final TextStyle? floatingLabel = WidgetStateProperty.resolveAs(
+        editorTheme.inputDecorationTheme.floatingLabelStyle,
+        const <WidgetState>{},
+      );
+      expect(floatingLabel!.fontSize! * 0.75, 14);
       final Text amount = tester.widget<Text>(
         find.text(CurrencyUtil.format(3864, 'USD')),
       );
@@ -692,7 +710,7 @@ void main() {
       expect(
         tester.getRect(_field(strings.text('Quantity'))).top,
         greaterThan(
-          tester.getRect(_field(strings.text('Company or ticker'))).top,
+          tester.getRect(_field(strings.text('Company or Ticker'))).top,
         ),
       );
       await _saveBelowNotes(tester, strings.text('Save'));

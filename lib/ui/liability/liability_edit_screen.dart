@@ -33,7 +33,17 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
   final TextEditingController _name = TextEditingController();
   final TextEditingController _amount = TextEditingController();
   final TextEditingController _notes = TextEditingController();
+  final FocusNode _amountFocus = FocusNode();
+  final FocusNode _nameFocus = FocusNode();
   bool _controllersPrimed = false;
+
+  Map<FocusNode, TextEditingController> get _requiredFields =>
+      <FocusNode, TextEditingController>{
+        _amountFocus: _amount,
+        _nameFocus: _name,
+      };
+
+  void _focusNextRequired() => focusNextRequiredField(context, _requiredFields);
 
   @override
   void didChangeDependencies() {
@@ -79,6 +89,8 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
     _name.dispose();
     _amount.dispose();
     _notes.dispose();
+    _amountFocus.dispose();
+    _nameFocus.dispose();
     super.dispose();
   }
 
@@ -130,6 +142,12 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                     const SizedBox(height: 20),
                     LabeledTextField(
                       controller: _amount,
+                      focusNode: _amountFocus,
+                      textInputAction: requiredFieldInputAction(
+                        _requiredFields,
+                        current: _amountFocus,
+                      ),
+                      onSubmitted: (_) => _focusNextRequired(),
                       autofocus: !form.isEditing,
                       label: 'Outstanding amount'.tr(context),
                       prefix: CurrencyUtil.symbol(form.currency),
@@ -152,7 +170,10 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                           optionLabel: (LiabilityType type) =>
                               type.displayName.tr(context),
                           optionIcon: liabilityTypeIcon,
-                          onSelected: viewModel.onTypeChange,
+                          onSelected: (LiabilityType type) {
+                            viewModel.onTypeChange(type);
+                            _focusNextRequired();
+                          },
                           compact: true,
                         ),
                         CurrencySelector(
@@ -165,6 +186,12 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                     const SizedBox(height: 12),
                     LabeledTextField(
                       controller: _name,
+                      focusNode: _nameFocus,
+                      textInputAction: requiredFieldInputAction(
+                        _requiredFields,
+                        current: _nameFocus,
+                      ),
+                      onSubmitted: (_) => _focusNextRequired(),
                       label: 'Name'.tr(context),
                       placeholder: 'e.g. Home loan'.tr(context),
                       onChanged: viewModel.onNameChange,
@@ -203,6 +230,9 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
       context,
       selected: current,
     );
-    if (picked != null) _viewModel?.onCurrencyChange(picked);
+    if (picked != null && mounted) {
+      _viewModel?.onCurrencyChange(picked);
+      _focusNextRequired();
+    }
   }
 }

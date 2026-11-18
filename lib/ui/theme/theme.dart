@@ -209,9 +209,28 @@ ThemeData buildTheme({
       focusedBorder: UnderlineInputBorder(
         borderSide: BorderSide(color: scheme.primary, width: 1.5),
       ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+      contentPadding: const EdgeInsets.only(top: 22, bottom: 6),
       floatingLabelBehavior: FloatingLabelBehavior.always,
-      labelStyle: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+      labelStyle: textTheme.bodyLarge?.copyWith(
+        color: scheme.onSurface,
+        fontWeight: FontWeight.w500,
+      ),
+      hintStyle: textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
+      floatingLabelStyle: WidgetStateTextStyle.resolveWith((
+        Set<WidgetState> states,
+      ) {
+        final Color color = states.contains(WidgetState.error)
+            ? scheme.error
+            : states.contains(WidgetState.focused)
+            ? scheme.primary
+            : scheme.onSurface;
+        final TextStyle base = textTheme.bodyMedium ?? const TextStyle();
+        return base.copyWith(
+          fontSize: (base.fontSize ?? 14) / 0.75,
+          color: color,
+          fontWeight: FontWeight.w500,
+        );
+      }),
       helperMaxLines: 3,
       errorMaxLines: 3,
     ),

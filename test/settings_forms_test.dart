@@ -159,11 +159,13 @@ class _Rates extends Fake implements FxRepository {
 class _Backups extends Fake implements BackupRepository {}
 
 class _Search extends Fake implements StockSearchService {
+  List<StockSearchResult> matches = <StockSearchResult>[];
+
   @override
   Future<Result<List<StockSearchResult>>> search(
     String query, {
     required StockSearchType type,
-  }) async => Result<List<StockSearchResult>>.success(<StockSearchResult>[]);
+  }) async => Result<List<StockSearchResult>>.success(matches);
 }
 
 class _FailingAppearanceRepository extends SettingsRepository {
@@ -217,7 +219,7 @@ class _Container extends Fake implements AppContainer {
   @override
   final _Assets assetRepository = _Assets();
   @override
-  final StockSearchService stockSearchService = _Search();
+  final _Search stockSearchService = _Search();
   @override
   final _Liabilities liabilityRepository = _Liabilities();
   @override
@@ -268,6 +270,14 @@ Widget _app(
 Finder _field(String label) => find.byWidgetPredicate(
   (Widget widget) => widget is LabeledTextField && widget.label == label,
 );
+
+Finder _textField(String label) =>
+    find.descendant(of: _field(label), matching: find.byType(TextField));
+
+EditableText _editableField(WidgetTester tester, String label) =>
+    tester.widget<EditableText>(
+      find.descendant(of: _field(label), matching: find.byType(EditableText)),
+    );
 
 Finder get _notesInput => find.descendant(
   of: find.byType(OptionalNotesField),
@@ -975,11 +985,11 @@ void main() {
         greaterThan(tester.getRect(find.byTooltip('Back')).bottom),
       );
       expect(
-        tester.getRect(_field('Company or ticker')).top,
+        tester.getRect(_field('Company or Ticker')).top,
         tester.getRect(_field('Quantity')).top,
       );
       expect(
-        tester.getRect(_field('Company or ticker')).left,
+        tester.getRect(_field('Company or Ticker')).left,
         lessThan(tester.getRect(_field('Quantity')).left),
       );
       final Scaffold scaffold = tester.widget<Scaffold>(
@@ -1356,6 +1366,437 @@ void main() {
           find.text('Price is fetched automatically on save when online.'),
           findsNothing,
         );
+        expect(find.text('Search Yahoo Finance'), findsNothing);
+        expect(find.text('Uses fetched name if left blank'), findsNothing);
+        final TextField customNameField = tester.widget<TextField>(
+          find.descendant(
+            of: _field('Custom name (optional)'),
+            matching: find.byType(TextField),
+          ),
+        );
+        expect(customNameField.decoration?.hintText, isNull);
+        expect(customNameField.decoration?.helperText, isNull);
+        expect(customNameField.style?.fontSize, 16);
+      },
+    );
+  }
+
+  testWidgets('asset and liability fields use readable label and input sizes', (
+    WidgetTester tester,
+  ) async {
+    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+    final TextField tickerInput = tester.widget<TextField>(
+      find.descendant(
+        of: _field('Company or Ticker'),
+        matching: find.byType(TextField),
+      ),
+    );
+    final TextField quantityInput = tester.widget<TextField>(
+      find.descendant(of: _field('Quantity'), matching: find.byType(TextField)),
+    );
+    expect(tickerInput.decoration?.hintText, 'Search');
+    expect(tickerInput.style?.fontSize, 16);
+    expect(quantityInput.style?.fontSize, 16);
+    final ThemeData assetTheme = Theme.of(
+      tester.element(find.byType(AssetEditScreen)),
+    );
+    final TextStyle? floatingLabel = WidgetStateProperty.resolveAs(
+      assetTheme.inputDecorationTheme.floatingLabelStyle,
+      const <WidgetState>{},
+    );
+    expect(floatingLabel!.fontSize! * 0.75, 14);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await open(
+      tester,
+      const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
+    );
+    final TextField liabilityName = tester.widget<TextField>(
+      find.descendant(of: _field('Name'), matching: find.byType(TextField)),
+    );
+    expect(liabilityName.style?.fontSize, 16);
+  });
+
+  testWidgets('asset selectors and Next skip filled required fields', (
+    WidgetTester tester,
+  ) async {
+    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+    await _tap(tester, find.byType(DropdownSelector<AssetType>));
+    await _tap(tester, find.text('Cash').last);
+    expect(_editableField(tester, 'Value').focusNode.hasFocus, isTrue);
+    await tester.enterText(_textField('Value'), '100');
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pumpAndSettle();
+    expect(_editableField(tester, 'Name').focusNode.hasFocus, isTrue);
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await _tap(tester, find.byType(CurrencySelector));
+    await _tap(tester, find.text('EUR — Euro'));
+    expect(_editableField(tester, 'Name').focusNode.hasFocus, isTrue);
+    await tester.enterText(_textField('Name'), 'Savings');
+    expect(
+      tester.widget<TextField>(_textField('Name')).textInputAction,
+      TextInputAction.done,
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isFalse);
+    expect(container.assetRepository.saved, isNull);
+
+    await _tap(tester, find.byType(DropdownSelector<AssetType>));
+    await _tap(tester, find.text('Gold').last);
+    expect(_editableField(tester, 'Quantity').focusNode.hasFocus, isTrue);
+    await tester.enterText(_textField('Quantity'), '2');
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pumpAndSettle();
+    expect(_editableField(tester, 'Price per g').focusNode.hasFocus, isTrue);
+    await tester.enterText(_textField('Price per g'), '50');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isFalse);
+    expect(container.assetRepository.saved, isNull);
+  });
+
+  for (final bool selectListing in <bool>[false, true]) {
+    testWidgets(
+      '${selectListing ? 'selecting a listing' : 'submitting a ticker'} focuses quantity then dismisses without saving',
+      (WidgetTester tester) async {
+        container.stockSearchService.matches = const <StockSearchResult>[
+          StockSearchResult(
+            symbol: 'AAPL',
+            name: 'Apple Inc.',
+            exchange: 'NASDAQ',
+          ),
+        ];
+        await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+        await tester.enterText(_textField('Company or Ticker'), 'AAPL');
+        if (selectListing) {
+          await tester.pump(const Duration(milliseconds: 350));
+          await tester.pumpAndSettle();
+          await _tap(tester, find.text('Apple Inc.'));
+        } else {
+          await tester.testTextInput.receiveAction(TextInputAction.next);
+          await tester.pumpAndSettle();
+        }
+        expect(_editableField(tester, 'Quantity').focusNode.hasFocus, isTrue);
+        await tester.enterText(_textField('Quantity'), '5');
+        expect(
+          tester.widget<TextField>(_textField('Quantity')).textInputAction,
+          TextInputAction.done,
+        );
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isFalse);
+        expect(container.assetRepository.saved, isNull);
+        expect(
+          _editableField(tester, 'Custom name (optional)').controller.text,
+          isEmpty,
+        );
+      },
+    );
+  }
+
+  testWidgets(
+    'liability selectors skip filled amounts and keep Save explicit',
+    (WidgetTester tester) async {
+      await open(
+        tester,
+        const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
+      );
+      await tester.enterText(_textField('Outstanding amount'), '1200');
+      await tester.testTextInput.receiveAction(TextInputAction.next);
+      await tester.pumpAndSettle();
+      expect(_editableField(tester, 'Name').focusNode.hasFocus, isTrue);
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      await _tap(tester, find.byType(DropdownSelector<LiabilityType>));
+      await _tap(tester, find.text('Mortgage').last);
+      expect(_editableField(tester, 'Name').focusNode.hasFocus, isTrue);
+      await tester.enterText(_textField('Name'), 'Home loan');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(container.liabilityRepository.saved, isNull);
+    },
+  );
+
+  for (final bool dark in <bool>[false, true]) {
+    testWidgets(
+      '${dark ? 'Midnight' : 'Light'} field labels stand out from name previews',
+      (WidgetTester tester) async {
+        container.assetRepository.existing = const AssetEntity(
+          id: 1,
+          portfolioId: 1,
+          type: AssetType.stock,
+          name: 'Example company',
+          currency: 'USD',
+          quantity: 2,
+          symbol: 'AAPL',
+          lastPrice: 100,
+          createdAt: 0,
+          updatedAt: 0,
+        );
+        await tester.pumpWidget(
+          _app(
+            container,
+            const AssetEditScreen(portfolioId: 1, assetId: 1),
+            brightness: dark ? Brightness.dark : Brightness.light,
+            appTheme: dark ? AppTheme.midnight : AppTheme.classic,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          _field('Custom name (optional)'),
+          100,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+
+        TextStyle renderedStyle(String text) => tester
+            .widget<RichText>(
+              find.descendant(
+                of: find.text(text),
+                matching: find.byType(RichText),
+              ),
+            )
+            .text
+            .style!;
+
+        final ColorScheme colors = Theme.of(
+          tester.element(_field('Custom name (optional)')),
+        ).colorScheme;
+        final TextStyle label = renderedStyle('Custom name (optional)');
+        final TextStyle preview = renderedStyle('Example company');
+        expect(label.color, colors.onSurface);
+        expect(label.fontWeight, FontWeight.w500);
+        expect(preview.color, colors.onSurfaceVariant);
+        expect(preview.fontWeight, FontWeight.w400);
+        expect(label.color, isNot(preview.color));
+
+        final Finder input = find.descendant(
+          of: _field('Custom name (optional)'),
+          matching: find.byType(TextField),
+        );
+        await _tap(tester, input);
+        expect(renderedStyle('Custom name (optional)').color, colors.primary);
+        expect(renderedStyle('Example company').color, colors.onSurfaceVariant);
+        await tester.enterText(input, 'My shares');
+        await tester.pumpAndSettle();
+        final EditableText entered = tester.widget<EditableText>(
+          find.descendant(of: input, matching: find.byType(EditableText)),
+        );
+        expect(entered.style.color, colors.onSurface);
+        expect(entered.controller.text, 'My shares');
+        await _toggleNotes(tester);
+        final Text notesLabel = tester.widget<Text>(
+          find.descendant(
+            of: find.byType(ListTile),
+            matching: find.text('Notes (optional)'),
+          ),
+        );
+        expect(notesLabel.style?.color, colors.onSurface);
+        expect(notesLabel.style?.fontWeight, FontWeight.w500);
+        final RichText notesHint = tester.widget<RichText>(
+          find.descendant(
+            of: find.descendant(
+              of: _notesInput,
+              matching: find.text('Notes (optional)'),
+            ),
+            matching: find.byType(RichText),
+          ),
+        );
+        expect(notesHint.text.style?.color, colors.onSurfaceVariant);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final (bool prominent, double textScale) layout in <(bool, double)>[
+    (false, 1),
+    (true, 1),
+    (false, 1.5),
+  ]) {
+    testWidgets('field label and input offsets are independent at $layout', (
+      WidgetTester tester,
+    ) async {
+      final (bool prominent, double textScale) = layout;
+      final Locale locale = Locale(textScale > 1 ? 'ar' : 'en');
+      final String label = AppLocalizations(locale).text('Name');
+      final TextEditingController reference = TextEditingController();
+      final TextEditingController current = TextEditingController();
+      addTearDown(reference.dispose);
+      addTearDown(current.dispose);
+
+      await tester.pumpWidget(
+        _app(
+          container,
+          Scaffold(
+            body: Builder(
+              builder: (BuildContext context) => Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      child: TextField(
+                        key: const ValueKey<String>('reference-offset-field'),
+                        controller: reference,
+                        style: prominent
+                            ? Theme.of(context).textTheme.displaySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary,
+                                  )
+                            : Theme.of(context).textTheme.bodyLarge,
+                        decoration: InputDecoration(
+                          labelText: label,
+                          hintText: 'Example',
+                          contentPadding: prominent
+                              ? EdgeInsets.zero
+                              : const EdgeInsets.only(top: 22, bottom: 6),
+                          border: prominent ? InputBorder.none : null,
+                          enabledBorder: prominent ? InputBorder.none : null,
+                          focusedBorder: prominent ? InputBorder.none : null,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: LabeledTextField(
+                        key: const ValueKey<String>('current-offset-field'),
+                        controller: current,
+                        label: label,
+                        placeholder: 'Example',
+                        prominent: prominent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          locale: locale,
+          textScale: textScale,
+          brightness: textScale > 1 ? Brightness.dark : Brightness.light,
+          appTheme: textScale > 1 ? AppTheme.midnight : AppTheme.classic,
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      final Finder oldField = find.byKey(
+        const ValueKey<String>('reference-offset-field'),
+      );
+      final Finder newField = find.byKey(
+        const ValueKey<String>('current-offset-field'),
+      );
+      Rect bounds(Finder field, Finder child) =>
+          tester.getRect(find.descendant(of: field, matching: child));
+      void expectOffsets() {
+        expect(
+          bounds(newField, find.text(label)).top,
+          closeTo(bounds(oldField, find.text(label)).top - 4, 0.01),
+        );
+        expect(
+          bounds(newField, find.byType(EditableText)).top,
+          closeTo(bounds(oldField, find.byType(EditableText)).top + 2, 0.01),
+        );
+        expect(
+          bounds(newField, find.text(label)).size,
+          bounds(oldField, find.text(label)).size,
+        );
+        expect(tester.getSize(newField), tester.getSize(oldField));
+        if (!prominent) {
+          expect(
+            bounds(newField, find.byType(InputDecorator)).bottom,
+            closeTo(bounds(oldField, find.byType(InputDecorator)).bottom, 0.01),
+          );
+        }
+      }
+
+      expectOffsets();
+      expect(
+        bounds(newField, find.text('Example')).top,
+        closeTo(bounds(oldField, find.text('Example')).top + 2, 0.01),
+      );
+      reference.text = '123';
+      await tester.enterText(
+        find.descendant(of: newField, matching: find.byType(TextField)),
+        '123',
+      );
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      expectOffsets();
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      try {
+        await tester.pumpAndSettle();
+        expect(find.bySemanticsLabel(label), findsNWidgets(2));
+      } finally {
+        semantics.dispose();
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final bool liability in <bool>[false, true]) {
+    testWidgets(
+      '${liability ? 'liability' : 'asset'} editor text stays close to the underline',
+      (WidgetTester tester) async {
+        final Locale locale = Locale(liability ? 'ar' : 'en');
+        final AppLocalizations strings = AppLocalizations(locale);
+        await tester.pumpWidget(
+          _app(
+            container,
+            liability
+                ? const LiabilityEditScreen(portfolioId: 1, liabilityId: 0)
+                : const AssetEditScreen(portfolioId: 1, assetId: 0),
+            locale: locale,
+            textScale: liability ? 1.5 : 1,
+            brightness: liability ? Brightness.dark : Brightness.light,
+            appTheme: liability ? AppTheme.midnight : AppTheme.classic,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        void expectTextNearUnderline(Finder field) {
+          final Rect input = tester.getRect(
+            find.descendant(of: field, matching: find.byType(EditableText)),
+          );
+          final Rect decoration = tester.getRect(
+            find.descendant(of: field, matching: find.byType(InputDecorator)),
+          );
+          expect(decoration.bottom - input.bottom, inInclusiveRange(4, 8));
+          expect(decoration.height, greaterThanOrEqualTo(48));
+        }
+
+        final String label = strings.text(
+          liability ? 'Name' : 'Company or Ticker',
+        );
+        final Finder field = _field(label);
+        expectTextNearUnderline(field);
+        await tester.enterText(
+          find.descendant(of: field, matching: find.byType(TextField)),
+          liability ? 'Home loan' : 'AAPL',
+        );
+        await tester.pumpAndSettle();
+        expectTextNearUnderline(field);
+        final Rect floatingLabel = tester.getRect(find.text(label));
+        final Rect input = tester.getRect(
+          find.descendant(of: field, matching: find.byType(EditableText)),
+        );
+        expect(floatingLabel.bottom, lessThanOrEqualTo(input.top));
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pumpAndSettle();
+        expectTextNearUnderline(field);
+
+        await _toggleNotes(tester);
+        await tester.enterText(_notesInput, 'First line\nSecond line');
+        await tester.pumpAndSettle();
+        expectTextNearUnderline(find.byType(OptionalNotesField));
+        expect(tester.takeException(), isNull);
       },
     );
   }
@@ -1391,7 +1832,7 @@ void main() {
           expect(find.text('Estimated value'), findsOneWidget);
           final String tickerLabel = type == AssetType.crypto
               ? 'Coin or ticker'
-              : 'Company or ticker';
+              : 'Company or Ticker';
           await tester.scrollUntilVisible(
             _field('Quantity'),
             100,

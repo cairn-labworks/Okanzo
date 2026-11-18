@@ -115,7 +115,7 @@ Future<void> _enter(WidgetTester tester, String label, String value) async {
   await tester.pumpAndSettle();
   await tester.enterText(field, value);
   await tester.pump(const Duration(milliseconds: 400));
-  if (label == 'Company or ticker' || label == 'Coin or ticker') {
+  if (label == 'Company or Ticker' || label == 'Coin or ticker') {
     expect(
       tester.widget<TextField>(field).focusNode!.hasFocus,
       isTrue,
@@ -217,13 +217,13 @@ void main() {
         await _waitUntil(
           tester,
           () => find
-              .widgetWithText(TextField, 'Company or ticker')
+              .widgetWithText(TextField, 'Company or Ticker')
               .evaluate()
               .isNotEmpty,
           'asset editor',
         );
 
-        await _enter(tester, 'Company or ticker', 'Apple');
+        await _enter(tester, 'Company or Ticker', 'Apple');
         await _waitUntil(
           tester,
           () => _listing('AAPL').evaluate().isNotEmpty,
@@ -231,7 +231,7 @@ void main() {
         );
         expect(_listing('AAPL').hitTestable(), findsOneWidget);
         await _tap(tester, _listing('AAPL'));
-        expect(_input(tester, 'Company or ticker'), 'AAPL');
+        expect(_input(tester, 'Company or Ticker'), 'AAPL');
         expect(_input(tester, 'Custom name (optional)'), isEmpty);
         expect(
           tester
@@ -259,14 +259,14 @@ void main() {
           'Custom name (optional)',
           'My search test holding',
         );
-        await _enter(tester, 'Company or ticker', 'Airbus');
+        await _enter(tester, 'Company or Ticker', 'Airbus');
         await _waitUntil(
           tester,
           () => _listing('AIR.PA').evaluate().isNotEmpty,
           'international listing',
         );
         await _tap(tester, _listing('AIR.PA'));
-        expect(_input(tester, 'Company or ticker'), 'AIR.PA');
+        expect(_input(tester, 'Company or Ticker'), 'AIR.PA');
         expect(
           _input(tester, 'Custom name (optional)'),
           'My search test holding',
@@ -288,20 +288,20 @@ void main() {
           tester.widget<StockSearchField>(find.byType(StockSearchField)).type,
           StockSearchType.fund,
         );
-        await _enter(tester, 'Company or ticker', 'Vanguard');
+        await _enter(tester, 'Company or Ticker', 'Vanguard');
         await _waitUntil(
           tester,
           () => _listing('VOO').evaluate().isNotEmpty,
           'fund suggestions',
         );
         await _tap(tester, _listing('VOO'));
-        expect(_input(tester, 'Company or ticker'), 'VOO');
+        expect(_input(tester, 'Company or Ticker'), 'VOO');
         checks['fundSearch'] = true;
         debugPrint('DEVICE CHECK: fund search resolves Vanguard to VOO');
 
         await _tap(tester, find.byType(PopupMenuButton<AssetType>));
         await _tap(tester, find.text(AssetType.stock.displayName).last);
-        await _enter(tester, 'Company or ticker', 'AAPL');
+        await _enter(tester, 'Company or Ticker', 'AAPL');
         await _waitUntil(
           tester,
           () => _listing('AAPL').evaluate().isNotEmpty,
@@ -398,7 +398,7 @@ void main() {
         await _tap(tester, find.text('Open search test editor'));
         expect(find.text('Save asset'), findsNothing);
         await _enter(tester, 'Custom name (optional)', 'Unsaved asset');
-        await _enter(tester, 'Company or ticker', 'MSFT');
+        await _enter(tester, 'Company or Ticker', 'MSFT');
         await _enter(tester, 'Quantity', '5');
         await _tap(tester, find.widgetWithText(OutlinedButton, 'Cancel'));
         expect(find.byType(AssetEditScreen), findsNothing);
@@ -460,7 +460,7 @@ void main() {
         await tester.pumpAndSettle();
         await _tap(tester, find.text('Open offline editor'));
         await _enter(tester, 'Custom name (optional)', 'Offline Microsoft');
-        await _enter(tester, 'Company or ticker', 'MSFT');
+        await _enter(tester, 'Company or Ticker', 'MSFT');
         await _waitUntil(
           tester,
           () => find

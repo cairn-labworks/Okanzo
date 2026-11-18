@@ -303,7 +303,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final Finder ticker = find.widgetWithText(TextField, 'Company or ticker');
+    final Finder ticker = find.widgetWithText(TextField, 'Company or Ticker');
     await tester.ensureVisible(ticker);
     await tester.enterText(ticker, 'Apple');
     await tester.pumpAndSettle();
@@ -560,7 +560,7 @@ void main() {
     await tester.tap(bse);
     await tester.pumpAndSettle();
 
-    final Finder ticker = find.widgetWithText(TextField, 'Company or ticker');
+    final Finder ticker = find.widgetWithText(TextField, 'Company or Ticker');
     await tester.ensureVisible(ticker);
     await tester.enterText(ticker, 'RELIANCE');
     await tester.pumpAndSettle();
@@ -879,7 +879,7 @@ void main() {
     ]);
     expect(find.text(StockExchange.hongKong.displayName), findsOneWidget);
     expect(find.text('2 × ${CurrencyUtil.format(10, 'HKD')}'), findsOneWidget);
-    final Finder ticker = find.widgetWithText(TextField, 'Company or ticker');
+    final Finder ticker = find.widgetWithText(TextField, 'Company or Ticker');
     expect(tester.widget<TextField>(ticker).controller?.text, '0700.HK');
   });
 
@@ -969,7 +969,7 @@ void main() {
 
       await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '4');
       await tester.enterText(
-        find.widgetWithText(TextField, 'Company or ticker'),
+        find.widgetWithText(TextField, 'Company or Ticker'),
         'AAPL',
       );
       await tester.pump(const Duration(milliseconds: 400));
@@ -1054,7 +1054,7 @@ void main() {
 
       const AppLocalizations es = AppLocalizations(Locale('es'));
       await tester.enterText(
-        find.widgetWithText(TextField, es.text('Company or ticker')),
+        find.widgetWithText(TextField, es.text('Company or Ticker')),
         'AAPL',
       );
       await tester.pump(const Duration(milliseconds: 400));
@@ -1131,7 +1131,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextField, 'Company or ticker'),
+        find.widgetWithText(TextField, 'Company or Ticker'),
         'AAPL',
       );
       await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '3');

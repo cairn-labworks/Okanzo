@@ -61,7 +61,16 @@ void main() {
       );
       expect(
         theme.inputDecorationTheme.labelStyle?.fontFamily,
-        theme.textTheme.bodySmall?.fontFamily,
+        theme.textTheme.bodyLarge?.fontFamily,
+      );
+      final TextStyle? floatingLabel = WidgetStateProperty.resolveAs(
+        theme.inputDecorationTheme.floatingLabelStyle,
+        const <WidgetState>{},
+      );
+      expect(floatingLabel?.fontFamily, theme.textTheme.bodyMedium?.fontFamily);
+      expect(
+        floatingLabel!.fontSize! * 0.75,
+        closeTo(theme.textTheme.bodyMedium!.fontSize!, 0.01),
       );
     });
 

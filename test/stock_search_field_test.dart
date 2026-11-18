@@ -109,7 +109,29 @@ void main() {
     ),
   );
 
-  Finder getSearch() => find.widgetWithText(TextField, 'Company or ticker');
+  Finder getSearch() => find.widgetWithText(TextField, 'Company or Ticker');
+
+  testWidgets('uses Company or Ticker label and plain Search placeholder', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(app());
+    final TextField stockField = tester.widget<TextField>(getSearch());
+    expect(
+      find.descendant(
+        of: getSearch(),
+        matching: find.text('Company or Ticker'),
+      ),
+      findsOneWidget,
+    );
+    expect(stockField.decoration?.hintText, 'Search');
+    expect(find.text('Search Yahoo Finance'), findsNothing);
+
+    await tester.pumpWidget(app(type: StockSearchType.crypto));
+    final TextField cryptoField = tester.widget<TextField>(
+      find.widgetWithText(TextField, 'Coin or ticker'),
+    );
+    expect(cryptoField.decoration?.hintText, 'Search');
+  });
 
   testWidgets(
     'crypto search shows coin names and preserves selected non-USD pairs',
