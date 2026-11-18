@@ -388,6 +388,17 @@ the default portfolio or preferences. They also support an empty debug installat
 
 </details>
 
+### Addressing GitHub issues
+
+Invoke `/address-issue <number>` in Copilot to use the
+[address-issue skill](.github/skills/address-issue/SKILL.md). It starts from
+latest remote `main` in a dedicated worktree, names the session
+`Issue:<number> - <title>`, and requires reproducing bugs before implementing
+a fix. Baseline checks and final verification use an emulator first, then a
+physical phone through the separately installed `wireless-debug` skill.
+After testing, it creates a PR with before/after screenshots where possible;
+it never merges without an explicit request.
+
 ---
 
 ## Support & license
