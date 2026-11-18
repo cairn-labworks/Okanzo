@@ -326,9 +326,9 @@ void main() {
           await _select<AssetType>(tester, listing.type.displayName);
         }
         await _selectExchange(tester, listing.exchange);
-        await _enter(tester, 'Name', listing.name);
         await _enter(tester, 'Company or ticker', listing.ticker);
         await _enter(tester, 'Quantity', '2');
+        await _enter(tester, 'Custom name (optional)', listing.name);
         await _pickCurrency(tester, listing.currency);
         if (_captureScreenshots && listing.exchange == StockExchange.bse) {
           FocusManager.instance.primaryFocus?.unfocus();
@@ -372,7 +372,9 @@ void main() {
         );
         final AssetEntity asset =
             (await container.assetRepository.getForPortfolio(portfolioId))
-                .singleWhere((AssetEntity row) => row.name == listing.name);
+                .singleWhere(
+                  (AssetEntity row) => row.displayName == listing.name,
+                );
         _verifyHolding(asset, listing);
         saved[listing.symbol] = asset;
         debugPrint('ANDROID SAVED ${asset.symbol} ${asset.currency}');
@@ -619,13 +621,13 @@ void main() {
         if (type != AssetType.stock) {
           await _select<AssetType>(tester, type.displayName);
         }
-        await _enter(tester, 'Name', name);
         await _enter(
           tester,
           type == AssetType.crypto ? 'Coin or ticker' : 'Company or ticker',
           symbol,
         );
         await _enter(tester, 'Quantity', '2');
+        await _enter(tester, 'Custom name (optional)', name);
         await _pickCurrency(tester, 'USD');
         await _tap(tester, find.text('Fetch latest price'));
         await _waitUntil(
@@ -664,7 +666,7 @@ void main() {
         );
         final AssetEntity asset =
             (await container.assetRepository.getForPortfolio(portfolioId))
-                .singleWhere((AssetEntity row) => row.name == name);
+                .singleWhere((AssetEntity row) => row.displayName == name);
         expect(asset.currency, 'EUR');
         expect(asset.lastPrice, fetchedEur);
         expect(asset.symbol, symbol);

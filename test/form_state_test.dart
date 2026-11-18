@@ -160,16 +160,42 @@ void main() {
   });
 
   group('AssetFormState.validate', () {
-    test('requires a name and a currency first', () {
-      expect(
-        const AssetFormState(name: '  ').validate(),
-        'Give this asset a name',
-      );
-      expect(
-        const AssetFormState(name: 'Apple', currency: ' ').validate(),
-        'Choose a currency',
-      );
-    });
+    test(
+      'requires a name for non-market assets and a currency for all assets',
+      () {
+        for (final AssetType type in AssetType.values) {
+          final AssetFormState unnamed = AssetFormState(
+            type: type,
+            name: '  ',
+            symbol: 'AAPL',
+            quantity: '2',
+            pricePerUnit: '10',
+            manualValue: '100',
+          );
+          expect(
+            unnamed.validate(),
+            type.isMarketLinked ? isNull : 'Give this asset a name',
+            reason: type.name,
+          );
+        }
+        expect(
+          const AssetFormState(
+            type: AssetType.cash,
+            name: 'Wallet',
+            currency: ' ',
+          ).validate(),
+          'Choose a currency',
+        );
+        expect(
+          const AssetFormState(
+            symbol: 'AAPL',
+            quantity: '1',
+            currency: ' ',
+          ).validate(),
+          'Choose a currency',
+        );
+      },
+    );
 
     test('market assets need a symbol and a positive quantity', () {
       const AssetFormState base = AssetFormState(
@@ -276,6 +302,38 @@ void main() {
       expect(entity.lastPrice, 190.5);
       expect(entity.createdAt, 1000);
       expect(entity.updatedAt, 1000);
+    });
+
+    test('falls back to ticker when fetched name is empty and overrides display with customName', () {
+      final AssetEntity fallback = const AssetFormState(
+        portfolioId: 1,
+        type: AssetType.stock,
+        symbol: ' aapl ',
+        quantity: '5',
+      ).toEntity(now: 10);
+      expect(fallback.name, 'AAPL');
+      expect(fallback.customName, isNull);
+      expect(fallback.displayName, 'AAPL');
+
+      final AssetEntity overridden = const AssetFormState(
+        portfolioId: 1,
+        type: AssetType.mutualFund,
+        name: 'Vanguard S&P 500 ETF',
+        customName: '  Retirement S&P 500  ',
+        symbol: 'voo',
+        quantity: '3',
+      ).toEntity(now: 20);
+      expect(overridden.name, 'Vanguard S&P 500 ETF');
+      expect(overridden.customName, 'Retirement S&P 500');
+      expect(overridden.displayName, 'Retirement S&P 500');
+
+      final AssetFormState roundTrip = AssetFormState.fromEntity(overridden);
+      expect(roundTrip.name, 'Vanguard S&P 500 ETF');
+      expect(roundTrip.customName, 'Retirement S&P 500');
+      expect(
+        roundTrip.copyWith(customName: '   ').toEntity(now: 30).displayName,
+        'Vanguard S&P 500 ETF',
+      );
     });
 
     test('round-trips through fromEntity', () {

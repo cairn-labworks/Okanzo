@@ -77,6 +77,7 @@ class AssetDao {
     double price,
     int timestamp, {
     String? currency,
+    String? name,
   }) async {
     await _db.update(
       Tables.assets,
@@ -85,6 +86,7 @@ class AssetDao {
         'lastPriceTimestamp': timestamp,
         'updatedAt': timestamp,
         if (currency != null && currency.isNotEmpty) 'currency': currency,
+        if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
       },
       where: 'id = ?',
       whereArgs: <Object?>[id],
@@ -94,11 +96,20 @@ class AssetDao {
 
   /// Updates multiple asset prices in a single transaction and notifies once.
   Future<void> updatePrices(
-    List<({int id, double price, int timestamp, String? currency})> updates,
+    List<
+      ({int id, double price, int timestamp, String? currency, String? name})
+    >
+    updates,
   ) async {
     if (updates.isEmpty) return;
     await _db.transaction((Transaction txn) async {
-      for (final ({int id, double price, int timestamp, String? currency})
+      for (final ({
+            int id,
+            double price,
+            int timestamp,
+            String? currency,
+            String? name,
+          })
           update
           in updates) {
         await txn.update(
@@ -109,6 +120,8 @@ class AssetDao {
             'updatedAt': update.timestamp,
             if (update.currency != null && update.currency!.isNotEmpty)
               'currency': update.currency,
+            if (update.name != null && update.name!.trim().isNotEmpty)
+              'name': update.name!.trim(),
           },
           where: 'id = ?',
           whereArgs: <Object?>[update.id],

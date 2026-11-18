@@ -9,6 +9,7 @@ import 'backup_models.dart';
 BackupAsset assetToBackup(AssetEntity asset) => BackupAsset(
   type: asset.type.storageName,
   name: asset.name,
+  customName: asset.customName,
   currency: asset.currency,
   quantity: asset.quantity,
   pricePerUnit: asset.pricePerUnit,
@@ -34,6 +35,7 @@ AssetEntity backupToAsset(BackupAsset asset, int portfolioId, int now) =>
       portfolioId: portfolioId,
       type: AssetType.fromName(asset.type),
       name: asset.name,
+      customName: asset.customName,
       currency: asset.currency,
       quantity: asset.quantity,
       pricePerUnit: asset.pricePerUnit,

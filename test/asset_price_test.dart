@@ -63,6 +63,7 @@ class _AssetDao implements AssetDao {
     double price,
     int timestamp, {
     String? currency,
+    String? name,
   }) async {
     updatedPrices[id] = price;
     updatedCurrencies[id] = currency;
@@ -73,6 +74,7 @@ class _AssetDao implements AssetDao {
         lastPriceTimestamp: timestamp,
         updatedAt: timestamp,
         currency: currency,
+        name: name,
       );
     }
     expect(timestamp, greaterThan(0));
@@ -80,16 +82,27 @@ class _AssetDao implements AssetDao {
 
   @override
   Future<void> updatePrices(
-    List<({int id, double price, int timestamp, String? currency})> updates,
+    List<
+      ({int id, double price, int timestamp, String? currency, String? name})
+    >
+    updates,
   ) async {
     batchUpdateCalls++;
-    for (final ({int id, double price, int timestamp, String? currency}) update
+    for (final ({
+          int id,
+          double price,
+          int timestamp,
+          String? currency,
+          String? name,
+        })
+        update
         in updates) {
       await updatePrice(
         update.id,
         update.price,
         update.timestamp,
         currency: update.currency,
+        name: update.name,
       );
     }
   }
@@ -1028,7 +1041,7 @@ void main() {
         fxRepository,
       );
       final AssetEditViewModel viewModel = await _editor(offlineRepository);
-      viewModel.onNameChange('Apple');
+      viewModel.onCustomNameChange('Apple');
       viewModel.onSymbolChange('AAPL');
       viewModel.onQuantityChange('5');
       final int before = dao.assets.length;
@@ -1037,7 +1050,8 @@ void main() {
 
       expect(dao.assets.length, before + 1);
       final AssetEntity saved = dao.assets.last;
-      expect(saved.name, 'Apple');
+      expect(saved.customName, 'Apple');
+      expect(saved.displayName, 'Apple');
       expect(saved.symbol, 'AAPL');
       expect(saved.quantity, 5);
       expect(saved.lastPrice, isNull);
@@ -1113,4 +1127,87 @@ void main() {
       expect(bulk.offline, isTrue);
     },
   );
+
+  test('market save without custom name fetches exchange name and offline saves backfill on refresh', () async {
+    bool online = false;
+    final _AssetDao localDao = _AssetDao();
+    final AssetRepository namedRepository = AssetRepository(
+      localDao,
+      StockPriceService(
+        StockApi(
+          client: MockClient((http.Request request) async {
+            if (!online) {
+              throw const SocketException('Network is unreachable');
+            }
+            final String symbol = request.url.pathSegments.last;
+            return http.Response(
+              jsonEncode(<String, Object?>{
+                'chart': <String, Object?>{
+                  'result': <Object?>[
+                    <String, Object?>{
+                      'meta': <String, Object?>{
+                        'symbol': symbol,
+                        'currency': 'USD',
+                        'regularMarketPrice': 410.0,
+                        'longName': symbol == 'VOO'
+                            ? 'Vanguard S&P 500 ETF'
+                            : 'Microsoft Corporation',
+                        'shortName': symbol,
+                      },
+                    },
+                  ],
+                },
+              }),
+              200,
+            );
+          }),
+        ),
+      ),
+      fxRepository,
+    );
+
+    // Save offline with blank custom name -> falls back to ticker until online.
+    final AssetEditViewModel offlineEditor = await _editor(namedRepository);
+    offlineEditor.onSymbolChange('msft');
+    offlineEditor.onQuantityChange('3');
+    await offlineEditor.save();
+    expect(offlineEditor.event?.type, AssetEditEventType.saved);
+    expect(localDao.assets.single.name, 'MSFT');
+    expect(localDao.assets.single.customName, isNull);
+    expect(localDao.assets.single.displayName, 'MSFT');
+
+    // Refresh online -> backfills fetched exchange name while keeping customName null.
+    online = true;
+    final PriceRefreshResult refreshed = await namedRepository.refreshAllPrices(
+      1,
+    );
+    expect(refreshed.updated, 1);
+    expect(localDao.assets.single.name, 'Microsoft Corporation');
+    expect(localDao.assets.single.displayName, 'Microsoft Corporation');
+
+    // Save online with a custom name -> stores fetched name AND custom override.
+    final AssetEditViewModel onlineEditor = await _editor(namedRepository);
+    onlineEditor.onTypeChange(AssetType.mutualFund);
+    onlineEditor.onSymbolChange('voo');
+    onlineEditor.onQuantityChange('5');
+    onlineEditor.onCustomNameChange('  Retirement ETF  ');
+    await onlineEditor.save();
+    expect(onlineEditor.event?.type, AssetEditEventType.saved);
+    final AssetEntity savedFund = localDao.assets.last;
+    expect(savedFund.name, 'Vanguard S&P 500 ETF');
+    expect(savedFund.customName, 'Retirement ETF');
+    expect(savedFund.displayName, 'Retirement ETF');
+
+    // Clearing custom name later restores the fetched exchange name on display.
+    final AssetEditViewModel editFund = await _editor(
+      namedRepository,
+      assetId: savedFund.id,
+    );
+    await Future<void>.delayed(Duration.zero);
+    expect(editFund.form.customName, 'Retirement ETF');
+    editFund.onCustomNameChange('   ');
+    await editFund.save();
+    expect(localDao.assets.last.customName, isNull);
+    expect(localDao.assets.last.displayName, 'Vanguard S&P 500 ETF');
+  });
 }

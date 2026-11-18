@@ -7,6 +7,7 @@ class AssetEntity {
     required this.portfolioId,
     required this.type,
     required this.name,
+    this.customName,
     required this.currency,
     this.quantity,
     this.pricePerUnit,
@@ -25,6 +26,7 @@ class AssetEntity {
     portfolioId: map['portfolioId'] as int,
     type: AssetType.fromName(map['type'] as String?),
     name: map['name'] as String,
+    customName: _nonEmptyText(map['customName']),
     currency: map['currency'] as String,
     quantity: (map['quantity'] as num?)?.toDouble(),
     pricePerUnit: (map['pricePerUnit'] as num?)?.toDouble(),
@@ -42,6 +44,9 @@ class AssetEntity {
   final int portfolioId;
   final AssetType type;
   final String name;
+
+  /// Optional user-provided display label for market-linked holdings.
+  final String? customName;
   final String currency;
 
   /// Units held (shares, coins, grams). Used by market and quantity valuation.
@@ -68,6 +73,15 @@ class AssetEntity {
   final int createdAt;
   final int updatedAt;
 
+  /// Name shown in lists: [customName] overrides [name] when set.
+  String get displayName {
+    final String? custom = _nonEmptyText(customName);
+    if (custom != null) return custom;
+    final String? base = _nonEmptyText(name);
+    if (base != null) return base;
+    return symbol?.trim().toUpperCase() ?? '';
+  }
+
   /// The asset's total value expressed in its own [currency].
   double get value {
     switch (type.valuationMode) {
@@ -85,6 +99,7 @@ class AssetEntity {
     'portfolioId': portfolioId,
     'type': type.storageName,
     'name': name,
+    'customName': customName,
     'currency': currency,
     'quantity': quantity,
     'pricePerUnit': pricePerUnit,
@@ -103,6 +118,8 @@ class AssetEntity {
     int? portfolioId,
     AssetType? type,
     String? name,
+    String? customName,
+    bool clearCustomName = false,
     String? currency,
     double? quantity,
     double? pricePerUnit,
@@ -119,6 +136,7 @@ class AssetEntity {
     portfolioId: portfolioId ?? this.portfolioId,
     type: type ?? this.type,
     name: name ?? this.name,
+    customName: clearCustomName ? null : (customName ?? this.customName),
     currency: currency ?? this.currency,
     quantity: quantity ?? this.quantity,
     pricePerUnit: pricePerUnit ?? this.pricePerUnit,
@@ -131,4 +149,7 @@ class AssetEntity {
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
+
+  static String? _nonEmptyText(Object? value) =>
+      value is String && value.trim().isNotEmpty ? value.trim() : null;
 }

@@ -95,9 +95,24 @@ class AssetEditViewModel extends ChangeNotifier {
 
   void onTypeChange(AssetType type) {
     if (type == _form.type) return;
+    final bool wasMarket = _form.type.isMarketLinked;
+    final bool isMarket = type.isMarketLinked;
+    final String nextName = switch ((wasMarket, isMarket)) {
+      (true, true) => '',
+      (true, false) => _form.customName,
+      (false, true) => '',
+      (false, false) => _form.name,
+    };
+    final String nextCustomName = switch ((wasMarket, isMarket)) {
+      (false, true) =>
+        _form.customName.trim().isNotEmpty ? _form.customName : _form.name,
+      _ => _form.customName,
+    };
     _updateQuoteInput(
       _form.copyWith(
         type: type,
+        name: nextName,
+        customName: nextCustomName,
         exchange: _form.usesStockExchange
             ? _form.exchange
             : StockExchange.fromSymbol(_form.symbol),
@@ -107,6 +122,9 @@ class AssetEditViewModel extends ChangeNotifier {
   }
 
   void onNameChange(String value) => _update(_form.copyWith(name: value));
+
+  void onCustomNameChange(String value) =>
+      _update(_form.copyWith(customName: value));
 
   Future<void> onCurrencyChange(String value) async {
     if (value == _form.currency) {
@@ -181,7 +199,7 @@ class AssetEditViewModel extends ChangeNotifier {
         exchange: _form.usesStockExchange
             ? StockExchange.fromSymbol(result.symbol)
             : _form.exchange,
-        name: _form.name.trim().isEmpty ? result.name : _form.name,
+        name: result.name,
         clearLastPrice: true,
       ),
     );
@@ -230,11 +248,15 @@ class AssetEditViewModel extends ChangeNotifier {
     }
     if (result.isSuccess) {
       final StockQuote quote = result.value;
+      final String? fetchedName = quote.name?.trim();
       _update(
         _form.copyWith(
           isFetchingPrice: false,
           lastPrice: quote.price,
           lastPriceTimestamp: DateTime.now().millisecondsSinceEpoch,
+          name: fetchedName != null && fetchedName.isNotEmpty
+              ? fetchedName
+              : null,
         ),
       );
     } else {
@@ -282,9 +304,13 @@ class AssetEditViewModel extends ChangeNotifier {
         return;
       }
       if (quote.isSuccess) {
+        final String? fetchedName = quote.value.name?.trim();
         _form = _form.copyWith(
           lastPrice: quote.value.price,
           lastPriceTimestamp: DateTime.now().millisecondsSinceEpoch,
+          name: fetchedName != null && fetchedName.isNotEmpty
+              ? fetchedName
+              : null,
         );
       } else {
         notice = quote.isOffline

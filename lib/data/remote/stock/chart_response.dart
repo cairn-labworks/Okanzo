@@ -60,6 +60,8 @@ class ChartMeta {
   const ChartMeta({
     this.currency,
     this.symbol,
+    this.longName,
+    this.shortName,
     this.regularMarketPrice,
     this.previousClose,
     this.chartPreviousClose,
@@ -68,6 +70,8 @@ class ChartMeta {
   factory ChartMeta.fromJson(Map<String, Object?> json) => ChartMeta(
     currency: json['currency'] as String?,
     symbol: json['symbol'] as String?,
+    longName: _nonEmptyText(json['longName']),
+    shortName: _nonEmptyText(json['shortName']),
     regularMarketPrice: (json['regularMarketPrice'] as num?)?.toDouble(),
     previousClose: (json['previousClose'] as num?)?.toDouble(),
     chartPreviousClose: (json['chartPreviousClose'] as num?)?.toDouble(),
@@ -75,9 +79,16 @@ class ChartMeta {
 
   final String? currency;
   final String? symbol;
+  final String? longName;
+  final String? shortName;
   final double? regularMarketPrice;
   final double? previousClose;
   final double? chartPreviousClose;
+
+  String? get displayName => longName ?? shortName;
+
+  static String? _nonEmptyText(Object? value) =>
+      value is String && value.trim().isNotEmpty ? value.trim() : null;
 }
 
 /// Public Yahoo Finance chart endpoint. Only the ticker symbol is ever sent;
