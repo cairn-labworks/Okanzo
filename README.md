@@ -95,7 +95,7 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 - Track **stocks, mutual funds/ETFs, crypto, gold, cash, bank deposits, real estate, vehicles, bonds**, plus **loans, mortgages, credit cards, pending payments and taxes**
 - **International exchanges**: NYSE/Nasdaq, Shanghai, Tokyo, Hong Kong, BSE (India), and Euronext Paris, Amsterdam, Brussels, Lisbon, Dublin, Oslo and Milan — or **Other / full Yahoo ticker** (`000001.SZ`, `VOD.L`, `RELIANCE.NS`, `SHOP.TO`). Quotes in minor units (such as British pence) convert automatically; [Yahoo Finance coverage](https://help.yahoo.com/kb/finance/complete-list-markets-exchanges-yahoo-finance-sln2310.html) applies
 - **Preferred exchanges** shortlist starting with **US (NYSE / Nasdaq)**, customisable via **Select preferred exchanges...** (including an empty shortlist) while preserving existing holdings
-- **Company, coin or ticker search**: type at least two characters in the stock, fund or crypto search field for Yahoo Finance suggestions showing the name and ticker, plus the exchange for stocks/funds. Crypto suggestions show full trading pairs such as `BTC-USD`; explicit non-USD pairs are preserved. Select a listing to fill its symbol and, if blank, its name. Manual ticker entry still works offline or when search is unavailable
+- **Company, coin or ticker search**: type at least two characters in the stock, fund or crypto search field for Yahoo Finance suggestions showing the name and ticker, plus the exchange for stocks/funds. Crypto suggestions show full trading pairs such as `BTC-USD`; explicit non-USD pairs are preserved. Select a listing to fill its symbol and use its fetched name automatically, or enter an optional **Custom name** to override it in lists. Manual ticker entry still works offline or when search is unavailable
 - **Smart crypto & FX conversion**: bare crypto tickers (`BTC` → `BTC-USD`, explicit `BTC-EUR` preserved), quote-to-holding currency conversion without resetting your chosen currency, and automatic portfolio conversion into your base currency
 
 </td>
@@ -322,11 +322,26 @@ checkout, and the pipeline's actual project ID when inspecting fork CI jobs.
 
 ## Quality checks
 
+The **Pull request checks** workflow runs when pull requests targeting `main` are
+opened, updated, reopened, or edited (including retargeting to `main`),
+on pushes to `main`, and manually from the Actions tab. It checks formatting
+without changing files, runs static analysis and all unit/widget tests, and
+builds an Android debug APK in a separate job. Both jobs use Flutter 3.47.5,
+matching the Release workflow, and enforce `pubspec.lock`. The Android job uses
+JDK 21 and needs no release signing secrets, so fork pull requests can run the
+same checks. Live-network and device integration tests remain manual.
+
+Run the same quality checks locally:
+
 ```bash
-dart format .
-flutter analyze
-flutter test
+flutter pub get --enforce-lockfile
+dart format --output=none --set-exit-if-changed .
+flutter analyze --no-pub
+flutter test --no-pub
+flutter build apk --debug --no-pub
 ```
+
+Use `dart format .` to fix formatting before committing.
 
 The test suite covers currency formatting and rounding, net-worth and FX conversion, asset/liability form validation and entity mapping, category ordering, list labels, 21-locale localization coverage, quote/FX response parsing, and byte-for-byte verification of the `MWB1` encrypted backup format.
 

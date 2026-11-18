@@ -69,27 +69,40 @@ class _AssetDao extends Fake implements AssetDao {
     double price,
     int timestamp, {
     String? currency,
+    String? name,
   }) async {
     final int index = assets.indexWhere((AssetEntity row) => row.id == id);
     assets[index] = assets[index].copyWith(
       lastPrice: price,
       lastPriceTimestamp: timestamp,
       currency: currency,
+      name: name,
       updatedAt: timestamp,
     );
   }
 
   @override
   Future<void> updatePrices(
-    List<({int id, double price, int timestamp, String? currency})> updates,
+    List<
+      ({int id, double price, int timestamp, String? currency, String? name})
+    >
+    updates,
   ) async {
-    for (final ({int id, double price, int timestamp, String? currency}) update
+    for (final ({
+          int id,
+          double price,
+          int timestamp,
+          String? currency,
+          String? name,
+        })
+        update
         in updates) {
       await updatePrice(
         update.id,
         update.price,
         update.timestamp,
         currency: update.currency,
+        name: update.name,
       );
     }
   }
@@ -231,7 +244,7 @@ void main() {
   test('selected listings replace the exchange, preserve currency and custom names', () async {
     final AssetEditViewModel viewModel = editor();
     viewModel.onExchangeChange(StockExchange.bse);
-    viewModel.onNameChange('My long-term shares');
+    viewModel.onCustomNameChange('My long-term shares');
     await viewModel.onCurrencyChange('EUR');
     viewModel.onSymbolChange('RELIANCE');
     await viewModel.fetchPrice();
@@ -245,11 +258,13 @@ void main() {
     );
     expect(viewModel.form.quoteSymbol, 'AAPL');
     expect(viewModel.form.exchange, StockExchange.us);
-    expect(viewModel.form.name, 'My long-term shares');
+    expect(viewModel.form.name, 'Apple Inc.');
+    expect(viewModel.form.customName, 'My long-term shares');
+    expect(viewModel.form.toEntity().displayName, 'My long-term shares');
     expect(viewModel.form.currency, 'EUR');
     expect(viewModel.form.lastPrice, isNull);
     expect(viewModel.form.lastPriceTimestamp, isNull);
-    viewModel.onNameChange('');
+    viewModel.onCustomNameChange('');
     viewModel.onStockSelected(
       const StockSearchResult(
         symbol: 'VOD.L',
@@ -260,6 +275,8 @@ void main() {
     expect(viewModel.form.quoteSymbol, 'VOD.L');
     expect(viewModel.form.exchange, StockExchange.other);
     expect(viewModel.form.name, 'Vodafone Group');
+    expect(viewModel.form.customName, isEmpty);
+    expect(viewModel.form.toEntity().displayName, 'Vodafone Group');
   });
 
   testWidgets('company search selects, fetches and saves the exact listing', (
@@ -294,13 +311,11 @@ void main() {
     await tester.tap(find.text('Apple Inc.'));
     await tester.pumpAndSettle();
     expect(tester.widget<TextField>(ticker).controller!.text, 'AAPL');
-    expect(
-      tester
-          .widget<TextField>(find.widgetWithText(TextField, 'Name'))
-          .controller!
-          .text,
-      'Apple Inc.',
+    final TextField customName = tester.widget<TextField>(
+      find.widgetWithText(TextField, 'Custom name (optional)'),
     );
+    expect(customName.controller!.text, isEmpty);
+    expect(customName.decoration?.hintText, 'Apple Inc.');
     expect(
       tester
           .widget<StockExchangeField>(find.byType(StockExchangeField))
@@ -317,6 +332,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(dao.assets.single.symbol, 'AAPL');
     expect(dao.assets.single.name, 'Apple Inc.');
+    expect(dao.assets.single.customName, isNull);
+    expect(dao.assets.single.displayName, 'Apple Inc.');
     expect(dao.assets.single.quantity, 2);
     expect(dao.assets.single.lastPrice, isNotNull);
     expect(queries, <String>['Apple']);
@@ -584,7 +601,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       expect(viewModel.form.lastPrice, isNotNull);
       final StockExchange exchange = viewModel.form.exchange;
-      viewModel.onNameChange('');
+      viewModel.onCustomNameChange('');
       viewModel.onStockSelected(
         const StockSearchResult(
           symbol: 'BTC-EUR',
@@ -597,7 +614,7 @@ void main() {
       expect(viewModel.form.currency, 'EUR');
       expect(viewModel.form.exchange, exchange);
       expect(viewModel.form.lastPrice, isNull);
-      viewModel.onNameChange('My Bitcoin');
+      viewModel.onCustomNameChange('My Bitcoin');
       viewModel.onStockSelected(
         const StockSearchResult(
           symbol: 'BTC-USD',
@@ -606,9 +623,12 @@ void main() {
         ),
       );
       expect(viewModel.form.quoteSymbol, 'BTC-USD');
-      expect(viewModel.form.name, 'My Bitcoin');
+      expect(viewModel.form.name, 'Bitcoin USD');
+      expect(viewModel.form.customName, 'My Bitcoin');
       await viewModel.save();
       expect(dao.assets.single.symbol, 'BTC-USD');
+      expect(dao.assets.single.customName, 'My Bitcoin');
+      expect(dao.assets.single.displayName, 'My Bitcoin');
       expect(dao.assets.single.type, AssetType.crypto);
     },
   );
@@ -947,7 +967,6 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Apple');
       await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '4');
       await tester.enterText(
         find.widgetWithText(TextField, 'Company or ticker'),
@@ -1035,10 +1054,6 @@ void main() {
 
       const AppLocalizations es = AppLocalizations(Locale('es'));
       await tester.enterText(
-        find.widgetWithText(TextField, es.text('Name')),
-        'Apple',
-      );
-      await tester.enterText(
         find.widgetWithText(TextField, es.text('Company or ticker')),
         'AAPL',
       );
@@ -1115,7 +1130,6 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Apple');
       await tester.enterText(
         find.widgetWithText(TextField, 'Company or ticker'),
         'AAPL',

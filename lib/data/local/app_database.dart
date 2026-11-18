@@ -25,7 +25,7 @@ class AppDatabase {
   /// The pre-rebrand database filename. Kept only so upgrading users' data can
   /// be migrated to [databaseName] (see AppContainer); it is not a brand name.
   static const String legacyDatabaseName = 'mywealth.db';
-  static const int schemaVersion = 2;
+  static const int schemaVersion = 3;
 
   final Database db;
 
@@ -81,6 +81,12 @@ class AppDatabase {
       });
     }
 
+    if (currentVersion < 3) {
+      await db.transaction((Transaction txn) async {
+        await txn.execute('ALTER TABLE assets ADD COLUMN customName TEXT');
+      });
+    }
+
     for (final String statement in _orderingIndexStatements) {
       await db.execute(statement);
     }
@@ -125,6 +131,7 @@ class AppDatabase {
         'portfolioId INTEGER NOT NULL, '
         'type TEXT NOT NULL, '
         'name TEXT NOT NULL, '
+        'customName TEXT, '
         'currency TEXT NOT NULL, '
         'quantity REAL, '
         'pricePerUnit REAL, '

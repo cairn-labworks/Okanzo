@@ -84,6 +84,7 @@ class BackupAsset {
   const BackupAsset({
     required this.type,
     required this.name,
+    this.customName,
     required this.currency,
     this.quantity,
     this.pricePerUnit,
@@ -98,6 +99,7 @@ class BackupAsset {
   factory BackupAsset.fromJson(Map<String, Object?> json) => BackupAsset(
     type: json['type'] as String? ?? '',
     name: json['name'] as String? ?? '',
+    customName: _nonEmptyText(json['customName']),
     currency: json['currency'] as String? ?? '',
     quantity: (json['quantity'] as num?)?.toDouble(),
     pricePerUnit: (json['pricePerUnit'] as num?)?.toDouble(),
@@ -111,6 +113,7 @@ class BackupAsset {
 
   final String type;
   final String name;
+  final String? customName;
   final String currency;
   final double? quantity;
   final double? pricePerUnit;
@@ -124,6 +127,7 @@ class BackupAsset {
   Map<String, Object?> toJson() => <String, Object?>{
     'type': type,
     'name': name,
+    if (customName != null) 'customName': customName,
     'currency': currency,
     if (quantity != null) 'quantity': quantity,
     if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
@@ -134,6 +138,9 @@ class BackupAsset {
     if (notes != null) 'notes': notes,
     'position': position,
   };
+
+  static String? _nonEmptyText(Object? value) =>
+      value is String && value.trim().isNotEmpty ? value.trim() : null;
 }
 
 class BackupLiability {

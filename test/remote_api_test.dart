@@ -251,6 +251,8 @@ void main() {
           metaBody(<String, Object?>{
             'regularMarketPrice': 190.25,
             'currency': 'USD',
+            'longName': 'Apple Inc.',
+            'shortName': 'Apple',
           }),
           onRequest: (Uri uri) => seen = uri,
         );
@@ -258,6 +260,7 @@ void main() {
         expect(seen.toString(), contains('/v8/finance/chart/AAPL'));
         expect(seen.toString(), contains('range=1d'));
         expect(result.value.symbol, 'AAPL');
+        expect(result.value.name, 'Apple Inc.');
         expect(result.value.price, 190.25);
         expect(result.value.currency, 'USD');
       },

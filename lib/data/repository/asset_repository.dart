@@ -90,6 +90,7 @@ class AssetRepository {
         symbol: quote.symbol,
         price: converted.value,
         currency: currency,
+        name: quote.name,
       ),
     );
   }
@@ -125,8 +126,22 @@ class AssetRepository {
       quote.value.price,
       now,
       currency: quote.value.currency,
+      name: _backfillName(asset, quote.value),
     );
     return Result<double>.success(quote.value.price);
+  }
+
+  static String? _backfillName(AssetEntity asset, StockQuote quote) {
+    final String? fetched = quote.name?.trim();
+    if (fetched == null || fetched.isEmpty) return null;
+    final String current = asset.name.trim();
+    final String symbol = asset.symbol?.trim() ?? '';
+    if (current.isEmpty ||
+        current.toUpperCase() == symbol.toUpperCase() ||
+        current.toUpperCase() == quote.symbol.toUpperCase()) {
+      return fetched;
+    }
+    return null;
   }
 
   static const int _maxConcurrentQuoteRequests = 4;
@@ -183,8 +198,19 @@ class AssetRepository {
     int failed = 0;
     int offlineFailed = 0;
     final int now = DateTime.now().millisecondsSinceEpoch;
-    final List<({int id, double price, int timestamp, String? currency})>
-    updates = <({int id, double price, int timestamp, String? currency})>[];
+    final List<
+      ({int id, double price, int timestamp, String? currency, String? name})
+    >
+    updates =
+        <
+          ({
+            int id,
+            double price,
+            int timestamp,
+            String? currency,
+            String? name,
+          })
+        >[];
 
     for (final AssetEntity asset in assets) {
       final (String, bool) key = (
@@ -218,6 +244,7 @@ class AssetRepository {
         price: converted.value,
         timestamp: now,
         currency: asset.currency,
+        name: _backfillName(asset, quote),
       ));
       updated++;
     }

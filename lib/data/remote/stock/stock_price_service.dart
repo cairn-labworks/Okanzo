@@ -4,11 +4,17 @@ import 'chart_response.dart';
 
 /// A resolved quote for a market-linked symbol.
 class StockQuote {
-  const StockQuote({required this.symbol, required this.price, this.currency});
+  const StockQuote({
+    required this.symbol,
+    required this.price,
+    this.currency,
+    this.name,
+  });
 
   final String symbol;
   final double price;
   final String? currency;
+  final String? name;
 }
 
 /// Fetches the latest/last-closing price for a ticker symbol and returns a
@@ -57,7 +63,12 @@ class StockPriceService {
         _ => (meta.currency, 1.0),
       };
       return Result<StockQuote>.success(
-        StockQuote(symbol: ticker, price: price / divisor, currency: currency),
+        StockQuote(
+          symbol: ticker,
+          price: price / divisor,
+          currency: currency,
+          name: meta.displayName,
+        ),
       );
     } on Object catch (error) {
       if (isOfflineError(error)) return Result<StockQuote>.offline();

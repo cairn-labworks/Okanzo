@@ -34,6 +34,7 @@ class AssetEditScreen extends StatefulWidget {
 class _AssetEditScreenState extends State<AssetEditScreen> {
   AssetEditViewModel? _viewModel;
   final TextEditingController _name = TextEditingController();
+  final TextEditingController _customName = TextEditingController();
   final TextEditingController _symbol = TextEditingController();
   final TextEditingController _quantity = TextEditingController();
   final TextEditingController _pricePerUnit = TextEditingController();
@@ -83,6 +84,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     if (_controllersPrimed) return;
     _controllersPrimed = true;
     _name.text = form.name;
+    _customName.text = form.customName;
     _symbol.text = form.symbol;
     _quantity.text = form.quantity;
     _pricePerUnit.text = form.pricePerUnit;
@@ -95,6 +97,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     _viewModel?.removeListener(_onChanged);
     _viewModel?.dispose();
     _name.dispose();
+    _customName.dispose();
     _symbol.dispose();
     _quantity.dispose();
     _pricePerUnit.dispose();
@@ -184,7 +187,11 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                           optionLabel: (AssetType type) =>
                               type.displayName.tr(context),
                           optionIcon: assetTypeIcon,
-                          onSelected: viewModel.onTypeChange,
+                          onSelected: (AssetType type) {
+                            viewModel.onTypeChange(type);
+                            _name.text = viewModel.form.name;
+                            _customName.text = viewModel.form.customName;
+                          },
                           compact: true,
                         ),
                         CurrencySelector(
@@ -212,13 +219,15 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    LabeledTextField(
-                      controller: _name,
-                      label: 'Name'.tr(context),
-                      placeholder: 'e.g. Apple shares'.tr(context),
-                      onChanged: viewModel.onNameChange,
-                    ),
+                    if (!form.type.isMarketLinked) ...<Widget>[
+                      const SizedBox(height: 12),
+                      LabeledTextField(
+                        controller: _name,
+                        label: 'Name'.tr(context),
+                        placeholder: 'e.g. Apple shares'.tr(context),
+                        onChanged: viewModel.onNameChange,
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     ..._valuationFields(form, viewModel),
                     const SizedBox(height: 8),
@@ -254,7 +263,6 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     AssetFormState form,
     AssetEditViewModel viewModel,
   ) {
-    final ThemeData theme = Theme.of(context);
     switch (form.valuationMode) {
       case ValuationMode.market:
         final Widget quantityField = LabeledTextField(
@@ -277,7 +285,6 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
             onSelected: (result) {
               viewModel.onStockSelected(result);
               _symbol.text = viewModel.form.symbol;
-              _name.text = viewModel.form.name;
             },
           ),
           Align(
@@ -310,18 +317,15 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
               ),
             ),
           ),
-          if (form.lastPrice == null)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                'Price is fetched automatically on save when online.'.tr(
-                  context,
-                ),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
+          const SizedBox(height: 12),
+          LabeledTextField(
+            controller: _customName,
+            label: 'Custom name (optional)'.tr(context),
+            placeholder: form.name.trim().isNotEmpty
+                ? form.name.trim()
+                : 'Uses fetched name if left blank'.tr(context),
+            onChanged: viewModel.onCustomNameChange,
+          ),
         ];
       case ValuationMode.quantity:
         return <Widget>[

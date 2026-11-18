@@ -10,6 +10,7 @@ class AssetFormState {
     this.portfolioId = 0,
     this.type = AssetType.stock,
     this.name = '',
+    this.customName = '',
     this.currency = 'USD',
     this.quantity = '',
     this.pricePerUnit = '',
@@ -28,6 +29,7 @@ class AssetFormState {
   final int portfolioId;
   final AssetType type;
   final String name;
+  final String customName;
   final String currency;
   final String quantity;
   final String pricePerUnit;
@@ -56,9 +58,13 @@ class AssetFormState {
     final StockExchange next = usesStockExchange && value.contains('.')
         ? StockExchange.fromSymbol(value)
         : exchange;
+    final String nextQuote = usesStockExchange
+        ? next.qualify(value)
+        : value.trim().toUpperCase();
     return copyWith(
       symbol: value,
       exchange: next,
+      name: type.isMarketLinked && nextQuote != quoteSymbol ? '' : null,
       currency: next != exchange ? next.currency : null,
       clearLastPrice: true,
     );
@@ -68,11 +74,16 @@ class AssetFormState {
     if (value == exchange) return this;
     final String ticker = quoteSymbol;
     final int separator = ticker.lastIndexOf('.');
+    final String nextSymbol = value == StockExchange.other || separator < 0
+        ? ticker
+        : ticker.substring(0, separator);
+    final String nextQuote = usesStockExchange
+        ? value.qualify(nextSymbol)
+        : nextSymbol.trim().toUpperCase();
     return copyWith(
       exchange: value,
-      symbol: value == StockExchange.other || separator < 0
-          ? ticker
-          : ticker.substring(0, separator),
+      symbol: nextSymbol,
+      name: type.isMarketLinked && nextQuote != ticker ? '' : null,
       currency: value.currency,
       clearLastPrice: true,
     );
@@ -93,11 +104,13 @@ class AssetFormState {
 
   /// Returns the first validation error, or null when the form can be saved.
   String? validate() {
-    if (name.trim().isEmpty) return 'Give this asset a name';
+    if (!type.isMarketLinked && name.trim().isEmpty) {
+      return 'Give this asset a name';
+    }
     if (currency.trim().isEmpty) return 'Choose a currency';
     switch (type.valuationMode) {
       case ValuationMode.market:
-        if (symbol.trim().isEmpty) return 'Enter a ticker symbol';
+        if (quoteSymbol.isEmpty) return 'Enter a ticker symbol';
         if ((double.tryParse(quantity) ?? 0.0) <= 0.0) {
           return 'Enter a quantity';
         }
@@ -120,11 +133,19 @@ class AssetFormState {
   AssetEntity toEntity({int? now}) {
     final int timestamp = now ?? DateTime.now().millisecondsSinceEpoch;
     final String ticker = quoteSymbol;
+    final String trimmedName = name.trim();
+    final String trimmedCustom = customName.trim();
+    final String persistedName = type.isMarketLinked
+        ? (trimmedName.isNotEmpty ? trimmedName : ticker)
+        : trimmedName;
     return AssetEntity(
       id: id,
       portfolioId: portfolioId,
       type: type,
-      name: name.trim(),
+      name: persistedName,
+      customName: type.isMarketLinked && trimmedCustom.isNotEmpty
+          ? trimmedCustom
+          : null,
       currency: currency.trim().toUpperCase(),
       quantity: double.tryParse(quantity),
       pricePerUnit: double.tryParse(pricePerUnit),
@@ -143,6 +164,7 @@ class AssetFormState {
     portfolioId: asset.portfolioId,
     type: asset.type,
     name: asset.name,
+    customName: asset.customName ?? '',
     currency: asset.currency,
     quantity: asset.quantity == null ? '' : formatInput(asset.quantity!),
     pricePerUnit: asset.pricePerUnit == null
@@ -164,6 +186,7 @@ class AssetFormState {
     int? portfolioId,
     AssetType? type,
     String? name,
+    String? customName,
     String? currency,
     String? quantity,
     String? pricePerUnit,
@@ -183,6 +206,7 @@ class AssetFormState {
       portfolioId: portfolioId ?? this.portfolioId,
       type: type ?? this.type,
       name: name ?? this.name,
+      customName: customName ?? this.customName,
       currency: currency ?? this.currency,
       quantity: quantity ?? this.quantity,
       pricePerUnit: pricePerUnit ?? this.pricePerUnit,
