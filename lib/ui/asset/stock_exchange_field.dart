@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../domain/model/stock_exchange.dart';
 import '../../l10n/app_localizations.dart';
 import '../components/form_components.dart';
+import '../components/type_icons.dart';
 
 enum _ExchangeAction { preferences }
 
@@ -52,6 +53,9 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
 
   @override
   Widget build(BuildContext context) {
+    final IconData selectedIcon = widget.selected == null
+        ? Icons.candlestick_chart
+        : stockExchangeIcon(widget.selected!);
     if (widget.compact) {
       final String label = widget.selected == StockExchange.us
           ? 'US exchange'.tr(context)
@@ -66,32 +70,34 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
       return PopupMenuButton<Object>(
         tooltip: '${'Exchange'.tr(context)}\n$help',
         onSelected: _select,
-        itemBuilder: (_) => <PopupMenuEntry<Object>>[
+        itemBuilder: (BuildContext itemContext) => <PopupMenuEntry<Object>>[
           for (final StockExchange exchange in widget.preferredExchanges)
             PopupMenuItem<Object>(
               value: exchange,
-              child: Text(exchange.displayName.tr(context)),
+              child: buildPopupMenuOption(
+                itemContext,
+                label: exchange.displayName.tr(itemContext),
+                icon: stockExchangeIcon(exchange),
+                selected: exchange == widget.selected,
+              ),
             ),
           PopupMenuItem<Object>(
             value: _ExchangeAction.preferences,
-            child: Row(
-              children: <Widget>[
-                const Icon(Icons.tune, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(StockExchangeField.manageLabel.tr(context)),
-                ),
-              ],
+            child: buildPopupMenuOption(
+              itemContext,
+              label: StockExchangeField.manageLabel.tr(itemContext),
+              icon: Icons.tune,
             ),
           ),
         ],
-        child: PickerChip(label: label),
+        child: PickerChip(label: label, icon: selectedIcon),
       );
     }
     return DropdownMenu<Object>(
       controller: _controller,
       initialSelection: widget.selected,
       label: Text('Exchange'.tr(context)),
+      leadingIcon: Icon(selectedIcon, size: 20),
       hintText: 'Choose preferred exchanges'.tr(context),
       expandedInsets: EdgeInsets.zero,
       requestFocusOnTap: false,
@@ -101,11 +107,12 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
           DropdownMenuEntry<Object>(
             value: exchange,
             label: exchange.displayName.tr(context),
+            leadingIcon: Icon(stockExchangeIcon(exchange), size: 18),
           ),
         DropdownMenuEntry<Object>(
           value: _ExchangeAction.preferences,
           label: StockExchangeField.manageLabel.tr(context),
-          leadingIcon: const Icon(Icons.tune),
+          leadingIcon: const Icon(Icons.tune, size: 18),
         ),
       ],
       onSelected: _select,
@@ -194,7 +201,19 @@ class _PreferredExchangesDialogState extends State<_PreferredExchangesDialog> {
                       CheckboxListTile(
                         key: ValueKey<StockExchange>(exchange),
                         contentPadding: EdgeInsets.zero,
-                        title: Text(exchange.displayName.tr(context)),
+                        minLeadingWidth: 20,
+                        horizontalTitleGap: 10,
+                        secondary: Icon(
+                          stockExchangeIcon(exchange),
+                          size: 20,
+                          color: _selected.contains(exchange)
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        title: Text(
+                          exchange.displayName.tr(context),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
                         value: _selected.contains(exchange),
                         onChanged: _saving
                             ? null

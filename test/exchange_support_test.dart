@@ -24,6 +24,7 @@ import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
 import 'package:okanzo/ui/asset/stock_exchange_field.dart';
 import 'package:okanzo/ui/components/form_components.dart';
+import 'package:okanzo/ui/components/type_icons.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
@@ -1154,6 +1155,70 @@ void main() {
       pendingQuote.complete(_quote(200, 'USD'));
       await tester.pumpAndSettle();
       expect(dao.assets, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'exchange dropdown and preferred exchanges dialog show intuitive icons',
+    (WidgetTester tester) async {
+      await settings.setPreferredExchanges(<StockExchange>[
+        StockExchange.us,
+        StockExchange.euronextParis,
+        StockExchange.bse,
+        StockExchange.other,
+      ]);
+      await openEditor(tester);
+
+      final Finder exchangeMenu = find.byType(PopupMenuButton<Object>);
+      expect(
+        tester
+            .widget<PickerChip>(
+              find.descendant(
+                of: exchangeMenu,
+                matching: find.byType(PickerChip),
+              ),
+            )
+            .icon,
+        Icons.candlestick_chart,
+      );
+
+      final PopupMenuButton<Object> menu = tester.widget(exchangeMenu);
+      final List<IconData> menuIcons = menu
+          .itemBuilder(tester.element(exchangeMenu))
+          .whereType<PopupMenuItem<Object>>()
+          .map((PopupMenuItem<Object> item) {
+            final Row row = item.child! as Row;
+            return row.children.whereType<Icon>().single.icon!;
+          })
+          .toList();
+      expect(menuIcons, <IconData>[
+        Icons.candlestick_chart,
+        Icons.hub_outlined,
+        Icons.account_balance,
+        Icons.public,
+        Icons.tune,
+      ]);
+
+      await openPreferences(tester);
+      for (final StockExchange exchange in <StockExchange>[
+        StockExchange.us,
+        StockExchange.euronextParis,
+        StockExchange.tokyo,
+        StockExchange.bse,
+        StockExchange.other,
+      ]) {
+        final Finder tileFinder = find.byKey(ValueKey<StockExchange>(exchange));
+        await tester.scrollUntilVisible(
+          tileFinder,
+          120,
+          scrollable: find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        final CheckboxListTile tile = tester.widget(tileFinder);
+        expect((tile.secondary! as Icon).icon, stockExchangeIcon(exchange));
+      }
     },
   );
 }
