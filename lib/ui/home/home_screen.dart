@@ -5,15 +5,17 @@ import '../../data/local/entity/liability_entity.dart';
 import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
 import '../../domain/model/asset_type.dart';
+import '../../domain/model/holding_type.dart';
+import '../../domain/model/liability_type.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../components/drag_reorder_column.dart';
 import '../components/type_icons.dart';
 import '../components/ui_components.dart';
+import '../holding/holding_create_screen.dart';
 import '../theme/app_style.dart';
 import '../theme/colors.dart';
 import 'category_groups.dart';
-import 'add_holding_button.dart';
 import 'holding_details.dart';
 import 'holding_group_list.dart';
 import 'home_view_model.dart';
@@ -26,6 +28,7 @@ class HomeScreen extends StatefulWidget {
     required this.onOpenLiabilityEditor,
     required this.onManagePortfolios,
     required this.onOpenSettings,
+    this.onCreateHolding,
     super.key,
   });
 
@@ -33,6 +36,12 @@ class HomeScreen extends StatefulWidget {
   final void Function(int portfolioId, int liabilityId) onOpenLiabilityEditor;
   final VoidCallback onManagePortfolios;
   final VoidCallback onOpenSettings;
+  final Future<HoldingKind?> Function(
+    int portfolioId, {
+    required HoldingType initialType,
+    ValueChanged<HoldingKind>? onHoldingSaved,
+  })?
+  onCreateHolding;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -126,15 +135,21 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           floatingActionButton: state.activePortfolio == null
               ? null
-              : AddHoldingButton(
-                  onAsset: () {
-                    setState(() => _showAssets = true);
-                    widget.onOpenAssetEditor(state.activePortfolio!.id, 0);
-                  },
-                  onLiability: () {
-                    setState(() => _showAssets = false);
-                    widget.onOpenLiabilityEditor(state.activePortfolio!.id, 0);
-                  },
+              : FilledButton.icon(
+                  key: const ValueKey<String>('add-holding'),
+                  onPressed: () => _openCreateHolding(state.activePortfolio!),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 54),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add, size: 20),
+                  label: Text('Add holding'.tr(context)),
                 ),
           body: state.loading
               ? const Center(child: CircularProgressIndicator())
@@ -199,6 +214,36 @@ class _HomeScreenState extends State<HomeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Could not delete holding.'.tr(context))),
     );
+  }
+
+  Future<void> _openCreateHolding(PortfolioEntity portfolio) async {
+    final HoldingType initialType = _showAssets
+        ? const HoldingType.asset(AssetType.stock)
+        : const HoldingType.liability(LiabilityType.loan);
+    void handleSaved(HoldingKind kind) {
+      if (mounted) {
+        setState(() => _showAssets = kind == HoldingKind.asset);
+      }
+    }
+
+    final HoldingKind? savedKind = widget.onCreateHolding != null
+        ? await widget.onCreateHolding!(
+            portfolio.id,
+            initialType: initialType,
+            onHoldingSaved: handleSaved,
+          )
+        : await Navigator.of(context).push<HoldingKind>(
+            MaterialPageRoute<HoldingKind>(
+              builder: (_) => HoldingCreateScreen(
+                portfolioId: portfolio.id,
+                initialType: initialType,
+                onHoldingSaved: handleSaved,
+              ),
+            ),
+          );
+    if (savedKind != null && mounted) {
+      setState(() => _showAssets = savedKind == HoldingKind.asset);
+    }
   }
 }
 

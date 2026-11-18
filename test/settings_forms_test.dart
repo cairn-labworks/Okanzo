@@ -19,6 +19,7 @@ import 'package:okanzo/data/repository/settings_repository.dart';
 import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/app_theme.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
+import 'package:okanzo/domain/model/holding_type.dart';
 import 'package:okanzo/domain/model/liability_type.dart';
 import 'package:okanzo/domain/model/precious_metal.dart';
 import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
@@ -33,16 +34,15 @@ import 'package:okanzo/ui/components/donut_chart.dart';
 import 'package:okanzo/ui/asset/stock_search_field.dart';
 import 'package:okanzo/ui/components/form_components.dart';
 import 'package:okanzo/ui/components/holding_editor_chrome.dart';
-import 'package:okanzo/ui/components/holding_create_screen.dart';
 import 'package:okanzo/ui/components/holding_saved_summary_screen.dart';
 import 'package:okanzo/ui/components/drag_reorder_column.dart';
 import 'package:okanzo/ui/components/type_icons.dart';
 import 'package:okanzo/ui/components/ui_components.dart';
 import 'package:okanzo/ui/components/whats_new_dialog.dart';
+import 'package:okanzo/ui/holding/holding_create_screen.dart';
 import 'package:okanzo/ui/home/home_screen.dart';
 import 'package:okanzo/ui/home/category_groups.dart';
 import 'package:okanzo/ui/home/holding_group_list.dart';
-import 'package:okanzo/ui/home/add_holding_button.dart';
 import 'package:okanzo/ui/home/net_worth_card.dart';
 import 'package:okanzo/ui/liability/liability_edit_screen.dart';
 import 'package:okanzo/ui/lock/lock_screen.dart';
@@ -645,7 +645,7 @@ void main() {
   });
 
   testWidgets(
-    'Canvas add morph keeps the list still and navigation behind blur',
+    'Add holding opens unified entry directly and keeps list scroll position on return',
     (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
@@ -667,36 +667,16 @@ void main() {
         find.byKey(const ValueKey<String>('add-holding')),
       );
       expect(before.bottom, lessThan(button.top));
-      final Color color = Theme.of(
-        tester.element(find.byType(AddHoldingButton)),
-      ).colorScheme.primary;
-      await tester.tap(find.byKey(const ValueKey<String>('add-holding')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 180));
-      expect(tester.getRect(find.text('Savings')), before);
-      await tester.pumpAndSettle();
-      final Material expanded = tester.widget<Material>(
-        find.byKey(const ValueKey<String>('expanded-add-holding')),
-      );
-      expect(expanded.color, color);
-      expect(find.byType(BackdropFilter), findsOneWidget);
-      expect(find.text('An asset').hitTestable(), findsOneWidget);
-      expect(find.text('A liability').hitTestable(), findsOneWidget);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.byType(BackdropFilter), findsNothing);
-      expect(tester.getRect(find.text('Savings')), before);
       await tester.tap(find.byKey(const ValueKey<String>('add-holding')));
       await tester.pumpAndSettle();
-      tester.view.physicalSize = const Size(844, 390);
-      await tester.pumpAndSettle();
-      final Rect rotated = tester.getRect(
-        find.byKey(const ValueKey<String>('expanded-add-holding')),
-      );
-      expect(rotated.top, greaterThanOrEqualTo(0));
-      expect(rotated.bottom, lessThanOrEqualTo(390));
+      expect(find.byType(HoldingCreateScreen), findsOneWidget);
+      expect(find.text('An asset'), findsNothing);
+      expect(find.text('A liability'), findsNothing);
+      expect(find.text('Added to net worth'), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
+      expect(find.byType(HoldingCreateScreen), findsNothing);
+      expect(tester.getRect(find.text('Savings')), before);
       expect(tester.takeException(), isNull);
     },
   );
@@ -1477,14 +1457,29 @@ void main() {
   );
 
   testWidgets(
-    'Quiet overview shows each empty state and selects the section when adding',
+    'Quiet overview shows each empty state and selects the detected section when adding',
     (WidgetTester tester) async {
-      final List<String> editors = <String>[];
+      final List<HoldingType> initialTypes = <HoldingType>[];
+      final List<HoldingKind> nextResult = <HoldingKind>[
+        HoldingKind.liability,
+        HoldingKind.asset,
+      ];
       await open(
         tester,
         HomeScreen(
-          onOpenAssetEditor: (_, _) => editors.add('asset'),
-          onOpenLiabilityEditor: (_, _) => editors.add('liability'),
+          onCreateHolding:
+              (
+                _, {
+                required HoldingType initialType,
+                ValueChanged<HoldingKind>? onHoldingSaved,
+              }) async {
+                initialTypes.add(initialType);
+                final HoldingKind result = nextResult.removeAt(0);
+                onHoldingSaved?.call(result);
+                return result;
+              },
+          onOpenAssetEditor: (_, _) {},
+          onOpenLiabilityEditor: (_, _) {},
           onManagePortfolios: () {},
           onOpenSettings: () {},
         ),
@@ -1497,19 +1492,21 @@ void main() {
         ),
         findsOneWidget,
       );
-      await _tap(
-        tester,
-        find.byKey(const ValueKey<String>('home-liabilities-tab')),
-      );
+      await _tap(tester, find.byKey(const ValueKey<String>('add-holding')));
+      expect(find.text('New asset'), findsNothing);
+      expect(find.text('New liability'), findsNothing);
+      expect(find.text('An asset'), findsNothing);
+      expect(find.text('A liability'), findsNothing);
+      expect(initialTypes, <HoldingType>[
+        const HoldingType.asset(AssetType.stock),
+      ]);
       expect(find.text('No liabilities'), findsOneWidget);
       await _tap(tester, find.byKey(const ValueKey<String>('add-holding')));
-      await _tap(tester, find.text('An asset'));
-      expect(editors, <String>['asset']);
+      expect(initialTypes, <HoldingType>[
+        const HoldingType.asset(AssetType.stock),
+        const HoldingType.liability(LiabilityType.loan),
+      ]);
       expect(find.text('No assets yet'), findsOneWidget);
-      await _tap(tester, find.byKey(const ValueKey<String>('add-holding')));
-      await _tap(tester, find.text('A liability'));
-      expect(editors, <String>['asset', 'liability']);
-      expect(find.text('No liabilities'), findsOneWidget);
     },
   );
 
@@ -1931,50 +1928,68 @@ void main() {
     },
   );
 
-  testWidgets('holding kind tabs preserve both drafts and guard Back', (
-    tester,
-  ) async {
-    Future<void> switchKind(String label) async {
-      FocusManager.instance.primaryFocus?.unfocus();
-      await tester.pumpAndSettle();
-      tester
-          .state<ScrollableState>(find.byType(Scrollable).first)
-          .position
-          .jumpTo(0);
-      await tester.pumpAndSettle();
-      await _tap(tester, find.text(label));
-    }
+  testWidgets(
+    'unified holding creation preserves inputs across type switches and guards Back',
+    (tester) async {
+      Future<void> selectHoldingType(HoldingType target) async {
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pumpAndSettle();
+        tester
+            .state<ScrollableState>(find.byType(Scrollable).first)
+            .position
+            .jumpTo(0);
+        await tester.pumpAndSettle();
+        await _tap(
+          tester,
+          find.byKey(const ValueKey<String>('holding-type-chip')),
+        );
+        final Finder option = find.byKey(ValueKey<HoldingType>(target));
+        if (option.evaluate().isEmpty) {
+          await tester.scrollUntilVisible(
+            option,
+            120,
+            scrollable: find.descendant(
+              of: find.byKey(const ValueKey<String>('holding-type-list')),
+              matching: find.byType(Scrollable),
+            ),
+          );
+        }
+        await _tap(tester, option);
+      }
 
-    await open(tester, const HoldingCreateScreen(portfolioId: 1, asset: true));
-    await _enterManualTicker(tester, 'AAPL');
-    await _tap(tester, _textField('Quantity'));
-    await tester.enterText(_textField('Quantity'), '2');
-    await switchKind('Liability / I owe');
-    await tester.enterText(_textField('Outstanding amount'), '250.75');
-    await _tap(tester, _textField('Name'));
-    await tester.enterText(_textField('Name'), 'Example loan');
-    await switchKind('Asset / I own');
-    await tester.scrollUntilVisible(
-      find.byKey(const ValueKey<String>('selected-market-holding')),
-      120,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('AAPL'), findsOneWidget);
-    expect(_editableField(tester, 'Quantity').controller.text, '2');
-    await switchKind('Liability / I owe');
-    expect(
-      _editableField(tester, 'Outstanding amount').controller.text,
-      '250.75',
-    );
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(find.text('Discard changes?'), findsOneWidget);
-    await tester.tap(find.text('Keep editing'));
-    await tester.pumpAndSettle();
-    expect(find.byType(HoldingCreateScreen), findsOneWidget);
-    expect(container.assetRepository.saved, isNull);
-    expect(container.liabilityRepository.saved, isNull);
-  });
+      await open(tester, const HoldingCreateScreen(portfolioId: 1));
+      await _enterManualTicker(tester, 'AAPL');
+      await _tap(tester, _textField('Quantity'));
+      await tester.enterText(_textField('Quantity'), '2');
+      await selectHoldingType(const HoldingType.liability(LiabilityType.loan));
+      expect(find.text('Subtracted from net worth'), findsOneWidget);
+      await tester.enterText(_textField('Outstanding amount'), '250.75');
+      await _tap(tester, _textField('Name'));
+      await tester.enterText(_textField('Name'), 'Example loan');
+      await selectHoldingType(const HoldingType.asset(AssetType.stock));
+      expect(find.text('Added to net worth'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey<String>('selected-market-holding')),
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('AAPL'), findsOneWidget);
+      expect(_editableField(tester, 'Quantity').controller.text, '2');
+      await selectHoldingType(const HoldingType.liability(LiabilityType.loan));
+      expect(
+        _editableField(tester, 'Outstanding amount').controller.text,
+        '250.75',
+      );
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Discard changes?'), findsOneWidget);
+      await tester.tap(find.text('Keep editing'));
+      await tester.pumpAndSettle();
+      expect(find.byType(HoldingCreateScreen), findsOneWidget);
+      expect(container.assetRepository.saved, isNull);
+      expect(container.liabilityRepository.saved, isNull);
+    },
+  );
 
   testWidgets(
     'asset footer shows 0-initialized aligned estimate, contextual hints, validation, and omits net worth preview',
@@ -2110,11 +2125,11 @@ void main() {
       seedHoldings();
 
       // 1. Add a Cash asset -> shows Asset added. + Undo addition deletes newly saved id
-      await open(
+      await open(tester, const HoldingCreateScreen(portfolioId: 1));
+      await _tap(
         tester,
-        const HoldingCreateScreen(portfolioId: 1, asset: true),
+        find.byKey(const ValueKey<String>('holding-type-chip')),
       );
-      await _tap(tester, find.byType(DropdownSelector<AssetType>));
       await _tap(tester, find.text('Cash').last);
       await tester.enterText(_textField('Value'), '500');
       await tester.enterText(_textField('Name'), 'Emergency buffer');
@@ -2179,10 +2194,9 @@ void main() {
         tester,
         find.byKey(const ValueKey<String>('add-another-holding')),
       );
-      expect(find.text('What would you like to add?'), findsOneWidget);
-      await _tap(tester, find.text('A liability'));
+      expect(find.text('What would you like to add?'), findsNothing);
       expect(find.byType(HoldingCreateScreen), findsOneWidget);
-      expect(find.text('Add liability'), findsOneWidget);
+      expect(find.text('New entry'), findsOneWidget);
       await _tap(tester, find.byTooltip('Back'));
       expect(find.text('Open'), findsOneWidget);
       expect(find.byType(HoldingSavedSummaryScreen), findsNothing);

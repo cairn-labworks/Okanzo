@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 
 import '../../data/repository/settings_repository.dart';
 import '../../di/app_container.dart';
+import '../../domain/model/holding_type.dart';
+import '../../domain/model/liability_type.dart';
 import '../../domain/model/release_notes.dart';
 import '../../l10n/app_localizations.dart';
 import '../asset/asset_edit_screen.dart';
 import '../components/whats_new_dialog.dart';
-import '../components/holding_create_screen.dart';
+import '../holding/holding_create_screen.dart';
 import '../home/home_screen.dart';
 import '../liability/liability_edit_screen.dart';
 import '../portfolio/portfolio_screen.dart';
@@ -105,11 +107,27 @@ class _AppShellState extends State<AppShell> {
 
   void _select(int index) => setState(() => _index = index);
 
+  Future<HoldingKind?> _openHoldingCreator(
+    int portfolioId, {
+    required HoldingType initialType,
+    ValueChanged<HoldingKind>? onHoldingSaved,
+  }) {
+    return Navigator.of(context).push<HoldingKind>(
+      MaterialPageRoute<HoldingKind>(
+        builder: (_) => HoldingCreateScreen(
+          portfolioId: portfolioId,
+          initialType: initialType,
+          onHoldingSaved: onHoldingSaved,
+        ),
+      ),
+    );
+  }
+
   void _openAssetEditor(int portfolioId, int assetId) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => assetId == 0
-            ? HoldingCreateScreen(portfolioId: portfolioId, asset: true)
+            ? HoldingCreateScreen(portfolioId: portfolioId)
             : AssetEditScreen(portfolioId: portfolioId, assetId: assetId),
       ),
     );
@@ -119,7 +137,10 @@ class _AppShellState extends State<AppShell> {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => liabilityId == 0
-            ? HoldingCreateScreen(portfolioId: portfolioId, asset: false)
+            ? HoldingCreateScreen(
+                portfolioId: portfolioId,
+                initialType: const HoldingType.liability(LiabilityType.loan),
+              )
             : LiabilityEditScreen(
                 portfolioId: portfolioId,
                 liabilityId: liabilityId,
@@ -144,6 +165,7 @@ class _AppShellState extends State<AppShell> {
       index: _index,
       children: <Widget>[
         HomeScreen(
+          onCreateHolding: _openHoldingCreator,
           onOpenAssetEditor: _openAssetEditor,
           onOpenLiabilityEditor: _openLiabilityEditor,
           onManagePortfolios: () =>

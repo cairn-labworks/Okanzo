@@ -8,6 +8,8 @@ import 'package:okanzo/data/local/entity/asset_entity.dart';
 import 'package:okanzo/data/local/entity/liability_entity.dart';
 import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
+import 'package:okanzo/domain/model/holding_type.dart';
+import 'package:okanzo/domain/model/liability_type.dart';
 import 'package:okanzo/domain/model/release_notes.dart';
 import 'package:okanzo/domain/model/theme_mode.dart';
 import 'package:okanzo/main.dart' as app;
@@ -197,15 +199,9 @@ void main() {
       3,
     );
 
-    final ScrollableState scroll = tester.state<ScrollableState>(
-      find.byType(Scrollable).first,
-    );
-    final double offset = scroll.position.pixels;
     await tap(tester, find.byKey(const ValueKey<String>('add-holding')));
-    expect(scroll.position.pixels, offset);
-    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(find.text('Added to net worth'), findsOneWidget);
     await capture(tester, 'canvas-add-expanded');
-    await tap(tester, find.text('An asset'));
     await enter(tester, 'Company or Ticker', 'AAPL');
     await enter(tester, 'Quantity', '2');
     await tester.scrollUntilVisible(
@@ -228,7 +224,7 @@ void main() {
       findsNothing,
     );
     await capture(tester, 'canvas-add-asset-market');
-    await tap(tester, find.byType(DropdownSelector<AssetType>));
+    await tap(tester, find.byKey(const ValueKey<String>('holding-type-chip')));
     await tap(tester, find.text('Cash').last);
     await enter(tester, 'Value', '10000.25');
     await enter(tester, 'Name', 'Travel fund');
@@ -248,7 +244,22 @@ void main() {
     assets.add(cash.id);
     expect(cash.manualValue, 10000.25);
     await tap(tester, find.byKey(const ValueKey<String>('add-holding')));
-    await tap(tester, find.text('A liability'));
+    await tap(tester, find.byKey(const ValueKey<String>('holding-type-chip')));
+    final Finder loanOption = find.byKey(
+      const ValueKey<HoldingType>(HoldingType.liability(LiabilityType.loan)),
+    );
+    if (loanOption.evaluate().isEmpty) {
+      await tester.scrollUntilVisible(
+        loanOption,
+        120,
+        scrollable: find.descendant(
+          of: find.byKey(const ValueKey<String>('holding-type-list')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+    }
+    await tap(tester, loanOption);
+    expect(find.text('Subtracted from net worth'), findsOneWidget);
     expect(
       tester
           .widget<FilledButton>(

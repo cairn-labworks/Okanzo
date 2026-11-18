@@ -8,6 +8,7 @@ import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/app_language.dart';
 import 'package:okanzo/domain/model/app_theme.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
+import 'package:okanzo/domain/model/holding_type.dart';
 import 'package:okanzo/domain/model/liability_type.dart';
 import 'package:okanzo/domain/model/release_notes.dart';
 import 'package:okanzo/domain/model/stock_exchange.dart';
@@ -447,8 +448,21 @@ void main() {
       );
 
       await _tap(tester, find.byKey(const ValueKey<String>('add-holding')));
-      await _tap(tester, find.text('A liability'));
       _headingBelowNavigation(tester);
+      expect(find.text('Added to net worth'), findsOneWidget);
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('holding-type-chip')),
+      );
+      await _tap(
+        tester,
+        find.byKey(
+          const ValueKey<HoldingType>(
+            HoldingType.liability(LiabilityType.loan),
+          ),
+        ),
+      );
+      expect(find.text('Subtracted from net worth'), findsOneWidget);
       expect(find.byType(PickerChip), findsNWidgets(2));
       await _enter(tester, 'Outstanding amount', '4200');
       await _enter(tester, 'Name', 'Midnight test loan');
@@ -468,6 +482,9 @@ void main() {
         () => find.byType(HomeScreen).evaluate().isNotEmpty,
         'liability saved',
       );
+      // Saving a liability switches HomeScreen to the Liabilities tab; switch
+      // back to Assets for the subsequent asset ordering assertions.
+      await _tap(tester, find.byKey(const ValueKey<String>('home-assets-tab')));
       expect(
         (await container.liabilityRepository.getForPortfolio(portfolioId))
             .single
