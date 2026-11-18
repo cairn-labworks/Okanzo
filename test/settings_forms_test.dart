@@ -17,6 +17,7 @@ import 'package:okanzo/data/repository/settings_repository.dart';
 import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/app_theme.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
+import 'package:okanzo/domain/model/holding_type.dart';
 import 'package:okanzo/domain/model/liability_type.dart';
 import 'package:okanzo/domain/model/release_notes.dart';
 import 'package:okanzo/domain/model/theme_mode.dart';
@@ -562,14 +563,22 @@ void main() {
   );
 
   testWidgets(
-    'Quiet overview shows each empty state and selects the section when adding',
+    'Quiet overview shows each empty state and selects the detected section when adding',
     (WidgetTester tester) async {
-      final List<String> editors = <String>[];
+      final List<HoldingType> initialTypes = <HoldingType>[];
+      final List<HoldingKind> nextResult = <HoldingKind>[
+        HoldingKind.liability,
+        HoldingKind.asset,
+      ];
       await open(
         tester,
         HomeScreen(
-          onOpenAssetEditor: (_, _) => editors.add('asset'),
-          onOpenLiabilityEditor: (_, _) => editors.add('liability'),
+          onCreateHolding: (_, {required HoldingType initialType}) async {
+            initialTypes.add(initialType);
+            return nextResult.removeAt(0);
+          },
+          onOpenAssetEditor: (_, _) {},
+          onOpenLiabilityEditor: (_, _) {},
           onManagePortfolios: () {},
           onOpenSettings: () {},
         ),
@@ -582,19 +591,19 @@ void main() {
         ),
         findsOneWidget,
       );
-      await _tap(
-        tester,
-        find.byKey(const ValueKey<String>('home-liabilities-tab')),
-      );
+      await _tap(tester, find.text('Add'));
+      expect(find.text('New asset'), findsNothing);
+      expect(find.text('New liability'), findsNothing);
+      expect(initialTypes, <HoldingType>[
+        const HoldingType.asset(AssetType.stock),
+      ]);
       expect(find.text('No liabilities'), findsOneWidget);
       await _tap(tester, find.text('Add'));
-      await _tap(tester, find.text('New asset'));
-      expect(editors, <String>['asset']);
+      expect(initialTypes, <HoldingType>[
+        const HoldingType.asset(AssetType.stock),
+        const HoldingType.liability(LiabilityType.loan),
+      ]);
       expect(find.text('No assets yet'), findsOneWidget);
-      await _tap(tester, find.text('Add'));
-      await _tap(tester, find.text('New liability'));
-      expect(editors, <String>['asset', 'liability']);
-      expect(find.text('No liabilities'), findsOneWidget);
     },
   );
 

@@ -4,11 +4,15 @@ import '../../data/local/entity/asset_entity.dart';
 import '../../data/local/entity/liability_entity.dart';
 import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
+import '../../domain/model/asset_type.dart';
+import '../../domain/model/holding_type.dart';
+import '../../domain/model/liability_type.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../components/drag_reorder_column.dart';
 import '../components/type_icons.dart';
 import '../components/ui_components.dart';
+import '../holding/holding_create_screen.dart';
 import '../theme/app_style.dart';
 import '../theme/colors.dart';
 import 'category_groups.dart';
@@ -22,6 +26,7 @@ class HomeScreen extends StatefulWidget {
     required this.onOpenLiabilityEditor,
     required this.onManagePortfolios,
     required this.onOpenSettings,
+    this.onCreateHolding,
     super.key,
   });
 
@@ -29,6 +34,11 @@ class HomeScreen extends StatefulWidget {
   final void Function(int portfolioId, int liabilityId) onOpenLiabilityEditor;
   final VoidCallback onManagePortfolios;
   final VoidCallback onOpenSettings;
+  final Future<HoldingKind?> Function(
+    int portfolioId, {
+    required HoldingType initialType,
+  })?
+  onCreateHolding;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -129,7 +139,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           floatingActionButton: state.activePortfolio == null
               ? null
-              : _AddFab(onPressed: () => _showAddSheet(state.activePortfolio!)),
+              : _AddFab(
+                  onPressed: () => _openCreateHolding(state.activePortfolio!),
+                ),
           body: state.loading
               ? const Center(child: CircularProgressIndicator())
               : _HomeContent(
@@ -153,54 +165,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _showAddSheet(PortfolioEntity portfolio) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    'Add to {portfolio}'
-                        .tr(context)
-                        .replaceAll('{portfolio}', portfolio.name),
-                    style: Theme.of(sheetContext).textTheme.titleMedium,
-                  ),
-                ),
-                _AddSheetRow(
-                  icon: Icons.account_balance_wallet,
-                  label: 'New asset'.tr(context),
-                  onTap: () {
-                    setState(() => _showAssets = true);
-                    Navigator.of(sheetContext).pop();
-                    widget.onOpenAssetEditor(portfolio.id, 0);
-                  },
-                ),
-                _AddSheetRow(
-                  icon: Icons.inbox,
-                  label: 'New liability'.tr(context),
-                  onTap: () {
-                    setState(() => _showAssets = false);
-                    Navigator.of(sheetContext).pop();
-                    widget.onOpenLiabilityEditor(portfolio.id, 0);
-                  },
-                ),
-              ],
+  Future<void> _openCreateHolding(PortfolioEntity portfolio) async {
+    final HoldingType initialType = _showAssets
+        ? const HoldingType.asset(AssetType.stock)
+        : const HoldingType.liability(LiabilityType.loan);
+    final HoldingKind? savedKind = widget.onCreateHolding != null
+        ? await widget.onCreateHolding!(portfolio.id, initialType: initialType)
+        : await Navigator.of(context).push<HoldingKind>(
+            MaterialPageRoute<HoldingKind>(
+              builder: (_) => HoldingCreateScreen(
+                portfolioId: portfolio.id,
+                initialType: initialType,
+              ),
             ),
-          ),
-        );
-      },
-    );
+          );
+    if (savedKind != null && mounted) {
+      setState(() => _showAssets = savedKind == HoldingKind.asset);
+    }
   }
 }
 
@@ -271,36 +252,6 @@ class _PortfolioTitle extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: label,
-      ),
-    );
-  }
-}
-
-class _AddSheetRow extends StatelessWidget {
-  const _AddSheetRow({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        child: Row(
-          children: <Widget>[
-            Icon(icon, color: theme.colorScheme.primary),
-            const SizedBox(width: 16),
-            Text(label, style: theme.textTheme.bodyLarge),
-          ],
-        ),
       ),
     );
   }
