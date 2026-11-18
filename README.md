@@ -305,6 +305,21 @@ Invoke `/create-release` in Copilot, or ask to release the latest `main` and pub
 
 ---
 
+GitLab operations use the GitLab CLI (`glab`) rather than a browser session.
+Install it with your package manager and authenticate once using OAuth:
+
+```sh
+glab auth login --hostname gitlab.com --device \
+  --git-protocol https --api-protocol https \
+  --setup-git-credential-helper
+glab auth status --hostname gitlab.com
+```
+
+Authorize the device code directly in GitLab. Confirm that credentials are stored
+in the OS keyring, not plaintext configuration; future sessions reuse that login.
+Use explicit GitLab project URLs for `glab --repo` commands from this GitHub
+checkout, and the pipeline's actual project ID when inspecting fork CI jobs.
+
 ## Quality checks
 
 ```bash

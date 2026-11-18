@@ -55,9 +55,30 @@ or update F-Droid by itself. Google Play is outside this skill's scope.
    `CurrentVersion`, `CurrentVersionCode`, `AutoUpdateMode`, `UpdateCheckMode`,
    `VercodeOperation`, `Binaries`, and `AllowedAPKSigningKeys`.
    Check existing merge requests before creating a duplicate.
-8. Use an authorized GitLab CLI session or the user's signed-in browser **only
-   if a submission/update is needed**. Ask the user to log in if necessary;
-   never request a password/token in chat or extract browser credentials.
+8. Use **GitLab CLI (`glab`) by default** for GitLab merge requests, review
+   replies, pipelines, job logs, and API calls. Check `glab --version` and
+   `glab auth status --hostname gitlab.com`; reuse the persistent OS-keyring
+   login across sessions. A signed-in browser alone does not authenticate glab.
+   Authentication is unnecessary for public reads that already work.
+9. If glab is missing, use an available package manager; prefer a user-local
+   installation when the system package-manager directory is not writable.
+   Do not change system permissions or install unrelated packages.
+   For a new interactive login, check `glab auth login --help`, then use OAuth:
+
+   ```sh
+   glab auth login --hostname gitlab.com --device \
+     --git-protocol https --api-protocol https \
+     --setup-git-credential-helper
+   ```
+
+   Let the user authorize the displayed device code in GitLab. Current glab
+   versions use the OS keyring by default; confirm the success message and a
+   fresh authenticated API call. Do not use `--insecure-storage`, accept a
+   plaintext-storage fallback silently, run `glab auth token`, request tokens
+   in chat, or extract browser credentials. A host-scoped glab Git credential
+   helper can reuse and refresh OAuth credentials for HTTPS pushes.
+   Use a browser only for authorization or a CLI-unsupported operation; report
+   CLI failures explicitly rather than silently reverting to browser automation.
 
 ## 2. Prepare and validate the release
 
@@ -157,8 +178,15 @@ allowed key, introduce scanner bypasses, or supply a private keystore to F-Droid
 2. If the existing auto-update recipe covers the tag/version and still builds
    correctly, use that mechanism. No GitLab login or duplicate merge request is
    necessary. Verify tag detection, new build entries, and build status.
-3. If metadata requires changes, use the authorized GitLab account to fork
-   `fdroid/fdroiddata` and submit a minimal merge request. Preserve the existing
+3. If metadata requires changes, use `glab repo fork` to create or reuse the
+   authorized account's `fdroid/fdroiddata` fork and submit a minimal merge
+   request with `glab mr create`. Inspect each command's help before use, avoid
+   adding fork remotes to the unrelated GitHub checkout, and work in the
+   isolated F-Droid checkout. For a cross-fork request, explicitly select the
+   upstream `--repo`, authorized fork `--head`, source branch and target branch;
+   supply a reviewed title/description and `--yes` for noninteractive creation.
+   Use `glab mr update` and `glab mr note` for follow-up changes and reviewer
+   replies instead of browser API writes. Preserve the existing
    ABI strategy, anti-features, signing identity, and reproducibility policy.
    Update all applicable `Builds` entries with correct `versionName`,
    `versionCode`, immutable `commit`, `CurrentVersion`, and `CurrentVersionCode`.
@@ -169,7 +197,28 @@ allowed key, introduce scanner bypasses, or supply a private keystore to F-Droid
 5. Run `fdroid lint com.cairnlabworks.okanzo` and applicable scan/build checks in
    a suitable environment, selecting the intended version codes explicitly.
    Verify GitLab CI if local F-Droid tools/build infrastructure are unavailable;
-   record which checks actually ran.
+   record which checks actually ran. Use glab to inspect the exact MR head
+   commit and its pipeline, not merely the newest pipeline on a branch.
+   From this GitHub-hosted repository, use explicit GitLab hosts/projects:
+
+   ```sh
+   glab mr view "$MR_IID" --repo https://gitlab.com/fdroid/fdroiddata
+   glab api --hostname gitlab.com \
+     "projects/fdroid%2Ffdroiddata/merge_requests/$MR_IID" |
+     jq '{sha, state, pipeline: .head_pipeline}'
+   glab api --hostname gitlab.com \
+     "projects/$PIPELINE_PROJECT_ID/pipelines/$PIPELINE_ID/jobs" \
+     --paginate | jq '.[] | {id, name, status, web_url}'
+   glab ci trace "$JOB_ID" --repo "https://gitlab.com/$PIPELINE_PROJECT_PATH"
+   ```
+
+   Set these variables from the verified MR/pipeline response. In particular,
+   `head_pipeline.project_id` may identify the user's fork rather than
+   `fdroid/fdroiddata`; use that project for pipeline status, job traces and
+   artifacts. Use `glab api` for CLI-unsupported endpoints, with explicit request
+   methods for writes. Filter its JSON with external `jq`, not GitHub CLI's
+   `--jq` flag. Keep waits bounded and retrieve large logs into temporary files
+   for targeted reads; do not dump credentials or entire verbose logs.
 6. If reproducibility fails, inspect official build logs and compare unsigned
    APK contents/signing inputs. Align the build environment or recipe, validate
    the correction, and submit it for review. Do not silently replace published
