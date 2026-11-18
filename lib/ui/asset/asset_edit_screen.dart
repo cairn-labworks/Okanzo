@@ -9,6 +9,7 @@ import '../../domain/model/stock_exchange.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../components/form_components.dart';
+import '../components/type_icons.dart';
 import '../components/ui_components.dart';
 import 'asset_edit_view_model.dart';
 import 'asset_form_state.dart';
@@ -182,6 +183,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                           options: AssetType.values,
                           optionLabel: (AssetType type) =>
                               type.displayName.tr(context),
+                          optionIcon: assetTypeIcon,
                           onSelected: viewModel.onTypeChange,
                           compact: true,
                         ),

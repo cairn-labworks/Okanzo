@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
+import 'type_icons.dart';
 
 /// Underlined field with shared helper slots and optional amount emphasis.
 class LabeledTextField extends StatelessWidget {
@@ -76,6 +77,27 @@ class LabeledTextField extends StatelessWidget {
   }
 }
 
+Widget buildPopupMenuOption(
+  BuildContext context, {
+  required String label,
+  IconData? icon,
+  bool selected = false,
+}) {
+  if (icon == null) return Text(label);
+  final ColorScheme colors = Theme.of(context).colorScheme;
+  return Row(
+    children: <Widget>[
+      Icon(
+        icon,
+        size: 18,
+        color: selected ? colors.primary : colors.onSurfaceVariant,
+      ),
+      const SizedBox(width: 10),
+      Expanded(child: Text(label)),
+    ],
+  );
+}
+
 /// A generic enum-style dropdown selector.
 class DropdownSelector<T> extends StatelessWidget {
   const DropdownSelector({
@@ -84,6 +106,7 @@ class DropdownSelector<T> extends StatelessWidget {
     required this.options,
     required this.optionLabel,
     required this.onSelected,
+    this.optionIcon,
     this.compact = false,
     super.key,
   });
@@ -92,6 +115,7 @@ class DropdownSelector<T> extends StatelessWidget {
   final T selected;
   final List<T> options;
   final String Function(T) optionLabel;
+  final IconData Function(T)? optionIcon;
   final ValueChanged<T> onSelected;
   final bool compact;
 
@@ -101,16 +125,30 @@ class DropdownSelector<T> extends StatelessWidget {
       return PopupMenuButton<T>(
         tooltip: label,
         onSelected: onSelected,
-        itemBuilder: (_) => <PopupMenuEntry<T>>[
+        itemBuilder: (BuildContext itemContext) => <PopupMenuEntry<T>>[
           for (final T option in options)
-            PopupMenuItem<T>(value: option, child: Text(optionLabel(option))),
+            PopupMenuItem<T>(
+              value: option,
+              child: buildPopupMenuOption(
+                itemContext,
+                label: optionLabel(option),
+                icon: optionIcon?.call(option),
+                selected: option == selected,
+              ),
+            ),
         ],
-        child: PickerChip(label: optionLabel(selected)),
+        child: PickerChip(
+          label: optionLabel(selected),
+          icon: optionIcon?.call(selected),
+        ),
       );
     }
     return DropdownMenu<T>(
       initialSelection: selected,
       label: Text(label),
+      leadingIcon: optionIcon == null
+          ? null
+          : Icon(optionIcon!(selected), size: 20),
       expandedInsets: EdgeInsets.zero,
       requestFocusOnTap: false,
       textStyle: Theme.of(context).textTheme.bodyMedium,
@@ -119,16 +157,23 @@ class DropdownSelector<T> extends StatelessWidget {
       },
       dropdownMenuEntries: <DropdownMenuEntry<T>>[
         for (final T option in options)
-          DropdownMenuEntry<T>(value: option, label: optionLabel(option)),
+          DropdownMenuEntry<T>(
+            value: option,
+            label: optionLabel(option),
+            leadingIcon: optionIcon == null
+                ? null
+                : Icon(optionIcon!(option), size: 18),
+          ),
       ],
     );
   }
 }
 
 class PickerChip extends StatelessWidget {
-  const PickerChip({required this.label, this.onPressed, super.key});
+  const PickerChip({required this.label, this.icon, this.onPressed, super.key});
 
   final String label;
+  final IconData? icon;
   final VoidCallback? onPressed;
 
   @override
@@ -156,6 +201,14 @@ class PickerChip extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
+                    if (icon != null) ...<Widget>[
+                      Icon(
+                        icon,
+                        size: 14,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
                     Flexible(
                       child: Text(label, style: theme.textTheme.bodySmall),
                     ),
@@ -274,12 +327,13 @@ class CurrencySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final IconData icon = currencyIcon(currency);
     if (compact) {
       return Tooltip(
         message:
             '${'Currency'.tr(context)}: '
             '$currency — ${CurrencyUtil.displayName(currency)}',
-        child: PickerChip(label: currency, onPressed: onTap),
+        child: PickerChip(label: currency, icon: icon, onPressed: onTap),
       );
     }
     return ListTile(
@@ -287,7 +341,7 @@ class CurrencySelector extends StatelessWidget {
       minTileHeight: 48,
       leading: Tooltip(
         message: 'Currency'.tr(context),
-        child: const Icon(Icons.payments_outlined, size: 20),
+        child: Icon(icon, size: 20),
       ),
       title: Text(
         '$currency — ${CurrencyUtil.displayName(currency)}',
@@ -425,15 +479,21 @@ class _CurrencyPickerDialogState extends State<_CurrencyPickerDialog> {
                   itemCount: results.length,
                   itemBuilder: (BuildContext context, int index) {
                     final String code = results[index];
+                    final bool isSelected = code == widget.selected;
+                    final ColorScheme colors = Theme.of(context).colorScheme;
                     return ListTile(
+                      minLeadingWidth: 20,
+                      horizontalTitleGap: 10,
+                      leading: Icon(
+                        currencyIcon(code),
+                        size: 20,
+                        color: isSelected
+                            ? colors.primary
+                            : colors.onSurfaceVariant,
+                      ),
                       title: Text('$code — ${CurrencyUtil.displayName(code)}'),
-                      trailing: code == widget.selected
-                          ? Text(
-                              '✓',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            )
+                      trailing: isSelected
+                          ? Text('✓', style: TextStyle(color: colors.primary))
                           : null,
                       onTap: () => Navigator.of(context).pop(code),
                     );

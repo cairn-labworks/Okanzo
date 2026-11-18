@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../asset/asset_edit_view_model.dart' show AssetEditEventType;
 import '../components/form_components.dart';
+import '../components/type_icons.dart';
 import '../components/ui_components.dart';
 import 'liability_edit_view_model.dart';
 import 'liability_form_state.dart';
@@ -149,6 +150,7 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                           options: LiabilityType.values,
                           optionLabel: (LiabilityType type) =>
                               type.displayName.tr(context),
+                          optionIcon: liabilityTypeIcon,
                           onSelected: viewModel.onTypeChange,
                           compact: true,
                         ),

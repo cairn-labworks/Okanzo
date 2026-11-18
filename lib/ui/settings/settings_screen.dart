@@ -14,6 +14,7 @@ import '../../util/currency_util.dart';
 import '../../util/link_opener.dart';
 import '../../util/relative_time.dart';
 import '../components/form_components.dart';
+import '../components/type_icons.dart';
 import '../components/ui_components.dart';
 import '../components/whats_new_dialog.dart';
 import 'settings_view_model.dart';
@@ -123,6 +124,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: 'Base currency'.tr(context),
                 subtitle: CurrencyUtil.displayName(settings.baseCurrency),
                 value: settings.baseCurrency,
+                valueIcon: currencyIcon(settings.baseCurrency),
                 onTap: () => _showCurrencyPicker(settings.baseCurrency),
               ),
               _SwitchRow(
@@ -722,6 +724,7 @@ class _SettingRow extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.value,
+    this.valueIcon,
     this.onTap,
     this.trailing,
   });
@@ -729,6 +732,7 @@ class _SettingRow extends StatelessWidget {
   final String title;
   final String? subtitle;
   final String? value;
+  final IconData? valueIcon;
   final VoidCallback? onTap;
   final Widget? trailing;
 
@@ -766,7 +770,7 @@ class _SettingRow extends StatelessWidget {
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
                           )
-                        : PickerChip(label: value!),
+                        : PickerChip(label: value!, icon: valueIcon),
                   )
                 : onTap == null
                 ? null

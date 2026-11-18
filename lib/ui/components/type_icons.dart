@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../domain/model/asset_type.dart';
 import '../../domain/model/liability_type.dart';
 import '../../domain/model/release_notes.dart';
+import '../../domain/model/stock_exchange.dart';
+import '../../util/currency_data.dart';
 
 IconData assetTypeIcon(AssetType type) {
   switch (type) {
@@ -30,7 +32,7 @@ IconData assetTypeIcon(AssetType type) {
 }
 
 IconData liabilityTypeIcon(LiabilityType type) {
-  switch (type) {
+  switch (LiabilityType.values[type.index]) {
     case LiabilityType.loan:
       return Icons.account_balance_wallet;
     case LiabilityType.mortgage:
@@ -73,4 +75,109 @@ IconData releaseHighlightIcon(ReleaseHighlightIcon icon) {
     case ReleaseHighlightIcon.liabilities:
       return Icons.account_balance_wallet_outlined;
   }
+}
+
+IconData stockExchangeIcon(StockExchange exchange) {
+  switch (exchange) {
+    case StockExchange.us:
+      return Icons.candlestick_chart;
+    case StockExchange.euronextParis:
+    case StockExchange.euronextAmsterdam:
+    case StockExchange.euronextBrussels:
+    case StockExchange.euronextLisbon:
+    case StockExchange.euronextDublin:
+    case StockExchange.euronextOslo:
+    case StockExchange.euronextMilan:
+      return Icons.hub_outlined;
+    case StockExchange.shanghai:
+    case StockExchange.tokyo:
+    case StockExchange.hongKong:
+    case StockExchange.bse:
+      return Icons.account_balance;
+    case StockExchange.other:
+      return Icons.public;
+  }
+}
+
+IconData currencyIcon(String currencyCode) {
+  final String code = currencyCode.trim().toUpperCase();
+  switch (code) {
+    case 'EUR':
+    case 'CHE':
+      return Icons.euro;
+    case 'GBP':
+    case 'CYP':
+    case 'EGP':
+    case 'FKP':
+    case 'GIP':
+    case 'IEP':
+    case 'LBP':
+    case 'SDG':
+    case 'SHP':
+    case 'SSP':
+    case 'SYP':
+      return Icons.currency_pound;
+    case 'INR':
+    case 'LKR':
+    case 'MUR':
+    case 'NPR':
+    case 'PKR':
+    case 'SCR':
+      return Icons.currency_rupee;
+    case 'JPY':
+      return Icons.currency_yen;
+    case 'CNY':
+      return Icons.currency_yuan;
+    case 'CHF':
+    case 'CHW':
+    case 'BEF':
+    case 'BIF':
+    case 'CDF':
+    case 'DJF':
+    case 'FRF':
+    case 'GNF':
+    case 'KMF':
+    case 'LUF':
+    case 'MGF':
+    case 'RWF':
+    case 'XAF':
+    case 'XFO':
+    case 'XFU':
+    case 'XOF':
+    case 'XPF':
+      return Icons.currency_franc;
+    case 'TRY':
+    case 'TRL':
+    case 'ITL':
+    case 'MTL':
+      return Icons.currency_lira;
+    case 'RUB':
+    case 'RUR':
+    case 'BYN':
+    case 'BYR':
+    case 'BYB':
+      return Icons.currency_ruble;
+    case 'XAU':
+    case 'XAG':
+    case 'XPD':
+    case 'XPT':
+    case 'ZWG':
+      return Icons.diamond_outlined;
+    case 'XBA':
+    case 'XBB':
+    case 'XBC':
+    case 'XBD':
+    case 'XDR':
+    case 'XSU':
+    case 'XUA':
+      return Icons.currency_exchange;
+  }
+  final CurrencyInfo? info = kCurrencies[code];
+  if (info != null &&
+      (info.symbol.contains(r'$') ||
+          info.displayName.contains('Dollar') ||
+          info.displayName.contains('Peso'))) {
+    return Icons.attach_money;
+  }
+  return Icons.payments_outlined;
 }
