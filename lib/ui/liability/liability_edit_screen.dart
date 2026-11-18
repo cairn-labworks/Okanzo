@@ -130,6 +130,7 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                     const SizedBox(height: 20),
                     LabeledTextField(
                       controller: _amount,
+                      autofocus: !form.isEditing,
                       label: 'Outstanding amount'.tr(context),
                       prefix: CurrencyUtil.symbol(form.currency),
                       keyboardType: const TextInputType.numberWithOptions(

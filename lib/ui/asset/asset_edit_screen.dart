@@ -153,6 +153,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                     if (form.valuationMode == ValuationMode.flat)
                       LabeledTextField(
                         controller: _manualValue,
+                        autofocus: !form.isEditing,
                         label: 'Value'.tr(context),
                         prefix: CurrencyUtil.symbol(form.currency),
                         keyboardType: const TextInputType.numberWithOptions(
