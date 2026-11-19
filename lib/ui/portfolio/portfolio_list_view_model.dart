@@ -64,6 +64,7 @@ class PortfolioListViewModel extends ChangeNotifier {
   final Map<int, List<LiabilityEntity>> _liabilitiesByPortfolio =
       <int, List<LiabilityEntity>>{};
   String? _baseCurrency;
+  bool _hideBalances = false;
   CurrencyConverter _converter = const CurrencyConverter.empty();
   List<PortfolioRow> _rows = const <PortfolioRow>[];
   String? _message;
@@ -71,10 +72,13 @@ class PortfolioListViewModel extends ChangeNotifier {
 
   List<PortfolioRow> get rows => _rows;
 
+  bool get hideBalances => _hideBalances;
+
   String? get message => _message;
 
   void _start() {
     _baseCurrency = _settingsRepository.current.baseCurrency;
+    _hideBalances = _settingsRepository.current.hideBalances;
     _portfolioSub = _portfolioRepository.observeAll().listen((
       List<PortfolioEntity> portfolios,
     ) {
@@ -82,15 +86,25 @@ class PortfolioListViewModel extends ChangeNotifier {
       unawaited(_reloadHoldingsAndRecompute());
     });
     _settingsSub = _settingsRepository.settings.listen((AppSettings settings) {
-      if (settings.baseCurrency == _baseCurrency) return;
+      final bool currencyChanged = settings.baseCurrency != _baseCurrency;
+      final bool hideChanged = settings.hideBalances != _hideBalances;
+      if (!currencyChanged && !hideChanged) return;
       _baseCurrency = settings.baseCurrency;
-      _recomputeFromCache();
+      _hideBalances = settings.hideBalances;
+      if (currencyChanged) {
+        _recomputeFromCache();
+      } else if (!_disposed) {
+        notifyListeners();
+      }
     });
     _converterSub = _fxRepository.converter.listen((CurrencyConverter value) {
       _converter = value;
       _recomputeFromCache();
     });
   }
+
+  void toggleHideBalances() =>
+      unawaited(_settingsRepository.setHideBalances(!_hideBalances));
 
   Future<void> _reloadHoldingsAndRecompute() async {
     final List<PortfolioEntity> snapshot = _portfolios;

@@ -183,6 +183,81 @@ void main() {
       );
     });
 
+    test(
+      'hideBalances omits quantities while keeping tickers and currency notes',
+      () {
+        expect(
+          assetSubtitle(
+            asset(type: AssetType.crypto, quantity: 1.25, symbol: 'btc-usd'),
+            'USD',
+            hideBalances: true,
+          ),
+          'BTC-USD',
+        );
+        expect(
+          assetSubtitle(
+            asset(
+              type: AssetType.stock,
+              quantity: 10,
+              symbol: 'mc.pa',
+              currency: 'EUR',
+            ),
+            'USD',
+            hideBalances: true,
+          ),
+          'MC.PA  ·  EUR',
+        );
+        expect(
+          assetSubtitle(
+            asset(type: AssetType.stock, symbol: 'AAPL'),
+            'USD',
+            hideBalances: true,
+          ),
+          'AAPL',
+        );
+        expect(
+          assetSubtitle(
+            asset(type: AssetType.stock, quantity: 2.5),
+            'USD',
+            hideBalances: true,
+          ),
+          '',
+        );
+        expect(
+          assetSubtitle(
+            asset(type: AssetType.stock, quantity: 2.5, currency: 'EUR'),
+            'USD',
+            hideBalances: true,
+          ),
+          '·  EUR',
+        );
+        expect(
+          assetSubtitle(
+            asset(type: AssetType.gold, quantity: 250),
+            'USD',
+            hideBalances: true,
+          ),
+          '',
+        );
+        expect(
+          assetSubtitle(
+            asset(type: AssetType.gold, quantity: 250, currency: 'EUR'),
+            'USD',
+            hideBalances: true,
+          ),
+          '·  EUR',
+        );
+        expect(
+          assetSubtitle(
+            asset(type: AssetType.cash, currency: 'EUR'),
+            'USD',
+            hideBalances: true,
+          ),
+          '·  EUR',
+        );
+      },
+    );
+
     test('item counts are singular for one', () {
       expect(itemCountLabel(1), '1 item');
       expect(itemCountLabel(0), '0 items');

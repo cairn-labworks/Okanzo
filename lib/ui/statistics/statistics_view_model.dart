@@ -141,6 +141,9 @@ class StatisticsViewModel extends ChangeNotifier {
   void selectPortfolio(int id) =>
       unawaited(_settingsRepository.setSelectedPortfolioId(id));
 
+  void toggleHideBalances() =>
+      unawaited(_settingsRepository.setHideBalances(!_state.hideBalances));
+
   void _rebuild() {
     final AppSettings? settings = _settings;
     if (settings == null || !_loadedPortfolios) return;

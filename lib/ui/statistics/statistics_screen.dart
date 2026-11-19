@@ -69,6 +69,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                   state.activePortfolio?.name ?? 'Statistics'.tr(context),
               onSelect: viewModel.selectPortfolio,
             ),
+            actions: <Widget>[
+              HideBalancesButton(
+                hideBalances: state.hideBalances,
+                onPressed: viewModel.toggleHideBalances,
+              ),
+            ],
           ),
           body: !state.hasAnything
               ? Center(
