@@ -6,6 +6,7 @@ import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
+import '../components/ui_components.dart';
 import '../theme/theme.dart';
 import 'portfolio_list_view_model.dart';
 
@@ -61,6 +62,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
       listenable: viewModel,
       builder: (BuildContext context, _) {
         final List<PortfolioRow> rows = viewModel.rows;
+        final bool hideBalances = viewModel.hideBalances;
         return Scaffold(
           appBar: AppBar(
             title: Text('Portfolios'.tr(context)),
@@ -71,6 +73,12 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
                     onPressed: widget.onClose,
                     icon: const Icon(Icons.arrow_back),
                   ),
+            actions: <Widget>[
+              HideBalancesButton(
+                hideBalances: hideBalances,
+                onPressed: viewModel.toggleHideBalances,
+              ),
+            ],
           ),
           floatingActionButton: FloatingActionButton.extended(
             heroTag: 'portfolio-create',
@@ -91,6 +99,7 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
               final PortfolioRow row = rows[index];
               return _PortfolioCard(
                 row: row,
+                hideBalances: hideBalances,
                 onSetDefault: () =>
                     unawaited(viewModel.setDefault(row.portfolio.id)),
                 onRename: () => _showRenameDialog(row.portfolio),
@@ -168,12 +177,14 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
 class _PortfolioCard extends StatelessWidget {
   const _PortfolioCard({
     required this.row,
+    required this.hideBalances,
     required this.onSetDefault,
     required this.onRename,
     required this.onDelete,
   });
 
   final PortfolioRow row;
+  final bool hideBalances;
   final VoidCallback onSetDefault;
   final VoidCallback onRename;
   final VoidCallback onDelete;
@@ -261,7 +272,9 @@ class _PortfolioCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              CurrencyUtil.format(row.netWorth, row.baseCurrency),
+              hideBalances
+                  ? CurrencyUtil.masked(row.baseCurrency)
+                  : CurrencyUtil.format(row.netWorth, row.baseCurrency),
               style: theme.textTheme.headlineMedium?.copyWith(
                 color: theme.colorScheme.primary,
               ),

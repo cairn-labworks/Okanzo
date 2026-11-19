@@ -95,17 +95,9 @@ class _HomeScreenState extends State<HomeScreen> {
               onManagePortfolios: widget.onManagePortfolios,
             ),
             actions: <Widget>[
-              IconButton(
+              HideBalancesButton(
+                hideBalances: state.hideBalances,
                 onPressed: viewModel.toggleHideBalances,
-                tooltip:
-                    (state.hideBalances ? 'Show balances' : 'Hide balances').tr(
-                      context,
-                    ),
-                icon: Icon(
-                  state.hideBalances
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                ),
               ),
               IconButton(
                 onPressed: state.isRefreshing ? null : viewModel.refresh,
@@ -414,6 +406,7 @@ class _HomeContent extends StatelessWidget {
                                               line.asset,
                                               group.baseCurrency,
                                               unitsLabel: 'units'.tr(context),
+                                              hideBalances: state.hideBalances,
                                             ),
                                             amount: state.hideBalances
                                                 ? CurrencyUtil.maskShort

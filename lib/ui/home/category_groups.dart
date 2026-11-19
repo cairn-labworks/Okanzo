@@ -113,25 +113,35 @@ class LiabilityCategoryGroup {
 }
 
 /// The secondary line under an asset row: quantity, symbol and, when it differs
-/// from the base currency, the asset's own currency.
+/// from the base currency, the asset's own currency. When [hideBalances] is
+/// true, quantities are omitted so holding scale cannot be deduced from prices.
 String assetSubtitle(
   AssetEntity asset,
   String baseCurrency, {
   String unitsLabel = 'units',
+  bool hideBalances = false,
 }) {
   String core;
   switch (asset.type.valuationMode) {
     case ValuationMode.market:
-      final String qty = asset.quantity == null
-          ? '—'
-          : formatQuantity(asset.quantity!);
       final String symbol = asset.symbol?.toUpperCase() ?? '';
-      core = symbol.isNotEmpty ? '$qty × $symbol' : '$qty $unitsLabel';
+      if (hideBalances) {
+        core = symbol;
+      } else {
+        final String qty = asset.quantity == null
+            ? '—'
+            : formatQuantity(asset.quantity!);
+        core = symbol.isNotEmpty ? '$qty × $symbol' : '$qty $unitsLabel';
+      }
     case ValuationMode.quantity:
-      final String qty = asset.quantity == null
-          ? '—'
-          : formatQuantity(asset.quantity!);
-      core = '$qty ${asset.type.unitLabel ?? ''}'.trim();
+      if (hideBalances) {
+        core = '';
+      } else {
+        final String qty = asset.quantity == null
+            ? '—'
+            : formatQuantity(asset.quantity!);
+        core = '$qty ${asset.type.unitLabel ?? ''}'.trim();
+      }
     case ValuationMode.flat:
       core = '';
   }

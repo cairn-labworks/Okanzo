@@ -1,5 +1,28 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
+/// App-bar action that toggles Hide Balances across browsing screens.
+class HideBalancesButton extends StatelessWidget {
+  const HideBalancesButton({
+    required this.hideBalances,
+    required this.onPressed,
+    super.key,
+  });
+
+  final bool hideBalances;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    onPressed: onPressed,
+    tooltip: (hideBalances ? 'Show balances' : 'Hide balances').tr(context),
+    icon: Icon(
+      hideBalances ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+    ),
+  );
+}
+
 class PageHeading extends StatelessWidget {
   const PageHeading(this.title, {super.key});
 
