@@ -324,6 +324,18 @@ checkout, and the pipeline's actual project ID when inspecting fork CI jobs.
 
 ---
 
+## UX prototype
+
+Open [the holding experience prototype](docs/prototypes/add-holding.prototype.html)
+directly in a browser; no server or dependencies are needed. It preserves the
+approved **Canvas** design and the alternative **Guide** flow for future
+iterations, including Home, Add holding, and both asset/liability editors.
+Use `?variant=A&add=expand` for Canvas or `?variant=B` for Guide.
+
+This is a design reference, not app code: all data is fictional, quotes and FX
+are simulated, and changes stay in memory. It is not bundled into the Flutter
+application.
+
 ## Quality checks
 
 The **Pull request checks** workflow runs when pull requests targeting `main` are
