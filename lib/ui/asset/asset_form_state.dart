@@ -7,6 +7,7 @@ import '../../domain/model/stock_exchange.dart';
 class AssetFormState {
   const AssetFormState({
     this.id = 0,
+    this.position = 0,
     this.portfolioId = 0,
     this.type = AssetType.stock,
     this.name = '',
@@ -26,6 +27,7 @@ class AssetFormState {
   });
 
   final int id;
+  final int position;
   final int portfolioId;
   final AssetType type;
   final String name;
@@ -140,6 +142,7 @@ class AssetFormState {
         : trimmedName;
     return AssetEntity(
       id: id,
+      position: position,
       portfolioId: portfolioId,
       type: type,
       name: persistedName,
@@ -161,6 +164,7 @@ class AssetFormState {
 
   static AssetFormState fromEntity(AssetEntity asset) => AssetFormState(
     id: asset.id,
+    position: asset.position,
     portfolioId: asset.portfolioId,
     type: asset.type,
     name: asset.name,
@@ -203,6 +207,7 @@ class AssetFormState {
   }) {
     return AssetFormState(
       id: id ?? this.id,
+      position: position,
       portfolioId: portfolioId ?? this.portfolioId,
       type: type ?? this.type,
       name: name ?? this.name,

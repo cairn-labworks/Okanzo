@@ -310,7 +310,11 @@ void main() {
     await tester.ensureVisible(find.text('Apple Inc.'));
     await tester.tap(find.text('Apple Inc.'));
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(ticker).controller!.text, 'AAPL');
+    expect(
+      find.byKey(const ValueKey<String>('selected-market-holding')),
+      findsOneWidget,
+    );
+    expect(find.text('AAPL'), findsOneWidget);
     final TextField customName = tester.widget<TextField>(
       find.widgetWithText(TextField, 'Custom name (optional)'),
     );
@@ -323,8 +327,6 @@ void main() {
       StockExchange.us,
     );
     await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '2');
-    await tester.ensureVisible(find.text('Fetch latest price'));
-    await tester.tap(find.text('Fetch latest price'));
     await tester.pumpAndSettle();
     expect(requests, <String>['AAPL']);
     await tester.ensureVisible(find.widgetWithText(FilledButton, 'Save'));
@@ -648,6 +650,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(StockExchangeField), findsNothing);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('selected-market-holding')),
+      );
+      await tester.pumpAndSettle();
       expect(
         tester
             .widget<TextField>(find.widgetWithText(TextField, 'Coin or ticker'))
@@ -880,6 +886,10 @@ void main() {
     expect(find.text(StockExchange.hongKong.displayName), findsOneWidget);
     expect(find.text('2 × ${CurrencyUtil.format(10, 'HKD')}'), findsOneWidget);
     final Finder ticker = find.widgetWithText(TextField, 'Company or Ticker');
+    await tester.tap(
+      find.byKey(const ValueKey<String>('selected-market-holding')),
+    );
+    await tester.pumpAndSettle();
     expect(tester.widget<TextField>(ticker).controller?.text, '0700.HK');
   });
 
@@ -1096,67 +1106,68 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Cancel next to Save closes the asset editor and aborts an in-flight auto-fetch save',
-    (WidgetTester tester) async {
-      final Completer<http.Response> pendingQuote = Completer<http.Response>();
-      final AssetRepository slowRepo = AssetRepository(
-        dao,
-        StockPriceService(
-          StockApi(client: MockClient((_) => pendingQuote.future)),
-        ),
-        fxRepositoryForTest(),
-      );
-      await tester.pumpWidget(
-        AppScope(
-          container: _Container(slowRepo, settings),
-          child: MaterialApp(
-            home: Builder(
-              builder: (BuildContext context) => Scaffold(
-                body: TextButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) =>
-                          const AssetEditScreen(portfolioId: 1, assetId: 0),
-                    ),
+  testWidgets('Back and confirmed discard abort an in-flight auto-fetch save', (
+    WidgetTester tester,
+  ) async {
+    final Completer<http.Response> pendingQuote = Completer<http.Response>();
+    final AssetRepository slowRepo = AssetRepository(
+      dao,
+      StockPriceService(
+        StockApi(client: MockClient((_) => pendingQuote.future)),
+      ),
+      fxRepositoryForTest(),
+    );
+    await tester.pumpWidget(
+      AppScope(
+        container: _Container(slowRepo, settings),
+        child: MaterialApp(
+          home: Builder(
+            builder: (BuildContext context) => Scaffold(
+              body: TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        const AssetEditScreen(portfolioId: 1, assetId: 0),
                   ),
-                  child: const Text('Open'),
                 ),
+                child: const Text('Open'),
               ),
             ),
           ),
         ),
-      );
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Company or Ticker'),
-        'AAPL',
-      );
-      await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '3');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Company or Ticker'),
+      'AAPL',
+    );
+    await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '3');
 
-      final Finder save = find.widgetWithText(FilledButton, 'Save');
-      final Finder cancel = find.widgetWithText(OutlinedButton, 'Cancel');
-      await tester.scrollUntilVisible(
-        save,
-        120,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(save);
-      await tester.pump();
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    final Finder save = find.widgetWithText(FilledButton, 'Save');
+    await tester.scrollUntilVisible(
+      save,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(save);
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-      await tester.tap(cancel);
-      await tester.pumpAndSettle();
-      expect(find.byType(AssetEditScreen), findsNothing);
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Discard'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AssetEditScreen), findsNothing);
 
-      pendingQuote.complete(_quote(200, 'USD'));
-      await tester.pumpAndSettle();
-      expect(dao.assets, isEmpty);
-    },
-  );
+    pendingQuote.complete(_quote(200, 'USD'));
+    await tester.pumpAndSettle();
+    expect(dao.assets, isEmpty);
+  });
 
   testWidgets(
     'exchange dropdown and preferred exchanges dialog show intuitive icons',

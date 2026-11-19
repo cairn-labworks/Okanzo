@@ -6,6 +6,7 @@ import '../asset/asset_form_state.dart' show formatInput;
 class LiabilityFormState {
   const LiabilityFormState({
     this.id = 0,
+    this.position = 0,
     this.portfolioId = 0,
     this.type = LiabilityType.loan,
     this.name = '',
@@ -17,6 +18,7 @@ class LiabilityFormState {
   });
 
   final int id;
+  final int position;
   final int portfolioId;
   final LiabilityType type;
   final String name;
@@ -42,6 +44,7 @@ class LiabilityFormState {
     final int timestamp = now ?? DateTime.now().millisecondsSinceEpoch;
     return LiabilityEntity(
       id: id,
+      position: position,
       portfolioId: portfolioId,
       type: type,
       name: name.trim(),
@@ -56,6 +59,7 @@ class LiabilityFormState {
   static LiabilityFormState fromEntity(LiabilityEntity liability) =>
       LiabilityFormState(
         id: liability.id,
+        position: liability.position,
         portfolioId: liability.portfolioId,
         type: liability.type,
         name: liability.name,
@@ -78,6 +82,7 @@ class LiabilityFormState {
   }) {
     return LiabilityFormState(
       id: id ?? this.id,
+      position: position,
       portfolioId: portfolioId ?? this.portfolioId,
       type: type ?? this.type,
       name: name ?? this.name,

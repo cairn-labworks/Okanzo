@@ -85,7 +85,10 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 - A single quiet panel with **collapsible category rows** showing category totals and item counts until expanded
 - **Simple net worth** (`Settings → Currency → Simple net worth`) shortens only the home headline from 1,000 upward (`$7K`, `$165.3M`, or `₹1.65 Cr` in INR lakh/crore) while keeping detailed totals exact
 - **Multiple portfolios** (*Personal*, *Family*, *Business*), a **Default** that powers the home screen, and instant switching
-- **Custom ordering**: long-press and drag to reorder categories or items within their category
+- **Custom ordering**: long-press and drag to reorder categories; arrange holdings inside a category using its **Sort or arrange** menu
+- **Canvas holding entry**: the compact bottom-right **Add holding** button expands in place over a blurred background, without moving the portfolio list. Choose **New asset** or **New liability**; Back protects unsaved changes, and Save is available once the required fields are valid.
+- **Holding details and order**: tap a holding for its details, Edit, or confirmed Delete. The category's **Sort or arrange** menu offers name/value sorting and **Arrange manually**; saved custom order is preserved when trying other sorts. Sort choices are session-scoped and separate for each portfolio/category.
+- **Readable names and quotes**: newly entered names and custom names are limited to 60 user-perceived characters, with a counter. Tap a selected market holding to search again; selecting a listing fetches its price once automatically. An unavailable quote does not block saving offline.
 
 </td>
 <td width="50%" valign="top">
@@ -348,6 +351,21 @@ The test suite covers currency formatting and rounding, net-worth and FX convers
 
 <details>
 <summary><b>Android emulator &amp; physical-device integration tests</b></summary>
+
+The Canvas journey uses synthetic holdings and captures the home screen, expanded
+Add action, details, editor, and delete confirmation on a **dedicated emulator**.
+Set `CANVAS_EVIDENCE` to an output directory, build its test APK, and run it with
+the repository-local driver:
+
+```bash
+flutter build apk --debug --target integration_test/canvas_holding_test.dart --build-number <at-least-installed>
+flutter drive -d <emulator-id> --use-application-binary build/app/outputs/flutter-apk/app-debug.apk \
+  --driver test_driver/canvas_holding.dart --keep-app-running
+```
+
+Use an equal-or-higher build number than any installed debug build, preflight
+with `adb install -r`, and restore a normal `lib/main.dart` build after testing,
+as described below. Do not run this synthetic-data scenario on a personal device.
 
 For the live Android exchange smoke test on a dedicated emulator (requires network access and Yahoo quote availability):
 

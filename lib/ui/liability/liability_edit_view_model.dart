@@ -38,6 +38,7 @@ class LiabilityEditViewModel extends ChangeNotifier {
 
   LiabilityFormState _form;
   LiabilityEditEvent? _event;
+  bool _disposed = false;
 
   LiabilityFormState get form => _form;
 
@@ -80,6 +81,7 @@ class LiabilityEditViewModel extends ChangeNotifier {
   void onNotesChange(String value) => _update(_form.copyWith(notes: value));
 
   Future<void> save() async {
+    if (_form.isSaving) return;
     final String? error = _form.validate();
     if (error != null) {
       _emit(LiabilityEditEvent(AssetEditEventType.error, error));
@@ -87,12 +89,14 @@ class LiabilityEditViewModel extends ChangeNotifier {
     }
     _update(_form.copyWith(isSaving: true));
     await _liabilityRepository.save(_form.toEntity());
+    if (_disposed) return;
     _emit(const LiabilityEditEvent(AssetEditEventType.saved));
   }
 
   Future<void> delete() async {
     if (_liabilityId == 0) return;
     await _liabilityRepository.delete(_liabilityId);
+    if (_disposed) return;
     _emit(const LiabilityEditEvent(AssetEditEventType.deleted));
   }
 
@@ -103,5 +107,11 @@ class LiabilityEditViewModel extends ChangeNotifier {
   void _emit(LiabilityEditEvent event) {
     _event = event;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

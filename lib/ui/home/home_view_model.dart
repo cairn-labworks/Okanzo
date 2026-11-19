@@ -216,11 +216,11 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   /// Persists a new order of asset items within a single type.
-  void onAssetItemsReordered(List<int> orderedIds) =>
-      unawaited(_assetRepository.updateOrder(orderedIds));
+  Future<void> onAssetItemsReordered(List<int> orderedIds) =>
+      _assetRepository.updateOrder(orderedIds);
 
-  void onLiabilityItemsReordered(List<int> orderedIds) =>
-      unawaited(_liabilityRepository.updateOrder(orderedIds));
+  Future<void> onLiabilityItemsReordered(List<int> orderedIds) =>
+      _liabilityRepository.updateOrder(orderedIds);
 
   void consumeMessage() {
     _message = null;

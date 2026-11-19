@@ -47,6 +47,7 @@ class AssetEditViewModel extends ChangeNotifier {
   bool _convertingCurrency = false;
   bool _cancelled = false;
   bool _disposed = false;
+  Result<StockQuote>? _quoteAttempt;
 
   AssetFormState get form => _form;
 
@@ -88,6 +89,7 @@ class AssetEditViewModel extends ChangeNotifier {
   }
 
   void _updateQuoteInput(AssetFormState next) {
+    _quoteAttempt = null;
     _priceRequest++;
     _convertingCurrency = false;
     _update(next.copyWith(isFetchingPrice: false, isSaving: false));
@@ -136,6 +138,7 @@ class AssetEditViewModel extends ChangeNotifier {
       return;
     }
     final int request = ++_priceRequest;
+    _quoteAttempt = null;
     final double? price = _form.lastPrice;
     if (!_form.type.isMarketLinked || price == null) {
       _convertingCurrency = false;
@@ -247,6 +250,7 @@ class AssetEditViewModel extends ChangeNotifier {
       return;
     }
     if (result.isSuccess) {
+      _quoteAttempt = result;
       final StockQuote quote = result.value;
       final String? fetchedName = quote.name?.trim();
       _update(
@@ -260,6 +264,7 @@ class AssetEditViewModel extends ChangeNotifier {
         ),
       );
     } else {
+      _quoteAttempt = result;
       _update(_form.copyWith(isFetchingPrice: false));
       _emit(
         AssetEditEvent(
@@ -292,11 +297,13 @@ class AssetEditViewModel extends ChangeNotifier {
         _form.lastPrice == null) {
       final int request = ++_priceRequest;
       _convertingCurrency = false;
-      final Result<StockQuote> quote = await _assetRepository.fetchQuote(
-        _form.quoteSymbol,
-        currency: _form.currency,
-        isCrypto: _form.type == AssetType.crypto,
-      );
+      final Result<StockQuote> quote =
+          _quoteAttempt ??
+          await _assetRepository.fetchQuote(
+            _form.quoteSymbol,
+            currency: _form.currency,
+            isCrypto: _form.type == AssetType.crypto,
+          );
       if (_cancelled || _disposed || request != _priceRequest) {
         if (!_cancelled && !_disposed && _form.isSaving) {
           _update(_form.copyWith(isSaving: false));

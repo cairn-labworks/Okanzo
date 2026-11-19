@@ -25,6 +25,7 @@ class LabeledTextField extends StatelessWidget {
     this.supportingText,
     this.isError = false,
     this.prominent = false,
+    this.maxLength,
     super.key,
   });
 
@@ -43,6 +44,7 @@ class LabeledTextField extends StatelessWidget {
   final String? supportingText;
   final bool isError;
   final bool prominent;
+  final int? maxLength;
 
   static final List<TextInputFormatter> _decimalFormatters =
       <TextInputFormatter>[
@@ -59,6 +61,7 @@ class LabeledTextField extends StatelessWidget {
       onSubmitted: onSubmitted,
       textInputAction: textInputAction,
       maxLines: singleLine ? 1 : null,
+      maxLength: maxLength,
       keyboardType: keyboardType,
       style: prominent
           ? Theme.of(context).textTheme.displaySmall
@@ -299,12 +302,14 @@ class FormActionRow extends StatelessWidget {
     required this.onCancel,
     required this.onSave,
     this.isSaving = false,
+    this.showCancel = true,
     super.key,
   });
 
   final VoidCallback? onCancel;
   final VoidCallback? onSave;
   final bool isSaving;
+  final bool showCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -329,6 +334,7 @@ class FormActionRow extends StatelessWidget {
         ],
       ),
     );
+    if (!showCancel) return SizedBox(width: double.infinity, child: saveButton);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         if (constraints.maxWidth >= 260 &&

@@ -74,7 +74,14 @@ class _StockSearchFieldState extends State<StockSearchField> {
 
   void _onFocusChange() {
     _blurReset?.cancel();
-    if (!_focus.hasFocus) {
+    if (_focus.hasFocus && _text.trim().length >= 2 && _result == null) {
+      _debounce?.cancel();
+      final int request = _request;
+      setState(() => _searching = true);
+      _debounce = Timer(const Duration(milliseconds: 350), () {
+        unawaited(_search(_text, request));
+      });
+    } else if (!_focus.hasFocus) {
       _blurReset = Timer(const Duration(milliseconds: 150), () {
         if (mounted && !_focus.hasFocus) _reset();
       });

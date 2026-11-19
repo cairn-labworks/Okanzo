@@ -12,6 +12,9 @@ import '../components/ui_components.dart';
 import '../theme/app_style.dart';
 import '../theme/colors.dart';
 import 'category_groups.dart';
+import 'add_holding_button.dart';
+import 'holding_details.dart';
+import 'holding_group_list.dart';
 import 'home_view_model.dart';
 import 'net_worth_card.dart';
 
@@ -37,6 +40,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   HomeViewModel? _viewModel;
   bool _showAssets = true;
+  final Map<String, HoldingSort> _sorts = <String, HoldingSort>{};
   final ValueNotifier<Set<String>> _expanded = ValueNotifier<Set<String>>(
     <String>{},
   );
@@ -121,20 +125,27 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           floatingActionButton: state.activePortfolio == null
               ? null
-              : _AddFab(onPressed: () => _showAddSheet(state.activePortfolio!)),
+              : AddHoldingButton(
+                  onAsset: () {
+                    setState(() => _showAssets = true);
+                    widget.onOpenAssetEditor(state.activePortfolio!.id, 0);
+                  },
+                  onLiability: () {
+                    setState(() => _showAssets = false);
+                    widget.onOpenLiabilityEditor(state.activePortfolio!.id, 0);
+                  },
+                ),
           body: state.loading
               ? const Center(child: CircularProgressIndicator())
               : _HomeContent(
                   state: state,
                   expanded: _expanded,
                   onToggleExpanded: _toggleExpanded,
-                  onOpenAsset: (AssetEntity asset) =>
-                      widget.onOpenAssetEditor(asset.portfolioId, asset.id),
-                  onOpenLiability: (LiabilityEntity liability) =>
-                      widget.onOpenLiabilityEditor(
-                        liability.portfolioId,
-                        liability.id,
-                      ),
+                  onOpenAsset: _openAsset,
+                  onOpenLiability: _openLiability,
+                  sorts: _sorts,
+                  onSort: (String key, HoldingSort sort) =>
+                      setState(() => _sorts[key] = sort),
                   viewModel: viewModel,
                   showAssets: _showAssets,
                   onSectionSelected: (bool value) =>
@@ -145,53 +156,45 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _showAddSheet(PortfolioEntity portfolio) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 8,
-                  ),
-                  child: Text(
-                    'Add to {portfolio}'
-                        .tr(context)
-                        .replaceAll('{portfolio}', portfolio.name),
-                    style: Theme.of(sheetContext).textTheme.titleMedium,
-                  ),
-                ),
-                _AddSheetRow(
-                  icon: Icons.account_balance_wallet,
-                  label: 'New asset'.tr(context),
-                  onTap: () {
-                    setState(() => _showAssets = true);
-                    Navigator.of(sheetContext).pop();
-                    widget.onOpenAssetEditor(portfolio.id, 0);
-                  },
-                ),
-                _AddSheetRow(
-                  icon: Icons.inbox,
-                  label: 'New liability'.tr(context),
-                  onTap: () {
-                    setState(() => _showAssets = false);
-                    Navigator.of(sheetContext).pop();
-                    widget.onOpenLiabilityEditor(portfolio.id, 0);
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  Future<void> _openAsset(AssetEntity asset) async {
+    final HoldingDetailsAction? action = await showHoldingDetails(
+      context,
+      asset: asset,
+      hideBalances: _viewModel!.state.hideBalances,
+    );
+    if (!mounted) return;
+    if (action == HoldingDetailsAction.edit) {
+      widget.onOpenAssetEditor(asset.portfolioId, asset.id);
+    } else if (action == HoldingDetailsAction.delete) {
+      try {
+        await AppScope.of(context).assetRepository.delete(asset.id);
+      } on Object {
+        if (mounted) _showDeleteError();
+      }
+    }
+  }
+
+  Future<void> _openLiability(LiabilityEntity liability) async {
+    final HoldingDetailsAction? action = await showHoldingDetails(
+      context,
+      liability: liability,
+      hideBalances: _viewModel!.state.hideBalances,
+    );
+    if (!mounted) return;
+    if (action == HoldingDetailsAction.edit) {
+      widget.onOpenLiabilityEditor(liability.portfolioId, liability.id);
+    } else if (action == HoldingDetailsAction.delete) {
+      try {
+        await AppScope.of(context).liabilityRepository.delete(liability.id);
+      } on Object {
+        if (mounted) _showDeleteError();
+      }
+    }
+  }
+
+  void _showDeleteError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Could not delete holding.'.tr(context))),
     );
   }
 }
@@ -268,36 +271,6 @@ class _PortfolioTitle extends StatelessWidget {
   }
 }
 
-class _AddSheetRow extends StatelessWidget {
-  const _AddSheetRow({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        child: Row(
-          children: <Widget>[
-            Icon(icon, color: theme.colorScheme.primary),
-            const SizedBox(width: 16),
-            Text(label, style: theme.textTheme.bodyLarge),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _HomeContent extends StatelessWidget {
   const _HomeContent({
     required this.state,
@@ -308,6 +281,8 @@ class _HomeContent extends StatelessWidget {
     required this.viewModel,
     required this.showAssets,
     required this.onSectionSelected,
+    required this.sorts,
+    required this.onSort,
   });
 
   final HomeState state;
@@ -318,12 +293,19 @@ class _HomeContent extends StatelessWidget {
   final HomeViewModel viewModel;
   final bool showAssets;
   final ValueChanged<bool> onSectionSelected;
+  final Map<String, HoldingSort> sorts;
+  final void Function(String, HoldingSort) onSort;
 
   @override
   Widget build(BuildContext context) {
     final bool colorful = AppStyle.of(context).colorfulCategories;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 96),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        12,
+        24,
+        MediaQuery.textScalerOf(context).scale(16) + 80,
+      ),
       children: <Widget>[
         NetWorthCard(
           summary: state.summary,
@@ -360,66 +342,68 @@ class _HomeContent extends StatelessWidget {
                     AssetCategoryGroup group,
                     bool dragging,
                   ) {
-                    final String key = 'asset-${group.type.storageName}';
+                    final String key =
+                        '${state.activePortfolio!.id}-asset-${group.type.storageName}';
                     return ValueListenableBuilder<Set<String>>(
                       valueListenable: expanded,
                       builder:
-                          (BuildContext context, Set<String> expandedKeys, _) =>
-                              _CategoryCardShell(
-                                icon: assetTypeIcon(group.type),
-                                accent: colorful
-                                    ? categoryColorAt(group.type.index)
-                                    : null,
-                                title: group.type.displayName.tr(context),
-                                count: group.items.length,
-                                totalText: state.hideBalances
-                                    ? CurrencyUtil.maskShort
-                                    : CurrencyUtil.format(
-                                        group.total,
-                                        group.baseCurrency,
+                          (
+                            BuildContext context,
+                            Set<String> expandedKeys,
+                            _,
+                          ) => _CategoryCardShell(
+                            icon: assetTypeIcon(group.type),
+                            accent: colorful
+                                ? categoryColorAt(group.type.index)
+                                : null,
+                            title: group.type.displayName.tr(context),
+                            count: group.items.length,
+                            totalText: state.hideBalances
+                                ? CurrencyUtil.maskShort
+                                : CurrencyUtil.format(
+                                    group.total,
+                                    group.baseCurrency,
+                                  ),
+                            isExpanded: expandedKeys.contains(key),
+                            isDragging: dragging,
+                            showDivider:
+                                group.type != state.assetGroups.first.type,
+                            onToggle: () => onToggleExpanded(key),
+                            expandedContentBuilder: () =>
+                                HoldingGroupList<AssetLine>(
+                                  items: group.items,
+                                  name: (line) => line.asset.displayName,
+                                  value: (line) => line.convertedValue,
+                                  priced: (line) =>
+                                      !line.asset.type.isMarketLinked ||
+                                      line.asset.lastPrice != null,
+                                  sort: sorts[key] ?? HoldingSort.custom,
+                                  onSort: (sort) => onSort(key, sort),
+                                  onReordered: (List<AssetLine> items) =>
+                                      viewModel.onAssetItemsReordered(
+                                        items
+                                            .map((AssetLine l) => l.asset.id)
+                                            .toList(),
                                       ),
-                                isExpanded: expandedKeys.contains(key),
-                                isDragging: dragging,
-                                showDivider:
-                                    group.type != state.assetGroups.first.type,
-                                onToggle: () => onToggleExpanded(key),
-                                expandedContentBuilder: () =>
-                                    DragReorderColumn<AssetLine>(
-                                      items: group.items,
-                                      keyOf: (AssetLine line) => line.asset.id,
-                                      onReordered: (List<AssetLine> items) =>
-                                          viewModel.onAssetItemsReordered(
-                                            items
-                                                .map(
-                                                  (AssetLine l) => l.asset.id,
-                                                )
-                                                .toList(),
-                                          ),
-                                      itemBuilder:
-                                          (
-                                            BuildContext context,
-                                            AssetLine line,
-                                            bool itemDragging,
-                                          ) => _HoldingItemRow(
-                                            title: line.asset.displayName,
-                                            subtitle: assetSubtitle(
-                                              line.asset,
-                                              group.baseCurrency,
-                                              unitsLabel: 'units'.tr(context),
-                                              hideBalances: state.hideBalances,
-                                            ),
-                                            amount: state.hideBalances
-                                                ? CurrencyUtil.maskShort
-                                                : CurrencyUtil.format(
-                                                    line.convertedValue,
-                                                    group.baseCurrency,
-                                                  ),
-                                            isDragging: itemDragging,
-                                            onOpen: () =>
-                                                onOpenAsset(line.asset),
-                                          ),
-                                    ),
-                              ),
+                                  itemBuilder: (AssetLine line) =>
+                                      _HoldingItemRow(
+                                        title: line.asset.displayName,
+                                        subtitle: assetSubtitle(
+                                          line.asset,
+                                          group.baseCurrency,
+                                          unitsLabel: 'units'.tr(context),
+                                          hideBalances: state.hideBalances,
+                                        ),
+                                        amount: state.hideBalances
+                                            ? CurrencyUtil.maskShort
+                                            : CurrencyUtil.format(
+                                                line.convertedValue,
+                                                group.baseCurrency,
+                                              ),
+                                        onOpen: () => onOpenAsset(line.asset),
+                                      ),
+                                ),
+                          ),
                     );
                   },
             ),
@@ -447,7 +431,8 @@ class _HomeContent extends StatelessWidget {
                     LiabilityCategoryGroup group,
                     bool dragging,
                   ) {
-                    final String key = 'liability-${group.type.storageName}';
+                    final String key =
+                        '${state.activePortfolio!.id}-liability-${group.type.storageName}';
                     return ValueListenableBuilder<Set<String>>(
                       valueListenable: expanded,
                       builder:
@@ -474,10 +459,13 @@ class _HomeContent extends StatelessWidget {
                                 group.type != state.liabilityGroups.first.type,
                             onToggle: () => onToggleExpanded(key),
                             expandedContentBuilder: () =>
-                                DragReorderColumn<LiabilityLine>(
+                                HoldingGroupList<LiabilityLine>(
                                   items: group.items,
-                                  keyOf: (LiabilityLine line) =>
-                                      line.liability.id,
+                                  name: (line) => line.liability.name,
+                                  value: (line) => line.convertedValue,
+                                  priced: (_) => true,
+                                  sort: sorts[key] ?? HoldingSort.custom,
+                                  onSort: (sort) => onSort(key, sort),
                                   onReordered: (List<LiabilityLine> items) =>
                                       viewModel.onLiabilityItemsReordered(
                                         items
@@ -487,12 +475,8 @@ class _HomeContent extends StatelessWidget {
                                             )
                                             .toList(),
                                       ),
-                                  itemBuilder:
-                                      (
-                                        BuildContext context,
-                                        LiabilityLine line,
-                                        bool itemDragging,
-                                      ) => _HoldingItemRow(
+                                  itemBuilder: (LiabilityLine line) =>
+                                      _HoldingItemRow(
                                         title: line.liability.name,
                                         subtitle: currencyNote(
                                           line.liability.currency,
@@ -504,7 +488,6 @@ class _HomeContent extends StatelessWidget {
                                                 line.convertedValue,
                                                 group.baseCurrency,
                                               ),
-                                        isDragging: itemDragging,
                                         onOpen: () =>
                                             onOpenLiability(line.liability),
                                       ),
@@ -602,52 +585,6 @@ class _CategoryPanel extends StatelessWidget {
       child: child,
     ),
   );
-}
-
-class _AddFab extends StatelessWidget {
-  const _AddFab({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Color>? gradient = AppStyle.of(context).fabGradient;
-    if (gradient == null) {
-      return FloatingActionButton.extended(
-        heroTag: 'home-add-holding',
-        onPressed: onPressed,
-        icon: const Icon(Icons.add),
-        label: Text('Add'.tr(context)),
-      );
-    }
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradient,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: gradient.last.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: FloatingActionButton.extended(
-        heroTag: 'home-add-holding',
-        onPressed: onPressed,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        elevation: 0,
-        highlightElevation: 0,
-        icon: const Icon(Icons.add),
-        label: Text('Add'.tr(context)),
-      ),
-    );
-  }
 }
 
 class _CategoryCardShell extends StatelessWidget {
@@ -760,23 +697,19 @@ class _HoldingItemRow extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.amount,
-    required this.isDragging,
     required this.onOpen,
   });
 
   final String title;
   final String subtitle;
   final String amount;
-  final bool isDragging;
   final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     return Material(
-      color: isDragging
-          ? theme.colorScheme.surfaceContainerHighest
-          : theme.colorScheme.surfaceContainerLow,
+      color: theme.colorScheme.surfaceContainerLow,
       child: InkWell(
         onTap: onOpen,
         child: Padding(
@@ -794,7 +727,7 @@ class _HoldingItemRow extends StatelessWidget {
                     Text(
                       title,
                       style: theme.textTheme.bodyLarge,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (subtitle.trim().isNotEmpty)
@@ -816,13 +749,6 @@ class _HoldingItemRow extends StatelessWidget {
                   textAlign: TextAlign.end,
                   style: theme.textTheme.bodyMedium,
                 ),
-              ),
-              const SizedBox(width: 6),
-              Icon(
-                Icons.drag_indicator,
-                size: 20,
-                color: theme.colorScheme.outline,
-                semanticLabel: 'Drag to reorder'.tr(context),
               ),
             ],
           ),

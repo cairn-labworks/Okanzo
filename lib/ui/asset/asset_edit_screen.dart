@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show mapEquals;
 
 import '../../data/remote/stock/stock_search_service.dart';
 import '../../di/app_container.dart';
@@ -9,6 +10,7 @@ import '../../domain/model/stock_exchange.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../components/form_components.dart';
+import '../components/holding_editor_guard.dart';
 import '../components/type_icons.dart';
 import '../components/ui_components.dart';
 import 'asset_edit_view_model.dart';
@@ -46,6 +48,10 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
   final FocusNode _pricePerUnitFocus = FocusNode();
   final FocusNode _manualValueFocus = FocusNode();
   bool _controllersPrimed = false;
+  AssetFormState? _initialForm;
+  bool _searchSelection = false;
+  final GlobalKey<HoldingEditorGuardState> _guard =
+      GlobalKey<HoldingEditorGuardState>();
 
   Map<FocusNode, TextEditingController> get _requiredFields =>
       switch (_viewModel!.form.valuationMode) {
@@ -89,7 +95,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
       case AssetEditEventType.deleted:
         final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
         final String? notice = event.message?.tr(context);
-        Navigator.of(context).pop();
+        unawaited(_guard.currentState!.close());
         if (notice != null && notice.isNotEmpty) {
           messenger
             ..hideCurrentSnackBar()
@@ -107,6 +113,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
   void _primeControllers(AssetFormState form) {
     if (_controllersPrimed) return;
     _controllersPrimed = true;
+    _initialForm = form;
     _name.text = form.name;
     _customName.text = form.customName;
     _symbol.text = form.symbol;
@@ -143,161 +150,195 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
       builder: (BuildContext context, _) {
         final AssetFormState form = viewModel.form;
         if (!form.loading) _primeControllers(form);
-        return Scaffold(
-          appBar: AppBar(
-            toolbarHeight: 48,
-            actions: <Widget>[
-              Padding(
-                padding: const EdgeInsetsDirectional.only(end: 16),
-                child: Center(
-                  child: Text(
-                    'OKANZO',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      letterSpacing: 1.2,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ),
-              if (form.isEditing)
-                IconButton(
-                  tooltip: 'Delete'.tr(context),
-                  onPressed: viewModel.delete,
-                  icon: const Icon(Icons.delete_outline),
-                ),
-            ],
-          ),
-          body: form.loading
-              ? const Center(child: CircularProgressIndicator())
-              : ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 26,
-                    vertical: 12,
-                  ),
-                  children: <Widget>[
-                    PageHeading(
-                      (form.isEditing ? 'Edit asset' : 'Add asset').tr(context),
-                    ),
-                    const SizedBox(height: 20),
-                    if (form.valuationMode == ValuationMode.flat)
-                      LabeledTextField(
-                        controller: _manualValue,
-                        focusNode: _manualValueFocus,
-                        textInputAction: requiredFieldInputAction(
-                          _requiredFields,
-                          current: _manualValueFocus,
-                        ),
-                        onSubmitted: (_) => _focusNextRequired(),
-                        autofocus: !form.isEditing,
-                        label: 'Value'.tr(context),
-                        prefix: CurrencyUtil.symbol(form.currency),
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        prominent: true,
-                        onChanged: viewModel.onManualValueChange,
-                      )
-                    else
-                      _EstimatedValueSummary(
-                        amount: CurrencyUtil.format(
-                          form.estimatedValue,
-                          form.currency,
-                        ),
-                        caption: form.valuationMode == ValuationMode.market
-                            ? form.lastPrice == null
-                                  ? null
-                                  : '${form.quantity.isEmpty ? '0' : form.quantity} × '
-                                        '${CurrencyUtil.format(form.lastPrice!, form.currency)}'
-                            : '${form.quantity.isEmpty ? '0' : form.quantity} × '
-                                  '${CurrencyUtil.format(double.tryParse(form.pricePerUnit) ?? 0, form.currency)}',
+        final bool dirty =
+            _initialForm != null &&
+            !mapEquals(
+              _initialForm!.toEntity(now: 0).toMap(),
+              form.toEntity(now: 0).toMap(),
+            );
+        return HoldingEditorGuard(
+          key: _guard,
+          dirty: dirty || form.isSaving || form.isFetchingPrice,
+          onDiscard: viewModel.cancel,
+          child: Scaffold(
+            appBar: AppBar(
+              toolbarHeight: 48,
+              actions: <Widget>[
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 16),
+                  child: Center(
+                    child: Text(
+                      'OKANZO',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        letterSpacing: 1.2,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: <Widget>[
-                        DropdownSelector<AssetType>(
-                          label: 'Type'.tr(context),
-                          selected: form.type,
-                          options: AssetType.values,
-                          optionLabel: (AssetType type) =>
-                              type.displayName.tr(context),
-                          optionIcon: assetTypeIcon,
-                          onSelected: (AssetType type) {
-                            viewModel.onTypeChange(type);
-                            _name.text = viewModel.form.name;
-                            _customName.text = viewModel.form.customName;
-                            _focusNextRequired();
+                    ),
+                  ),
+                ),
+                if (form.isEditing)
+                  IconButton(
+                    tooltip: 'Delete'.tr(context),
+                    onPressed: form.isSaving
+                        ? null
+                        : () async {
+                            if (await confirmHoldingDeletion(
+                              context,
+                              form.toEntity().displayName,
+                            )) {
+                              await viewModel.delete();
+                            }
                           },
-                          compact: true,
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+              ],
+            ),
+            bottomNavigationBar: form.loading
+                ? null
+                : Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.viewInsetsOf(context).bottom,
+                    ),
+                    child: SafeArea(
+                      minimum: const EdgeInsets.fromLTRB(26, 12, 26, 12),
+                      child: FormActionRow(
+                        showCancel: false,
+                        isSaving: form.isSaving,
+                        onCancel: null,
+                        onSave:
+                            form.isSaving ||
+                                form.isFetchingPrice ||
+                                form.validate() != null
+                            ? null
+                            : () {
+                                FocusScope.of(context).unfocus();
+                                unawaited(viewModel.save());
+                              },
+                      ),
+                    ),
+                  ),
+            body: form.loading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 26,
+                      vertical: 12,
+                    ),
+                    children: <Widget>[
+                      PageHeading(
+                        (form.isEditing ? 'Edit asset' : 'Add asset').tr(
+                          context,
                         ),
-                        CurrencySelector(
-                          currency: form.currency,
-                          compact: true,
-                          onTap: () => _pickCurrency(form.currency),
+                      ),
+                      const SizedBox(height: 20),
+                      if (form.valuationMode == ValuationMode.flat)
+                        LabeledTextField(
+                          controller: _manualValue,
+                          focusNode: _manualValueFocus,
+                          textInputAction: requiredFieldInputAction(
+                            _requiredFields,
+                            current: _manualValueFocus,
+                          ),
+                          onSubmitted: (_) => _focusNextRequired(),
+                          autofocus: !form.isEditing,
+                          label: 'Value'.tr(context),
+                          prefix: CurrencyUtil.symbol(form.currency),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          prominent: true,
+                          onChanged: viewModel.onManualValueChange,
+                        )
+                      else
+                        _EstimatedValueSummary(
+                          amount: CurrencyUtil.format(
+                            form.estimatedValue,
+                            form.currency,
+                          ),
+                          caption: form.valuationMode == ValuationMode.market
+                              ? form.lastPrice == null
+                                    ? null
+                                    : '${form.quantity.isEmpty ? '0' : form.quantity} × '
+                                          '${CurrencyUtil.format(form.lastPrice!, form.currency)}'
+                              : '${form.quantity.isEmpty ? '0' : form.quantity} × '
+                                    '${CurrencyUtil.format(double.tryParse(form.pricePerUnit) ?? 0, form.currency)}',
                         ),
-                        if (form.usesStockExchange)
-                          StockExchangeField(
-                            selected:
-                                form.isEditing ||
-                                    form.symbol.trim().isNotEmpty ||
-                                    viewModel.preferredExchanges.contains(
-                                      form.exchange,
-                                    )
-                                ? form.exchange
-                                : null,
-                            preferredExchanges: viewModel.preferredExchanges,
-                            onSavePreferences: viewModel.savePreferredExchanges,
-                            compact: true,
-                            onSelected: (StockExchange exchange) {
-                              viewModel.onExchangeChange(exchange);
-                              _symbol.text = viewModel.form.symbol;
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: <Widget>[
+                          DropdownSelector<AssetType>(
+                            label: 'Type'.tr(context),
+                            selected: form.type,
+                            options: AssetType.values,
+                            optionLabel: (AssetType type) =>
+                                type.displayName.tr(context),
+                            optionIcon: assetTypeIcon,
+                            onSelected: (AssetType type) {
+                              viewModel.onTypeChange(type);
+                              _searchSelection = false;
+                              _name.text = viewModel.form.name;
+                              _customName.text = viewModel.form.customName;
                               _focusNextRequired();
                             },
+                            compact: true,
                           ),
-                      ],
-                    ),
-                    if (!form.type.isMarketLinked) ...<Widget>[
-                      const SizedBox(height: 12),
-                      LabeledTextField(
-                        controller: _name,
-                        focusNode: _nameFocus,
-                        textInputAction: requiredFieldInputAction(
-                          _requiredFields,
-                          current: _nameFocus,
-                        ),
-                        onSubmitted: (_) => _focusNextRequired(),
-                        label: 'Name'.tr(context),
-                        placeholder: 'e.g. Apple shares'.tr(context),
-                        onChanged: viewModel.onNameChange,
+                          CurrencySelector(
+                            currency: form.currency,
+                            compact: true,
+                            onTap: () => _pickCurrency(form.currency),
+                          ),
+                          if (form.usesStockExchange)
+                            StockExchangeField(
+                              selected:
+                                  form.isEditing ||
+                                      form.symbol.trim().isNotEmpty ||
+                                      viewModel.preferredExchanges.contains(
+                                        form.exchange,
+                                      )
+                                  ? form.exchange
+                                  : null,
+                              preferredExchanges: viewModel.preferredExchanges,
+                              onSavePreferences:
+                                  viewModel.savePreferredExchanges,
+                              compact: true,
+                              onSelected: (StockExchange exchange) {
+                                viewModel.onExchangeChange(exchange);
+                                _symbol.text = viewModel.form.symbol;
+                                _focusNextRequired();
+                              },
+                            ),
+                        ],
                       ),
+                      if (!form.type.isMarketLinked) ...<Widget>[
+                        const SizedBox(height: 12),
+                        LabeledTextField(
+                          controller: _name,
+                          focusNode: _nameFocus,
+                          textInputAction: requiredFieldInputAction(
+                            _requiredFields,
+                            current: _nameFocus,
+                          ),
+                          onSubmitted: (_) => _focusNextRequired(),
+                          label: 'Name'.tr(context),
+                          placeholder: 'e.g. Apple shares'.tr(context),
+                          maxLength: 60,
+                          onChanged: viewModel.onNameChange,
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      ..._valuationFields(form, viewModel),
+                      const SizedBox(height: 8),
+                      OptionalNotesField(
+                        key: const ValueKey<String>('asset-notes'),
+                        controller: _notes,
+                        onChanged: viewModel.onNotesChange,
+                      ),
+                      const SizedBox(height: 24),
                     ],
-                    const SizedBox(height: 12),
-                    ..._valuationFields(form, viewModel),
-                    const SizedBox(height: 8),
-                    OptionalNotesField(
-                      key: const ValueKey<String>('asset-notes'),
-                      controller: _notes,
-                      onChanged: viewModel.onNotesChange,
-                    ),
-                    const SizedBox(height: 12),
-                    FormActionRow(
-                      isSaving: form.isSaving,
-                      onCancel: () {
-                        FocusScope.of(context).unfocus();
-                        viewModel.cancel();
-                        Navigator.of(context).pop();
-                      },
-                      onSave: form.isSaving || form.isFetchingPrice
-                          ? null
-                          : () {
-                              FocusScope.of(context).unfocus();
-                              unawaited(viewModel.save());
-                            },
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
+                  ),
+          ),
         );
       },
     );
@@ -322,28 +363,55 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
           onChanged: viewModel.onQuantityChange,
         );
         return <Widget>[
-          StockSearchField(
-            controller: _symbol,
-            focusNode: _symbolFocus,
-            textInputAction: requiredFieldInputAction(
-              _requiredFields,
-              current: _symbolFocus,
+          if (form.name.trim().isNotEmpty && !_searchSelection) ...<Widget>[
+            Material(
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(13),
+              child: ListTile(
+                key: const ValueKey<String>('selected-market-holding'),
+                leading: Icon(assetTypeIcon(form.type)),
+                title: Text(form.name),
+                subtitle: Text(form.quoteSymbol),
+                trailing: const Icon(Icons.search),
+                onTap: () {
+                  setState(() => _searchSelection = true);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) return;
+                    _symbolFocus.requestFocus();
+                    _symbol.selection = TextSelection(
+                      baseOffset: 0,
+                      extentOffset: _symbol.text.length,
+                    );
+                  });
+                },
+              ),
             ),
-            onSubmitted: (_) => _focusNextRequired(),
-            service: AppScope.of(context).stockSearchService,
-            type: switch (form.type) {
-              AssetType.crypto => StockSearchType.crypto,
-              AssetType.mutualFund => StockSearchType.fund,
-              _ => StockSearchType.stock,
-            },
-            quantityField: quantityField,
-            onChanged: viewModel.onSymbolChange,
-            onSelected: (result) {
-              viewModel.onStockSelected(result);
-              _symbol.text = viewModel.form.symbol;
-              _focusNextRequired();
-            },
-          ),
+            quantityField,
+          ] else
+            StockSearchField(
+              controller: _symbol,
+              focusNode: _symbolFocus,
+              textInputAction: requiredFieldInputAction(
+                _requiredFields,
+                current: _symbolFocus,
+              ),
+              onSubmitted: (_) => _focusNextRequired(),
+              service: AppScope.of(context).stockSearchService,
+              type: switch (form.type) {
+                AssetType.crypto => StockSearchType.crypto,
+                AssetType.mutualFund => StockSearchType.fund,
+                _ => StockSearchType.stock,
+              },
+              quantityField: quantityField,
+              onChanged: viewModel.onSymbolChange,
+              onSelected: (result) {
+                _searchSelection = false;
+                viewModel.onStockSelected(result);
+                _symbol.text = viewModel.form.symbol;
+                _focusNextRequired();
+                unawaited(viewModel.fetchPrice());
+              },
+            ),
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: TextButton(
@@ -380,6 +448,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
             textInputAction: requiredFieldInputAction(_requiredFields),
             onSubmitted: (_) => _focusNextRequired(),
             label: 'Custom name (optional)'.tr(context),
+            maxLength: 60,
             placeholder: form.name.trim().isNotEmpty ? form.name.trim() : null,
             onChanged: viewModel.onCustomNameChange,
           ),
