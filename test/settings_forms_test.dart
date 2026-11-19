@@ -46,6 +46,10 @@ import 'package:okanzo/util/result.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:okanzo/util/screenshot_protection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:okanzo/util/app_lock_coordinator.dart';
+import 'package:okanzo/util/biometric_authenticator.dart';
+
+import 'helpers/fake_biometric_authenticator.dart';
 
 class _Assets extends Fake implements AssetRepository {
   AssetEntity? existing;
@@ -216,6 +220,11 @@ class _Container extends Fake implements AppContainer {
 
   @override
   final SettingsRepository settingsRepository;
+  final FakeBiometricAuthenticator authenticator = FakeBiometricAuthenticator();
+  @override
+  late final AppLockCoordinator appLock = AppLockCoordinator(
+    authenticator: authenticator,
+  );
   @override
   final _Assets assetRepository = _Assets();
   @override
@@ -1324,6 +1333,7 @@ void main() {
   testWidgets('base currency and app lock remain persistent settings', (
     WidgetTester tester,
   ) async {
+    container.authenticator.result = BiometricResult.success;
     await container.settingsRepository.setAppLockEnabled(true);
     await open(tester, SettingsScreen(onClose: () {}));
     await _tap(tester, find.text('Currency'));

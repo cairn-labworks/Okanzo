@@ -32,6 +32,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   SettingsViewModel? _viewModel;
   int? _selectedCategory;
+  bool _authenticating = false;
 
   void _back() {
     if (_selectedCategory != null) {
@@ -150,7 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   context,
                 ),
                 value: settings.appLockEnabled,
-                onChanged: _onAppLockChanged,
+                onChanged: _authenticating ? null : _onAppLockChanged,
               ),
               _SwitchRow(
                 title: 'Block screenshots'.tr(context),
@@ -192,11 +193,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: 'Save an encrypted, password-protected backup'.tr(
                   context,
                 ),
-                onTap: () {
-                  if (viewModel.portfolios.isNotEmpty) {
-                    _showExportDialog(viewModel.portfolios);
-                  }
-                },
+                onTap: _authenticating
+                    ? null
+                    : () async {
+                        if (viewModel.portfolios.isNotEmpty &&
+                            (!settings.appLockEnabled ||
+                                await _confirmIdentity(
+                                  "Confirm it's you to export portfolios",
+                                )) &&
+                            mounted) {
+                          _showExportDialog(viewModel.portfolios);
+                        }
+                      },
               ),
               _SettingRow(
                 title: 'Import portfolios'.tr(context),
@@ -428,22 +436,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
   );
 
   Future<void> _onAppLockChanged(bool enabled) async {
-    final SettingsViewModel viewModel = _viewModel!;
-    if (!enabled) {
-      viewModel.setAppLockEnabled(false);
-      return;
+    if (await _confirmIdentity("Confirm it's you to change app lock") &&
+        mounted) {
+      if (enabled) AppScope.of(context).appLock.markUnlocked();
+      _viewModel!.setAppLockEnabled(enabled);
     }
-    switch (await BiometricAuthenticator.capability()) {
-      case BiometricCapability.available:
-        viewModel.setAppLockEnabled(true);
-      case BiometricCapability.notEnrolled:
-        viewModel.postMessage(
-          'Set up a screen lock or fingerprint in system settings first'.tr(
-            context,
-          ),
-        );
-      case BiometricCapability.unavailable:
-        viewModel.postMessage("This device can't authenticate you".tr(context));
+  }
+
+  Future<bool> _confirmIdentity(String reason) async {
+    if (_authenticating) return false;
+    final AppContainer container = AppScope.of(context);
+    setState(() => _authenticating = true);
+    try {
+      final BiometricResult result = await container.appLock.authenticate(
+        title: 'Unlock Okanzo'.tr(context),
+        subtitle: reason.tr(context),
+      );
+      if (!mounted) return false;
+      if (result.message != null) _viewModel!.postMessage(result.message!);
+      return result == BiometricResult.success;
+    } finally {
+      if (mounted) setState(() => _authenticating = false);
     }
   }
 
@@ -469,15 +482,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (request == null || !mounted) return;
     final AppLocalizations localizations = AppLocalizations.of(context);
     final SettingsViewModel viewModel = _viewModel!;
+    final AppContainer container = AppScope.of(context);
     try {
       final Uint8List bytes = await viewModel.buildExport(
         request.portfolioIds,
         request.password,
       );
-      final Uri? saved = await FilePicker.saveFile(
-        dialogTitle: localizations.text('Export portfolios'),
-        fileName: 'okanzo-backup.okanzo',
-        bytes: bytes,
+      final Uri? saved = await container.appLock.withFilePicker(
+        () => container.backupFilePicker.saveFile(
+          dialogTitle: localizations.text('Export portfolios'),
+          fileName: 'okanzo-backup.okanzo',
+          bytes: bytes,
+        ),
       );
       if (saved == null) return;
       viewModel.postMessage(
@@ -495,18 +511,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _startImport() async {
-    final PlatformFile? file = await FilePicker.pickFile(
-      dialogTitle: 'Import backup'.tr(context),
-    );
-    if (file == null || !mounted) return;
-    final String? password = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) => const _ImportPasswordDialog(),
-    );
-    if (password == null || !mounted) return;
+    final AppContainer container = AppScope.of(context);
     final AppLocalizations localizations = AppLocalizations.of(context);
     final SettingsViewModel viewModel = _viewModel!;
     try {
+      final PlatformFile? file = await container.appLock.withFilePicker(
+        () => container.backupFilePicker.pickFile(
+          dialogTitle: localizations.text('Import backup'),
+        ),
+      );
+      if (file == null || !mounted) return;
+      final String? password = await showDialog<String>(
+        context: context,
+        builder: (BuildContext context) => const _ImportPasswordDialog(),
+      );
+      if (password == null || !mounted) return;
       final Uint8List bytes = await file.readAsBytes();
       final ImportResult result = await viewModel.importBackup(bytes, password);
       viewModel.postMessage(

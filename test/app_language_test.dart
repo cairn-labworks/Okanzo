@@ -19,6 +19,9 @@ import 'package:okanzo/main.dart';
 import 'package:okanzo/ui/settings/settings_screen.dart';
 import 'package:okanzo/util/result.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:okanzo/util/app_lock_coordinator.dart';
+
+import 'helpers/fake_biometric_authenticator.dart';
 
 class _PortfolioRepository extends Fake implements PortfolioRepository {
   @override
@@ -55,6 +58,11 @@ class _Container extends Fake implements AppContainer {
 
   @override
   final SettingsRepository settingsRepository;
+
+  @override
+  final AppLockCoordinator appLock = AppLockCoordinator(
+    authenticator: FakeBiometricAuthenticator(),
+  );
 
   @override
   final PortfolioRepository portfolioRepository = _PortfolioRepository();

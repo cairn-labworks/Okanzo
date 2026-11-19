@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import 'ui/lock/lock_screen.dart';
 import 'ui/navigation/app_shell.dart';
 import 'ui/theme/dynamic_color.dart';
 import 'ui/theme/theme.dart';
+import 'util/app_lock_coordinator.dart';
 import 'util/biometric_authenticator.dart';
 import 'util/screenshot_protection.dart';
 
@@ -42,6 +44,15 @@ class OkanzoApp extends StatefulWidget {
 }
 
 class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
+  AppContainer? _container;
+  bool _navigatorCanHandlePop = false;
+  bool? _frameworkHandlesBack;
+
+  bool get _locked =>
+      _container != null &&
+      _container!.settingsRepository.current.appLockEnabled &&
+      !_container!.appLock.unlocked;
+
   @override
   void initState() {
     super.initState();
@@ -50,8 +61,37 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _container?.appLock.removeListener(_updateBackHandling);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _container?.appLock.removeListener(_updateBackHandling);
+    _container = AppScope.of(context);
+    _container!.appLock.addListener(_updateBackHandling);
+    _updateBackHandling();
+  }
+
+  void _updateBackHandling() {
+    final bool handlesBack = !_locked && _navigatorCanHandlePop;
+    if (_frameworkHandlesBack == handlesBack) return;
+    _frameworkHandlesBack = handlesBack;
+    // Let Android's predictive back exit the activity, not animate a hidden route.
+    unawaited(SystemNavigator.setFrameworkHandlesBack(handlesBack));
+  }
+
+  // This observer precedes WidgetsApp's Navigator observer. A PopScope outside
+  // the Navigator cannot by itself intercept back events for its hidden routes.
+  @override
+  Future<bool> didPopRoute() async {
+    if (_locked) {
+      await SystemNavigator.pop();
+      return true;
+    }
+    return false;
   }
 
   @override
@@ -73,6 +113,7 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
           // Brief splash while preferences load; avoids flashing the wrong theme.
           return const SizedBox.shrink();
         }
+        _updateBackHandling();
         return DynamicColorBuilder(
           builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
             // Wallpaper colours apply to light mode; dark is always Midnight.
@@ -82,6 +123,11 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
             return MaterialApp(
               title: 'Okanzo',
               debugShowCheckedModeBanner: false,
+              onNavigationNotification: (NavigationNotification notification) {
+                _navigatorCanHandlePop = notification.canHandlePop;
+                _updateBackHandling();
+                return true;
+              },
               localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
                 AppLocalizations.delegate,
                 GlobalMaterialLocalizations.delegate,
@@ -104,10 +150,12 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
                 AppThemeMode.light => ThemeMode.light,
                 AppThemeMode.dark => ThemeMode.dark,
               },
-              home: AppLockGate(
+              builder: (BuildContext context, Widget? navigator) => AppLockGate(
                 appLockEnabled: settings.appLockEnabled,
-                child: const AppShell(),
+                coordinator: container.appLock,
+                child: navigator!,
               ),
+              home: const AppShell(),
             );
           },
         );
@@ -121,11 +169,13 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
 class AppLockGate extends StatefulWidget {
   const AppLockGate({
     required this.appLockEnabled,
+    required this.coordinator,
     required this.child,
     super.key,
   });
 
   final bool appLockEnabled;
+  final AppLockCoordinator coordinator;
   final Widget child;
 
   @override
@@ -133,54 +183,150 @@ class AppLockGate extends StatefulWidget {
 }
 
 class _AppLockGateState extends State<AppLockGate> with WidgetsBindingObserver {
-  bool _unlocked = false;
-  bool _prompting = false;
+  bool _shellMounted = false;
+  bool _autoPrompted = false;
+  bool _promptScheduled = false;
+  bool _unlockOnResume = false;
+  String? _error;
+  late AppLifecycleState _lifecycle;
+
+  bool get _locked => widget.appLockEnabled && !widget.coordinator.unlocked;
 
   @override
   void initState() {
     super.initState();
+    _lifecycle =
+        WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
     WidgetsBinding.instance.addObserver(this);
+    widget.coordinator.addListener(_onLockChanged);
+    _schedulePrompt();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    widget.coordinator.removeListener(_onLockChanged);
     super.dispose();
   }
 
   @override
   void didUpdateWidget(AppLockGate oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Turning the lock off discards the unlocked state, so turning it back on
-    // challenges the user again — the Android gate did the same by dropping the
-    // saveable state when the lock was disabled.
-    if (oldWidget.appLockEnabled && !widget.appLockEnabled) _unlocked = false;
+    if (oldWidget.coordinator != widget.coordinator) {
+      oldWidget.coordinator.removeListener(_onLockChanged);
+      widget.coordinator.addListener(_onLockChanged);
+    }
+    if (!oldWidget.appLockEnabled && widget.appLockEnabled && _locked) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      _autoPrompted = false;
+    }
+    _schedulePrompt();
+  }
+
+  void _onLockChanged() {
+    if (_locked) FocusManager.instance.primaryFocus?.unfocus();
+    if (!_locked) _error = null;
+    setState(() {});
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Re-lock whenever the app is sent to the background.
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden) {
-      if (!_prompting && _unlocked) setState(() => _unlocked = false);
+    _lifecycle = state;
+    if (state == AppLifecycleState.paused &&
+        !widget.coordinator.authenticating &&
+        !widget.coordinator.deferPickerPause()) {
+      _unlockOnResume = false;
+      _autoPrompted = false;
+      if (widget.appLockEnabled) widget.coordinator.lock();
+    } else if (state == AppLifecycleState.resumed) {
+      if (widget.coordinator.consumeExpiredPickerPause() &&
+          widget.appLockEnabled) {
+        _autoPrompted = false;
+        widget.coordinator.lock();
+      }
+      if (_unlockOnResume) {
+        _unlockOnResume = false;
+        widget.coordinator.markUnlocked();
+      }
+      _schedulePrompt();
     }
   }
 
+  void _schedulePrompt() {
+    if (!_locked ||
+        _autoPrompted ||
+        _promptScheduled ||
+        widget.coordinator.authenticating ||
+        _lifecycle != AppLifecycleState.resumed) {
+      return;
+    }
+    _promptScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _promptScheduled = false;
+      if (!mounted ||
+          !_locked ||
+          _autoPrompted ||
+          widget.coordinator.authenticating ||
+          _lifecycle != AppLifecycleState.resumed) {
+        return;
+      }
+      _autoPrompted = true;
+      unawaited(_authenticate());
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
   Future<void> _authenticate() async {
-    if (_prompting) return;
-    _prompting = true;
-    final String? error = await BiometricAuthenticator.authenticate(
+    if (widget.coordinator.authenticating ||
+        _lifecycle != AppLifecycleState.resumed) {
+      return;
+    }
+    _autoPrompted = true;
+    final BiometricResult result = await widget.coordinator.authenticate(
       title: 'Unlock Okanzo'.tr(context),
       subtitle: "Confirm it's you to view your net worth".tr(context),
     );
-    _prompting = false;
-    // Stay locked on failure; the user can retry from the lock screen.
-    if (error == null && mounted) setState(() => _unlocked = true);
+    if (!mounted) return;
+    if (result == BiometricResult.success) {
+      if (_lifecycle == AppLifecycleState.resumed) {
+        widget.coordinator.markUnlocked();
+      } else {
+        _unlockOnResume = true;
+      }
+    } else {
+      setState(() => _error = result.message);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.appLockEnabled || _unlocked) return widget.child;
-    return LockScreen(onUnlock: _authenticate);
+    if (!_locked) _shellMounted = true;
+    return PopScope(
+      canPop: !_locked,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (!didPop && _locked) unawaited(SystemNavigator.pop());
+      },
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          if (_shellMounted)
+            Visibility(
+              visible: !_locked,
+              maintainState: true,
+              child: IgnorePointer(
+                ignoring: _locked,
+                child: ExcludeFocus(
+                  excluding: _locked,
+                  child: ExcludeSemantics(
+                    excluding: _locked,
+                    child: widget.child,
+                  ),
+                ),
+              ),
+            ),
+          if (_locked) LockScreen(onUnlock: _authenticate, error: _error),
+        ],
+      ),
+    );
   }
 }

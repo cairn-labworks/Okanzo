@@ -3,22 +3,11 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Full-screen gate shown while the app is locked.
-class LockScreen extends StatefulWidget {
-  const LockScreen({required this.onUnlock, super.key});
+class LockScreen extends StatelessWidget {
+  const LockScreen({required this.onUnlock, this.error, super.key});
 
   final Future<void> Function() onUnlock;
-
-  @override
-  State<LockScreen> createState() => _LockScreenState();
-}
-
-class _LockScreenState extends State<LockScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Prompt automatically the first time the lock screen appears.
-    WidgetsBinding.instance.addPostFrameCallback((_) => widget.onUnlock());
-  }
+  final String? error;
 
   @override
   Widget build(BuildContext context) {
@@ -66,10 +55,21 @@ class _LockScreenState extends State<LockScreen> {
                     ),
                   ),
                 ),
+                if (error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Text(
+                      error!.tr(context),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsets.only(top: 32),
                   child: FilledButton.icon(
-                    onPressed: () => widget.onUnlock(),
+                    onPressed: onUnlock,
                     icon: const Icon(Icons.fingerprint, size: 20),
                     label: Text('Unlock'.tr(context)),
                   ),
