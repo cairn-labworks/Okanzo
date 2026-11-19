@@ -31,6 +31,9 @@ import 'package:okanzo/ui/asset/stock_exchange_field.dart';
 import 'package:okanzo/ui/asset/stock_search_field.dart';
 import 'package:okanzo/ui/liability/liability_edit_screen.dart';
 import 'package:okanzo/ui/theme/theme.dart';
+import 'package:okanzo/util/app_lock_coordinator.dart';
+import 'package:okanzo/util/backup_file_picker.dart';
+import 'package:okanzo/util/biometric_authenticator.dart';
 
 class _OfflineContainer implements AppContainer {
   _OfflineContainer(this._inner)
@@ -40,6 +43,16 @@ class _OfflineContainer implements AppContainer {
 
   final AppContainer _inner;
   final http.Client _offlineClient;
+
+  @override
+  AppLockCoordinator get appLock => _inner.appLock;
+  @override
+  BackupFilePicker get backupFilePicker => _inner.backupFilePicker;
+  @override
+  BiometricAuthenticator get biometricAuthenticator =>
+      _inner.biometricAuthenticator;
+  @override
+  DateTime Function() get clock => _inner.clock;
 
   @override
   AppDatabase get database => _inner.database;

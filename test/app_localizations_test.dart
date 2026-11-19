@@ -131,6 +131,35 @@ void main() {
   });
 
   test(
+    'security prompts and credential guidance are translated in all locales',
+    () {
+      for (final Locale locale in AppLocalizations.supportedLocales) {
+        final AppLocalizations strings = AppLocalizations(locale);
+        for (final String source in <String>[
+          "Confirm it's you to change app lock",
+          "Confirm it's you to export portfolios",
+          'Authentication failed',
+          'Set up a screen lock or fingerprint in system settings first',
+          "This device can't authenticate you",
+        ]) {
+          expect(
+            strings.text(source).trim(),
+            isNotEmpty,
+            reason: '$locale: $source',
+          );
+          if (locale.languageCode != 'en') {
+            expect(
+              strings.text(source),
+              isNot(source),
+              reason: '$locale: $source',
+            );
+          }
+        }
+      }
+    },
+  );
+
+  test(
     'date labels use the resolved UI locale, not the formatting default',
     () async {
       await initializeDateFormatting('es');

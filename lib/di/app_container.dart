@@ -22,6 +22,9 @@ import '../data/repository/liability_repository.dart';
 import '../data/repository/portfolio_repository.dart';
 import '../data/repository/settings_repository.dart';
 import '../data/security/database_key_provider.dart';
+import '../util/app_lock_coordinator.dart';
+import '../util/backup_file_picker.dart';
+import '../util/biometric_authenticator.dart';
 
 /// Lightweight manual dependency container holding the encrypted database and
 /// every repository. A single instance is created at startup and handed to the
@@ -36,9 +39,19 @@ class AppContainer {
     required this.liabilityRepository,
     required this.fxRepository,
     required this.backupRepository,
-  });
+    required this.biometricAuthenticator,
+    required this.backupFilePicker,
+    required this.clock,
+  }) : appLock = AppLockCoordinator(
+         authenticator: biometricAuthenticator,
+         now: clock,
+       );
 
-  static Future<AppContainer> create() async {
+  static Future<AppContainer> create({
+    BiometricAuthenticator? biometricAuthenticator,
+    BackupFilePicker backupFilePicker = const SystemBackupFilePicker(),
+    DateTime Function()? clock,
+  }) async {
     const DatabaseKeyProvider keyProvider = DatabaseKeyProvider();
     final Future<SharedPreferences> prefsFuture =
         SharedPreferences.getInstance();
@@ -80,6 +93,10 @@ class AppContainer {
       liabilityRepository: LiabilityRepository(liabilityDao),
       fxRepository: fxRepository,
       backupRepository: BackupRepository(portfolioDao, assetDao, liabilityDao),
+      biometricAuthenticator:
+          biometricAuthenticator ?? LocalBiometricAuthenticator(),
+      backupFilePicker: backupFilePicker,
+      clock: clock ?? DateTime.now,
     );
   }
 
@@ -115,6 +132,10 @@ class AppContainer {
   final LiabilityRepository liabilityRepository;
   final FxRepository fxRepository;
   final BackupRepository backupRepository;
+  final BiometricAuthenticator biometricAuthenticator;
+  final BackupFilePicker backupFilePicker;
+  final DateTime Function() clock;
+  final AppLockCoordinator appLock;
 }
 
 /// Makes the [AppContainer] available to the whole widget tree.

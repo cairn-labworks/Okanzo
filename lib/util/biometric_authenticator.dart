@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 import 'package:local_auth_darwin/local_auth_darwin.dart';
@@ -16,15 +17,41 @@ enum BiometricCapability {
 
 /// Thin wrapper over `local_auth` mirroring the Android BiometricPrompt flow:
 /// biometrics *or* the device credential (PIN/pattern/passcode) unlock the app.
-class BiometricAuthenticator {
-  const BiometricAuthenticator._();
+enum BiometricResult {
+  success,
+  cancelled,
+  notEnrolled,
+  unavailable,
+  failed;
 
-  static final LocalAuthentication _auth = LocalAuthentication();
+  String? get message => switch (this) {
+    notEnrolled =>
+      'Set up a screen lock or fingerprint in system settings first',
+    unavailable => "This device can't authenticate you",
+    failed => 'Authentication failed',
+    success || cancelled => null,
+  };
+}
+
+abstract interface class BiometricAuthenticator {
+  Future<BiometricCapability> capability();
+
+  Future<BiometricResult> authenticate({
+    required String title,
+    required String subtitle,
+  });
+}
+
+class LocalBiometricAuthenticator implements BiometricAuthenticator {
+  LocalBiometricAuthenticator();
+
+  final LocalAuthentication _auth = LocalAuthentication();
 
   /// Mirrors `BiometricManager.canAuthenticate(BIOMETRIC_WEAK or
   /// DEVICE_CREDENTIAL)`: a device secured with a PIN/pattern/passcode or with
   /// enrolled biometrics can run the challenge.
-  static Future<BiometricCapability> capability() async {
+  @override
+  Future<BiometricCapability> capability() async {
     try {
       if (await _auth.isDeviceSupported()) return BiometricCapability.available;
       if (await _auth.canCheckBiometrics) {
@@ -41,8 +68,8 @@ class BiometricAuthenticator {
     }
   }
 
-  /// Shows the platform prompt. Returns null on success, or a failure message.
-  static Future<String?> authenticate({
+  @override
+  Future<BiometricResult> authenticate({
     required String title,
     required String subtitle,
   }) async {
@@ -53,11 +80,25 @@ class BiometricAuthenticator {
           AndroidAuthMessages(signInTitle: title),
           const IOSAuthMessages(),
         ],
-        persistAcrossBackgrounding: true,
+        persistAcrossBackgrounding: false,
       );
-      return ok ? null : 'Authentication failed';
+      return ok ? BiometricResult.success : BiometricResult.cancelled;
     } on LocalAuthException catch (error) {
-      return error.description ?? error.code.name;
+      return switch (error.code) {
+        LocalAuthExceptionCode.userCanceled ||
+        LocalAuthExceptionCode.systemCanceled => BiometricResult.cancelled,
+        LocalAuthExceptionCode.noCredentialsSet ||
+        LocalAuthExceptionCode.noBiometricsEnrolled =>
+          BiometricResult.notEnrolled,
+        LocalAuthExceptionCode.noBiometricHardware =>
+          BiometricResult.unavailable,
+        _ => _failure(error),
+      };
     }
+  }
+
+  BiometricResult _failure(LocalAuthException error) {
+    debugPrint('Device authentication failed: ${error.code.name}');
+    return BiometricResult.failed;
   }
 }
