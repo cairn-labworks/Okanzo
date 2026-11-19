@@ -15,6 +15,7 @@ class StockExchangeField extends StatefulWidget {
     required this.onSelected,
     required this.onSavePreferences,
     this.compact = false,
+    this.canvas = false,
     super.key,
   });
 
@@ -23,6 +24,7 @@ class StockExchangeField extends StatefulWidget {
   final ValueChanged<StockExchange> onSelected;
   final Future<void> Function(List<StockExchange>) onSavePreferences;
   final bool compact;
+  final bool canvas;
 
   static const String manageLabel = 'Select preferred exchanges...';
 
@@ -56,7 +58,7 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
     final IconData selectedIcon = widget.selected == null
         ? Icons.candlestick_chart
         : stockExchangeIcon(widget.selected!);
-    if (widget.compact) {
+    if (widget.compact || widget.canvas) {
       final String label = widget.selected == StockExchange.us
           ? 'US exchange'.tr(context)
           : widget.selected?.displayName.tr(context) ?? 'Exchange'.tr(context);
@@ -90,7 +92,11 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
             ),
           ),
         ],
-        child: PickerChip(label: label, icon: selectedIcon),
+        child: PickerChip(
+          label: label,
+          icon: selectedIcon,
+          fieldLabel: widget.canvas ? 'Exchange'.tr(context) : null,
+        ),
       );
     }
     return DropdownMenu<Object>(

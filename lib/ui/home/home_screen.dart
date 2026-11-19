@@ -99,10 +99,6 @@ class _HomeScreenState extends State<HomeScreen> {
               onManagePortfolios: widget.onManagePortfolios,
             ),
             actions: <Widget>[
-              HideBalancesButton(
-                hideBalances: state.hideBalances,
-                onPressed: viewModel.toggleHideBalances,
-              ),
               IconButton(
                 onPressed: state.isRefreshing ? null : viewModel.refresh,
                 tooltip: 'Refresh prices'.tr(context),
@@ -115,6 +111,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       )
                     : const Icon(Icons.refresh),
+              ),
+              HideBalancesButton(
+                hideBalances: state.hideBalances,
+                onPressed: viewModel.toggleHideBalances,
               ),
               IconButton(
                 onPressed: widget.onOpenSettings,
@@ -299,6 +299,15 @@ class _HomeContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool colorful = AppStyle.of(context).colorfulCategories;
+    final int holdingCount = showAssets
+        ? state.assetGroups.fold(
+            0,
+            (total, group) => total + group.items.length,
+          )
+        : state.liabilityGroups.fold(
+            0,
+            (total, group) => total + group.items.length,
+          );
     return ListView(
       padding: EdgeInsets.fromLTRB(
         24,
@@ -317,7 +326,34 @@ class _HomeContent extends StatelessWidget {
           showAssets: showAssets,
           onSelected: onSectionSelected,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                (showAssets ? 'What you own' : 'What you owe')
+                    .tr(context)
+                    .toUpperCase(),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 10,
+                  letterSpacing: 1.2,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            Text(
+              holdingCount == 1
+                  ? '1 item'.tr(context)
+                  : '{count} items'
+                        .tr(context)
+                        .replaceAll('{count}', '$holdingCount'),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
         if (showAssets && !state.hasAnyAssets)
           EmptyState(
             icon: Icons.account_balance_wallet,
@@ -342,8 +378,8 @@ class _HomeContent extends StatelessWidget {
                     AssetCategoryGroup group,
                     bool dragging,
                   ) {
-                    final String key =
-                        '${state.activePortfolio!.id}-asset-${group.type.storageName}';
+                    final String key = 'asset-${group.type.storageName}';
+                    final String sortKey = '${state.activePortfolio!.id}-$key';
                     return ValueListenableBuilder<Set<String>>(
                       valueListenable: expanded,
                       builder:
@@ -377,8 +413,8 @@ class _HomeContent extends StatelessWidget {
                                   priced: (line) =>
                                       !line.asset.type.isMarketLinked ||
                                       line.asset.lastPrice != null,
-                                  sort: sorts[key] ?? HoldingSort.custom,
-                                  onSort: (sort) => onSort(key, sort),
+                                  sort: sorts[sortKey] ?? HoldingSort.custom,
+                                  onSort: (sort) => onSort(sortKey, sort),
                                   onReordered: (List<AssetLine> items) =>
                                       viewModel.onAssetItemsReordered(
                                         items
@@ -431,8 +467,8 @@ class _HomeContent extends StatelessWidget {
                     LiabilityCategoryGroup group,
                     bool dragging,
                   ) {
-                    final String key =
-                        '${state.activePortfolio!.id}-liability-${group.type.storageName}';
+                    final String key = 'liability-${group.type.storageName}';
+                    final String sortKey = '${state.activePortfolio!.id}-$key';
                     return ValueListenableBuilder<Set<String>>(
                       valueListenable: expanded,
                       builder:
@@ -464,8 +500,8 @@ class _HomeContent extends StatelessWidget {
                                   name: (line) => line.liability.name,
                                   value: (line) => line.convertedValue,
                                   priced: (_) => true,
-                                  sort: sorts[key] ?? HoldingSort.custom,
-                                  onSort: (sort) => onSort(key, sort),
+                                  sort: sorts[sortKey] ?? HoldingSort.custom,
+                                  onSort: (sort) => onSort(sortKey, sort),
                                   onReordered: (List<LiabilityLine> items) =>
                                       viewModel.onLiabilityItemsReordered(
                                         items
@@ -623,7 +659,7 @@ class _CategoryCardShell extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: <Widget>[
-          TypeAvatar(icon, accent: accent, size: 32),
+          TypeAvatar(icon, accent: accent, size: 40),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -678,11 +714,9 @@ class _CategoryCardShell extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: <Widget>[
-          if (showDivider) const Divider(),
+          if (showDivider) const Divider(height: 1),
           InkWell(onTap: onToggle, child: header),
           if (isExpanded) ...<Widget>[
-            Divider(height: 1, color: theme.colorScheme.outlineVariant),
-            const SizedBox(height: 4),
             expandedContentBuilder(),
             const SizedBox(height: 4),
           ],
@@ -713,11 +747,7 @@ class _HoldingItemRow extends StatelessWidget {
       child: InkWell(
         onTap: onOpen,
         child: Padding(
-          padding: const EdgeInsetsDirectional.only(
-            start: 8,
-            top: 12,
-            bottom: 12,
-          ),
+          padding: const EdgeInsetsDirectional.only(top: 16, bottom: 16),
           child: Row(
             children: <Widget>[
               Expanded(
@@ -726,18 +756,23 @@ class _HoldingItemRow extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       title,
-                      style: theme.textTheme.bodyLarge,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (subtitle.trim().isNotEmpty)
-                      Text(
-                        subtitle,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Text(
+                          subtitle,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                   ],
                 ),

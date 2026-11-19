@@ -8,6 +8,7 @@ import '../../domain/model/release_notes.dart';
 import '../../l10n/app_localizations.dart';
 import '../asset/asset_edit_screen.dart';
 import '../components/whats_new_dialog.dart';
+import '../components/holding_create_screen.dart';
 import '../home/home_screen.dart';
 import '../liability/liability_edit_screen.dart';
 import '../portfolio/portfolio_screen.dart';
@@ -107,8 +108,9 @@ class _AppShellState extends State<AppShell> {
   void _openAssetEditor(int portfolioId, int assetId) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            AssetEditScreen(portfolioId: portfolioId, assetId: assetId),
+        builder: (_) => assetId == 0
+            ? HoldingCreateScreen(portfolioId: portfolioId, asset: true)
+            : AssetEditScreen(portfolioId: portfolioId, assetId: assetId),
       ),
     );
   }
@@ -116,10 +118,12 @@ class _AppShellState extends State<AppShell> {
   void _openLiabilityEditor(int portfolioId, int liabilityId) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => LiabilityEditScreen(
-          portfolioId: portfolioId,
-          liabilityId: liabilityId,
-        ),
+        builder: (_) => liabilityId == 0
+            ? HoldingCreateScreen(portfolioId: portfolioId, asset: false)
+            : LiabilityEditScreen(
+                portfolioId: portfolioId,
+                liabilityId: liabilityId,
+              ),
       ),
     );
   }

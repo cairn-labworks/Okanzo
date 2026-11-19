@@ -7,7 +7,7 @@ import 'type_icons.dart';
 
 const EdgeInsets _editorFieldPadding = EdgeInsets.only(top: 24, bottom: 4);
 
-/// Underlined field with shared helper slots and optional amount emphasis.
+/// Shared field with optional Canvas outlines and amount emphasis.
 class LabeledTextField extends StatelessWidget {
   const LabeledTextField({
     required this.controller,
@@ -26,6 +26,7 @@ class LabeledTextField extends StatelessWidget {
     this.isError = false,
     this.prominent = false,
     this.maxLength,
+    this.canvas = false,
     super.key,
   });
 
@@ -45,6 +46,7 @@ class LabeledTextField extends StatelessWidget {
   final bool isError;
   final bool prominent;
   final int? maxLength;
+  final bool canvas;
 
   static final List<TextInputFormatter> _decimalFormatters =
       <TextInputFormatter>[
@@ -92,6 +94,98 @@ class LabeledTextField extends StatelessWidget {
         errorText: isError ? supportingText : null,
       ),
     );
+    if (canvas) {
+      final ThemeData theme = Theme.of(context);
+      final ColorScheme colors = theme.colorScheme;
+      final OutlineInputBorder border = OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: colors.outlineVariant),
+      );
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(
+              label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colors.onSurface,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Semantics(
+              label: label,
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                autofocus: autofocus,
+                onChanged: onChanged,
+                onSubmitted: onSubmitted,
+                textInputAction: textInputAction,
+                maxLines: singleLine ? 1 : null,
+                maxLength: maxLength,
+                keyboardType: keyboardType,
+                style: prominent
+                    ? theme.textTheme.displaySmall?.copyWith(
+                        color: colors.primary,
+                        fontSize: 32,
+                        height: 1.3,
+                      )
+                    : theme.textTheme.bodyLarge,
+                inputFormatters:
+                    keyboardType ==
+                        const TextInputType.numberWithOptions(decimal: true)
+                    ? _decimalFormatters
+                    : null,
+                decoration: InputDecoration(
+                  labelText: null,
+                  hintText: placeholder,
+                  prefixText: prefix,
+                  suffixText: suffix,
+                  helperText: supportingText,
+                  errorText: isError ? supportingText : null,
+                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                  filled: !prominent,
+                  fillColor: colors.surfaceContainerLow,
+                  border: prominent
+                      ? UnderlineInputBorder(
+                          borderSide: BorderSide(color: colors.outlineVariant),
+                        )
+                      : border,
+                  enabledBorder: prominent
+                      ? UnderlineInputBorder(
+                          borderSide: BorderSide(color: colors.outlineVariant),
+                        )
+                      : border,
+                  focusedBorder: prominent
+                      ? UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: colors.primary,
+                            width: 1.5,
+                          ),
+                        )
+                      : border.copyWith(
+                          borderSide: BorderSide(
+                            color: colors.primary,
+                            width: 1.5,
+                          ),
+                        ),
+                  contentPadding: prominent
+                      ? const EdgeInsets.only(top: 4, bottom: 14)
+                      : const EdgeInsets.symmetric(
+                          horizontal: 13,
+                          vertical: 14,
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return prominent
         ? Transform.translate(offset: const Offset(0, 2), child: field)
         : field;
@@ -152,6 +246,7 @@ class DropdownSelector<T> extends StatelessWidget {
     required this.onSelected,
     this.optionIcon,
     this.compact = false,
+    this.canvas = false,
     super.key,
   });
 
@@ -162,10 +257,11 @@ class DropdownSelector<T> extends StatelessWidget {
   final IconData Function(T)? optionIcon;
   final ValueChanged<T> onSelected;
   final bool compact;
+  final bool canvas;
 
   @override
   Widget build(BuildContext context) {
-    if (compact) {
+    if (compact || canvas) {
       return PopupMenuButton<T>(
         tooltip: label,
         onSelected: onSelected,
@@ -182,6 +278,7 @@ class DropdownSelector<T> extends StatelessWidget {
             ),
         ],
         child: PickerChip(
+          fieldLabel: canvas ? label : null,
           label: optionLabel(selected),
           icon: optionIcon?.call(selected),
         ),
@@ -214,15 +311,66 @@ class DropdownSelector<T> extends StatelessWidget {
 }
 
 class PickerChip extends StatelessWidget {
-  const PickerChip({required this.label, this.icon, this.onPressed, super.key});
+  const PickerChip({
+    required this.label,
+    this.icon,
+    this.onPressed,
+    this.fieldLabel,
+    super.key,
+  });
 
   final String label;
   final IconData? icon;
   final VoidCallback? onPressed;
+  final String? fieldLabel;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    if (fieldLabel != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            fieldLabel!,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Material(
+            color: theme.colorScheme.surfaceContainerLow,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(color: theme.colorScheme.outlineVariant),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: onPressed,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 14,
+                ),
+                child: Row(
+                  children: <Widget>[
+                    if (icon != null) ...<Widget>[
+                      Icon(icon, size: 19, color: theme.colorScheme.primary),
+                      const SizedBox(width: 9),
+                    ],
+                    Expanded(
+                      child: Text(label, style: theme.textTheme.bodyMedium),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.expand_more, size: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
     return Material(
       type: MaterialType.transparency,
       child: InkWell(
@@ -365,22 +513,29 @@ class CurrencySelector extends StatelessWidget {
     required this.currency,
     required this.onTap,
     this.compact = false,
+    this.canvas = false,
     super.key,
   });
 
   final String currency;
   final VoidCallback onTap;
   final bool compact;
+  final bool canvas;
 
   @override
   Widget build(BuildContext context) {
     final IconData icon = currencyIcon(currency);
-    if (compact) {
+    if (compact || canvas) {
       return Tooltip(
         message:
             '${'Currency'.tr(context)}: '
             '$currency — ${CurrencyUtil.displayName(currency)}',
-        child: PickerChip(label: currency, icon: icon, onPressed: onTap),
+        child: PickerChip(
+          label: currency,
+          icon: icon,
+          onPressed: onTap,
+          fieldLabel: canvas ? 'Currency'.tr(context) : null,
+        ),
       );
     }
     return ListTile(
@@ -404,11 +559,13 @@ class OptionalNotesField extends StatefulWidget {
   const OptionalNotesField({
     required this.controller,
     required this.onChanged,
+    this.canvas = false,
     super.key,
   });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final bool canvas;
 
   @override
   State<OptionalNotesField> createState() => _OptionalNotesFieldState();
@@ -425,10 +582,16 @@ class _OptionalNotesFieldState extends State<OptionalNotesField> {
       offset: const Offset(0, -4),
       child: Text(
         'Notes (optional)'.tr(context),
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface,
-          fontWeight: FontWeight.w500,
-        ),
+        style:
+            (widget.canvas
+                    ? Theme.of(context).textTheme.bodySmall
+                    : Theme.of(context).textTheme.bodyMedium)
+                ?.copyWith(
+                  color: widget.canvas
+                      ? Theme.of(context).colorScheme.onSurfaceVariant
+                      : Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
       ),
     ),
     initiallyExpanded: _expanded,
@@ -442,8 +605,20 @@ class _OptionalNotesFieldState extends State<OptionalNotesField> {
       ),
     ),
     maintainState: true,
-    shape: const Border(),
-    collapsedShape: const Border(),
+    shape: widget.canvas
+        ? Border(
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          )
+        : const Border(),
+    collapsedShape: widget.canvas
+        ? Border(
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          )
+        : const Border(),
     children: <Widget>[
       TextField(
         controller: widget.controller,

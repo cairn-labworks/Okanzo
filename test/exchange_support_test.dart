@@ -11,11 +11,16 @@ import 'package:http/testing.dart';
 import 'package:okanzo/data/local/app_database.dart';
 import 'package:okanzo/data/local/dao/asset_dao.dart';
 import 'package:okanzo/data/local/entity/asset_entity.dart';
+import 'package:okanzo/data/local/entity/liability_entity.dart';
+import 'package:okanzo/data/local/entity/portfolio_entity.dart';
 import 'package:okanzo/data/remote/stock/chart_response.dart';
 import 'package:okanzo/data/remote/stock/stock_price_service.dart';
 import 'package:okanzo/data/remote/stock/stock_search_service.dart';
 import 'package:okanzo/data/repository/asset_repository.dart';
 import 'package:okanzo/data/repository/settings_repository.dart';
+import 'package:okanzo/data/repository/portfolio_repository.dart';
+import 'package:okanzo/data/repository/liability_repository.dart';
+import 'package:okanzo/data/repository/fx_repository.dart';
 import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/stock_exchange.dart';
@@ -24,6 +29,7 @@ import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
 import 'package:okanzo/ui/asset/stock_exchange_field.dart';
 import 'package:okanzo/ui/components/form_components.dart';
+import 'package:okanzo/ui/components/holding_editor_chrome.dart';
 import 'package:okanzo/ui/components/type_icons.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -34,6 +40,11 @@ import 'helpers/popup_menu_helpers.dart';
 
 class _AssetDao extends Fake implements AssetDao {
   final List<AssetEntity> assets = <AssetEntity>[];
+  @override
+  Stream<List<AssetEntity>> observeForPortfolio(int portfolioId) =>
+      Stream.value(
+        assets.where((asset) => asset.portfolioId == portfolioId).toList(),
+      );
 
   @override
   Future<List<AssetEntity>> getForPortfolio(int portfolioId) async => assets
@@ -130,6 +141,37 @@ class _Database extends Fake implements Database {
   Future<void> close() async {}
 }
 
+class _Portfolios extends Fake implements PortfolioRepository {
+  @override
+  Stream<List<PortfolioEntity>> observeAll() =>
+      Stream.value(const <PortfolioEntity>[
+        PortfolioEntity(
+          id: 1,
+          name: 'Personal',
+          isDefault: true,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ]);
+}
+
+class _Liabilities extends Fake implements LiabilityRepository {
+  @override
+  Stream<List<LiabilityEntity>> observeForPortfolio(int portfolioId) =>
+      Stream.value(const <LiabilityEntity>[]);
+}
+
+Finder _editorInput(String label) => find.descendant(
+  of: find.byWidgetPredicate(
+    (widget) => widget is LabeledTextField && widget.label == label,
+  ),
+  matching: find.byType(TextField),
+);
+Finder get _saveButton => find.descendant(
+  of: find.byType(HoldingEditorFooter),
+  matching: find.byType(FilledButton),
+);
+
 class _Container extends Fake implements AppContainer {
   _Container(
     this.assetRepository,
@@ -145,6 +187,12 @@ class _Container extends Fake implements AppContainer {
 
   @override
   final AssetRepository assetRepository;
+  @override
+  final PortfolioRepository portfolioRepository = _Portfolios();
+  @override
+  final LiabilityRepository liabilityRepository = _Liabilities();
+  @override
+  final FxRepository fxRepository = fxRepositoryForTest();
 
   @override
   final SettingsRepository settingsRepository;
@@ -303,7 +351,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final Finder ticker = find.widgetWithText(TextField, 'Company or Ticker');
+    final Finder ticker = _editorInput('Company or Ticker');
     await tester.ensureVisible(ticker);
     await tester.enterText(ticker, 'Apple');
     await tester.pumpAndSettle();
@@ -314,23 +362,29 @@ void main() {
       find.byKey(const ValueKey<String>('selected-market-holding')),
       findsOneWidget,
     );
-    expect(find.text('AAPL'), findsOneWidget);
+    expect(find.text('AAPL / EUR'), findsOneWidget);
     final TextField customName = tester.widget<TextField>(
-      find.widgetWithText(TextField, 'Custom name (optional)'),
+      _editorInput('Custom name (optional)'),
     );
     expect(customName.controller!.text, isEmpty);
     expect(customName.decoration?.hintText, 'Apple Inc.');
+    await tester.scrollUntilVisible(
+      find.byType(StockExchangeField),
+      -100,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       tester
           .widget<StockExchangeField>(find.byType(StockExchangeField))
           .selected,
       StockExchange.us,
     );
-    await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '2');
+    await tester.ensureVisible(_editorInput('Quantity'));
+    await tester.enterText(_editorInput('Quantity'), '2');
     await tester.pumpAndSettle();
     expect(requests, <String>['AAPL']);
-    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Save'));
-    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.ensureVisible(_saveButton);
+    await tester.tap(_saveButton);
     await tester.pumpAndSettle();
     expect(dao.assets.single.symbol, 'AAPL');
     expect(dao.assets.single.name, 'Apple Inc.');
@@ -562,10 +616,15 @@ void main() {
     await tester.tap(bse);
     await tester.pumpAndSettle();
 
-    final Finder ticker = find.widgetWithText(TextField, 'Company or Ticker');
+    final Finder ticker = _editorInput('Company or Ticker');
     await tester.ensureVisible(ticker);
     await tester.enterText(ticker, 'RELIANCE');
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byType(StockExchangeField),
+      -100,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       tester
           .widget<StockExchangeField>(find.byType(StockExchangeField))
@@ -573,15 +632,26 @@ void main() {
       StockExchange.bse,
     );
     final Finder fetch = find.text('Fetch latest price');
-    await tester.ensureVisible(fetch);
+    await Scrollable.ensureVisible(tester.element(fetch), alignment: 0.5);
+    await tester.pumpAndSettle();
     await tester.tap(fetch);
     await tester.pumpAndSettle();
     expect(requests, <String>['RELIANCE.BO']);
+    await tester.scrollUntilVisible(
+      find.text('0 × ${CurrencyUtil.format(100, 'INR')}'),
+      -100,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('0 × ${CurrencyUtil.format(100, 'INR')}'), findsOneWidget);
 
     await tester.ensureVisible(ticker);
     await tester.enterText(ticker, '0700.HK');
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byType(StockExchangeField),
+      -100,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       tester
           .widget<StockExchangeField>(find.byType(StockExchangeField))
@@ -656,7 +726,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<TextField>(find.widgetWithText(TextField, 'Coin or ticker'))
+            .widget<TextField>(_editorInput('Coin or ticker'))
             .controller
             ?.text,
         'BTC-USD',
@@ -690,13 +760,24 @@ void main() {
         tester.widget<CurrencySelector>(find.byType(CurrencySelector)).currency,
         'EUR',
       );
+      await tester.scrollUntilVisible(
+        find.text('2 × ${CurrencyUtil.format(5, 'EUR')}'),
+        -100,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('2 × ${CurrencyUtil.format(5, 'EUR')}'), findsOneWidget);
       final Finder fetch = find.text('Fetch latest price');
-      await tester.ensureVisible(fetch);
+      await Scrollable.ensureVisible(tester.element(fetch), alignment: 0.5);
+      await tester.pumpAndSettle();
       await tester.tap(fetch);
       await tester.pumpAndSettle();
 
       expect(requests, <String>['AAPL']);
+      await tester.scrollUntilVisible(
+        find.text('2 × ${CurrencyUtil.format(50, 'EUR')}'),
+        -100,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(
         find.text('2 × ${CurrencyUtil.format(50, 'EUR')}'),
         findsOneWidget,
@@ -715,7 +796,7 @@ void main() {
           .position
           .jumpTo(0);
       await tester.pumpAndSettle();
-      expect(find.text(CurrencyUtil.format(100, 'EUR')), findsOneWidget);
+      expect(find.text(CurrencyUtil.format(100, 'EUR')), findsNWidgets(2));
     },
   );
 
@@ -884,8 +965,13 @@ void main() {
       StockExchangeField.manageLabel,
     ]);
     expect(find.text(StockExchange.hongKong.displayName), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('2 × ${CurrencyUtil.format(10, 'HKD')}'),
+      -100,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('2 × ${CurrencyUtil.format(10, 'HKD')}'), findsOneWidget);
-    final Finder ticker = find.widgetWithText(TextField, 'Company or Ticker');
+    final Finder ticker = _editorInput('Company or Ticker');
     await tester.tap(
       find.byKey(const ValueKey<String>('selected-market-holding')),
     );
@@ -977,16 +1063,13 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '4');
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Company or Ticker'),
-        'AAPL',
-      );
+      await tester.enterText(_editorInput('Quantity'), '4');
+      await tester.enterText(_editorInput('Company or Ticker'), 'AAPL');
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
       expect(find.text('Apple Inc.'), findsOneWidget);
 
-      final Finder save = find.widgetWithText(FilledButton, 'Save');
+      final Finder save = _saveButton;
       await tester.scrollUntilVisible(
         save,
         120,
@@ -1064,7 +1147,7 @@ void main() {
 
       const AppLocalizations es = AppLocalizations(Locale('es'));
       await tester.enterText(
-        find.widgetWithText(TextField, es.text('Company or Ticker')),
+        _editorInput(es.text('Company or Ticker')),
         'AAPL',
       );
       await tester.pump(const Duration(milliseconds: 400));
@@ -1077,11 +1160,8 @@ void main() {
         ),
         findsOneWidget,
       );
-      await tester.enterText(
-        find.widgetWithText(TextField, es.text('Quantity')),
-        '2',
-      );
-      final Finder save = find.widgetWithText(FilledButton, es.text('Save'));
+      await tester.enterText(_editorInput(es.text('Quantity')), '2');
+      final Finder save = _saveButton;
       await tester.scrollUntilVisible(
         save,
         120,
@@ -1140,13 +1220,10 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Company or Ticker'),
-      'AAPL',
-    );
-    await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '3');
+    await tester.enterText(_editorInput('Company or Ticker'), 'AAPL');
+    await tester.enterText(_editorInput('Quantity'), '3');
 
-    final Finder save = find.widgetWithText(FilledButton, 'Save');
+    final Finder save = _saveButton;
     await tester.scrollUntilVisible(
       save,
       120,

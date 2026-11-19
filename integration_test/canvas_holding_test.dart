@@ -12,6 +12,7 @@ import 'package:okanzo/domain/model/release_notes.dart';
 import 'package:okanzo/domain/model/theme_mode.dart';
 import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/components/form_components.dart';
+import 'package:okanzo/ui/components/holding_editor_chrome.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:okanzo/util/screenshot_protection.dart';
 
@@ -142,8 +143,15 @@ void main() {
       find.byKey(const ValueKey<String>('selected-market-holding')),
       findsOneWidget,
     );
+    await capture(tester, 'canvas-selected-market-editor');
     await enter(tester, 'Quantity', '3');
-    await tap(tester, find.widgetWithText(FilledButton, 'Save'));
+    await tap(
+      tester,
+      find.descendant(
+        of: find.byType(HoldingEditorFooter),
+        matching: find.byType(FilledButton),
+      ),
+    );
     expect(
       (await tester.runAsync(
         () => container.assetRepository.getById(assets[1]),
@@ -159,10 +167,37 @@ void main() {
     expect(scroll.position.pixels, offset);
     expect(find.byType(BackdropFilter), findsOneWidget);
     await capture(tester, 'canvas-add-expanded');
-    await tap(tester, find.text('New liability'));
+    await tap(tester, find.text('An asset'));
+    await enter(tester, 'Company or Ticker', 'AAPL');
+    await enter(tester, 'Quantity', '2');
+    await capture(tester, 'canvas-add-asset-market');
+    await tap(tester, find.byType(DropdownSelector<AssetType>));
+    await tap(tester, find.text('Cash').last);
+    await enter(tester, 'Value', '10000.25');
+    await enter(tester, 'Name', 'Travel fund');
+    await capture(tester, 'canvas-add-asset');
+    await tap(
+      tester,
+      find.descendant(
+        of: find.byType(HoldingEditorFooter),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    final AssetEntity cash = (await tester.runAsync(
+      () => container.assetRepository.getForPortfolio(portfolioId),
+    ))!.singleWhere((asset) => asset.name == 'Travel fund');
+    assets.add(cash.id);
+    expect(cash.manualValue, 10000.25);
+    await tap(tester, find.byKey(const ValueKey<String>('add-holding')));
+    await tap(tester, find.text('A liability'));
     expect(
       tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Save'))
+          .widget<FilledButton>(
+            find.descendant(
+              of: find.byType(HoldingEditorFooter),
+              matching: find.byType(FilledButton),
+            ),
+          )
           .onPressed,
       isNull,
     );
@@ -172,7 +207,13 @@ void main() {
     await tap(tester, find.byTooltip('Back'));
     expect(find.text('Discard changes?'), findsOneWidget);
     await tap(tester, find.text('Keep editing'));
-    await tap(tester, find.widgetWithText(FilledButton, 'Save'));
+    await tap(
+      tester,
+      find.descendant(
+        of: find.byType(HoldingEditorFooter),
+        matching: find.byType(FilledButton),
+      ),
+    );
     final LiabilityEntity added = (await tester.runAsync(
       () => container.liabilityRepository.getForPortfolio(portfolioId),
     ))!.singleWhere((liability) => liability.name == 'Example loan');

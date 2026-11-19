@@ -48,7 +48,7 @@ class AddHoldingButton extends StatelessWidget {
         );
         final double endWidth = (MediaQuery.sizeOf(context).width - 32).clamp(
           0,
-          300,
+          272,
         );
         final double width = lerpDouble(anchor.width, endWidth, curve.value)!;
         return Stack(
@@ -103,7 +103,8 @@ class AddHoldingButton extends StatelessWidget {
                                   animation: animation,
                                   start: .33,
                                   icon: Icons.trending_up,
-                                  label: 'New asset'.tr(context),
+                                  label: 'An asset'.tr(context),
+                                  subtitle: 'Something you own'.tr(context),
                                   iconColor: const Color(0xFF27583B),
                                   iconBackground: const Color(0xFFB8D7B1),
                                   onTap: () => Navigator.of(context).pop(true),
@@ -113,7 +114,8 @@ class AddHoldingButton extends StatelessWidget {
                                   animation: animation,
                                   start: .22,
                                   icon: Icons.trending_down,
-                                  label: 'New liability'.tr(context),
+                                  label: 'A liability'.tr(context),
+                                  subtitle: 'Something you owe'.tr(context),
                                   iconColor: const Color(0xFF754424),
                                   iconBackground: const Color(0xFFF0D7B9),
                                   onTap: () => Navigator.of(context).pop(false),
@@ -212,6 +214,7 @@ class _Choice extends StatelessWidget {
     required this.start,
     required this.icon,
     required this.label,
+    required this.subtitle,
     required this.iconColor,
     required this.iconBackground,
     required this.onTap,
@@ -221,6 +224,7 @@ class _Choice extends StatelessWidget {
   final double start;
   final IconData icon;
   final String label;
+  final String subtitle;
   final Color iconColor;
   final Color iconBackground;
   final VoidCallback onTap;
@@ -252,7 +256,17 @@ class _Choice extends StatelessWidget {
               child: Icon(icon, size: 20, color: iconColor),
             ),
           ),
-          title: Text(label, style: TextStyle(color: foreground)),
+          title: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: foreground, fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: foreground, fontSize: 10.5),
+          ),
+          horizontalTitleGap: 12,
           onTap: onTap,
         ),
       ),

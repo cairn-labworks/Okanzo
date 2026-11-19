@@ -18,6 +18,7 @@ class StockSearchField extends StatefulWidget {
     this.focusNode,
     this.textInputAction,
     this.onSubmitted,
+    this.canvas = false,
     super.key,
   });
 
@@ -30,6 +31,7 @@ class StockSearchField extends StatefulWidget {
   final FocusNode? focusNode;
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
+  final bool canvas;
 
   @override
   State<StockSearchField> createState() => _StockSearchFieldState();
@@ -161,8 +163,9 @@ class _StockSearchFieldState extends State<StockSearchField> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          FormFieldPair(
-            first: LabeledTextField(
+          if (widget.canvas) ...<Widget>[
+            LabeledTextField(
+              canvas: true,
               controller: widget.controller,
               focusNode: _focus,
               label:
@@ -175,8 +178,25 @@ class _StockSearchFieldState extends State<StockSearchField> {
               textInputAction: widget.textInputAction,
               onSubmitted: widget.onSubmitted,
             ),
-            second: widget.quantityField,
-          ),
+            const SizedBox(height: 12),
+            widget.quantityField,
+          ] else
+            FormFieldPair(
+              first: LabeledTextField(
+                controller: widget.controller,
+                focusNode: _focus,
+                label:
+                    (widget.type == StockSearchType.crypto
+                            ? 'Coin or ticker'
+                            : 'Company or Ticker')
+                        .tr(context),
+                placeholder: 'Search'.tr(context),
+                onChanged: _onChanged,
+                textInputAction: widget.textInputAction,
+                onSubmitted: widget.onSubmitted,
+              ),
+              second: widget.quantityField,
+            ),
           if (_searching)
             const Padding(
               padding: EdgeInsets.only(top: 8),

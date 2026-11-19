@@ -157,8 +157,14 @@ class HoldingGroupList<T> extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsetsDirectional.only(start: 19, bottom: 12),
     padding: const EdgeInsetsDirectional.only(start: 12),
+    decoration: BoxDecoration(
+      border: BorderDirectional(
+        start: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      ),
+    ),
     child: Column(
       children: <Widget>[
         Row(
@@ -166,7 +172,11 @@ class HoldingGroupList<T> extends StatelessWidget {
             Expanded(
               child: Text(
                 'Your holdings'.tr(context),
-                style: Theme.of(context).textTheme.labelSmall,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 10,
+                  letterSpacing: .7,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
             PopupMenuButton<Object>(

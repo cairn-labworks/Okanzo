@@ -11,6 +11,7 @@ import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
 import 'package:okanzo/ui/asset/stock_exchange_field.dart';
 import 'package:okanzo/ui/components/form_components.dart';
+import 'package:okanzo/ui/components/holding_editor_chrome.dart';
 import 'package:okanzo/ui/home/home_screen.dart';
 import 'package:okanzo/ui/home/home_view_model.dart';
 import 'package:okanzo/util/currency_util.dart';
@@ -99,11 +100,39 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 }
 
 Future<void> _enter(WidgetTester tester, String label, String value) async {
-  final Finder field = find.widgetWithText(TextField, label);
+  final Finder field = find.descendant(
+    of: find.byWidgetPredicate(
+      (widget) => widget is LabeledTextField && widget.label == label,
+    ),
+    matching: find.byType(TextField),
+  );
+  if ((label == 'Company or Ticker' || label == 'Coin or ticker') &&
+      field.evaluate().isEmpty &&
+      find
+          .byKey(const ValueKey<String>('selected-market-holding'))
+          .evaluate()
+          .isNotEmpty) {
+    await _tap(
+      tester,
+      find.byKey(const ValueKey<String>('selected-market-holding')),
+    );
+  }
+  if (field.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      field,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
   await Scrollable.ensureVisible(tester.element(field), alignment: 0.5);
   await tester.enterText(field, value);
   await tester.pumpAndSettle();
 }
+
+Finder get _saveButton => find.descendant(
+  of: find.byType(HoldingEditorFooter),
+  matching: find.byType(FilledButton),
+);
 
 Future<void> _select<T>(WidgetTester tester, String label) async {
   await _tap(tester, find.byType(PopupMenuButton<T>));
@@ -179,8 +208,8 @@ Future<void> _selectExchange(
 }
 
 Future<void> _newAsset(WidgetTester tester) async {
-  await _tap(tester, find.byType(FloatingActionButton));
-  await _tap(tester, find.text('New asset'));
+  await _tap(tester, find.byKey(const ValueKey<String>('add-holding')));
+  await _tap(tester, find.text('An asset'));
   await _waitUntil(
     tester,
     () => find.byType(StockExchangeField).evaluate().isNotEmpty,
@@ -252,7 +281,10 @@ void main() {
       await app.main();
       await _waitUntil(
         tester,
-        () => find.byType(FloatingActionButton).evaluate().isNotEmpty,
+        () => find
+            .byKey(const ValueKey<String>('add-holding'))
+            .evaluate()
+            .isNotEmpty,
         'home portfolio',
       );
       if (find.text('Got it').evaluate().isNotEmpty) {
@@ -364,7 +396,7 @@ void main() {
           await tester.pumpAndSettle();
           await binding.takeScreenshot('bse-quote');
         }
-        await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+        await _tap(tester, _saveButton);
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
@@ -397,6 +429,7 @@ void main() {
           await _tap(tester, find.text(listing.type.displayName));
         }
         await _tap(tester, find.text(listing.name));
+        await _tap(tester, find.text('Edit asset'));
         await _waitUntil(
           tester,
           () => find.byType(StockExchangeField).evaluate().isNotEmpty,
@@ -409,13 +442,8 @@ void main() {
           listing.exchange,
         );
         expect(
-          tester
-              .widget<TextField>(
-                find.widgetWithText(TextField, 'Company or Ticker'),
-              )
-              .controller
-              ?.text,
-          listing.symbol,
+          find.text('${listing.symbol} / ${listing.currency}'),
+          findsOneWidget,
         );
         final AssetEntity asset = saved[listing.symbol]!;
         expect(
@@ -460,6 +488,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await _tap(tester, find.text(_listings.first.name));
+      await _tap(tester, find.text('Edit asset'));
       await _waitUntil(
         tester,
         () => find.byType(StockExchangeField).evaluate().isNotEmpty,
@@ -472,15 +501,7 @@ void main() {
             .selected,
         StockExchange.hongKong,
       );
-      expect(
-        tester
-            .widget<TextField>(
-              find.widgetWithText(TextField, 'Company or Ticker'),
-            )
-            .controller
-            ?.text,
-        '0700.HK',
-      );
+      expect(find.text('0700.HK / HKD'), findsOneWidget);
       expect(
         find.byKey(const ValueKey<String>('asset-valuation-caption')),
         findsOneWidget,
@@ -578,7 +599,10 @@ void main() {
       await app.main();
       await _waitUntil(
         tester,
-        () => find.byType(FloatingActionButton).evaluate().isNotEmpty,
+        () => find
+            .byKey(const ValueKey<String>('add-holding'))
+            .evaluate()
+            .isNotEmpty,
         'home portfolio',
       );
       if (find.text('Got it').evaluate().isNotEmpty) {
@@ -658,7 +682,7 @@ void main() {
         expect(_editor(tester).form.currency, 'EUR');
         expect(_editor(tester).form.lastPrice, greaterThan(0));
         final double fetchedEur = _editor(tester).form.lastPrice!;
-        await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+        await _tap(tester, _saveButton);
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
@@ -676,6 +700,7 @@ void main() {
           await _tap(tester, find.text(type.displayName));
         }
         await _tap(tester, find.text(name));
+        await _tap(tester, find.text('Edit asset'));
         await _waitUntil(
           tester,
           () => !_editor(tester).form.loading,
@@ -689,7 +714,7 @@ void main() {
           _editor(tester).form.lastPrice,
           closeTo(expectedGbp, expectedGbp * 1e-12),
         );
-        await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+        await _tap(tester, _saveButton);
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,

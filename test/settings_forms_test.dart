@@ -28,6 +28,8 @@ import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/components/donut_chart.dart';
 import 'package:okanzo/ui/components/form_components.dart';
+import 'package:okanzo/ui/components/holding_editor_chrome.dart';
+import 'package:okanzo/ui/components/holding_create_screen.dart';
 import 'package:okanzo/ui/components/drag_reorder_column.dart';
 import 'package:okanzo/ui/components/type_icons.dart';
 import 'package:okanzo/ui/components/ui_components.dart';
@@ -152,10 +154,11 @@ class _Portfolios extends Fake implements PortfolioRepository {
 
 class _Rates extends Fake implements FxRepository {
   int refreshes = 0;
+  CurrencyConverter rates = const CurrencyConverter.empty();
 
   @override
   Stream<CurrencyConverter> get converter =>
-      Stream<CurrencyConverter>.value(const CurrencyConverter.empty());
+      Stream<CurrencyConverter>.value(rates);
 
   @override
   Future<Result<void>> ensureFreshRates([int maxAgeMillis = 0]) async =>
@@ -293,6 +296,10 @@ Finder _field(String label) => find.byWidgetPredicate(
 
 Finder _textField(String label) =>
     find.descendant(of: _field(label), matching: find.byType(TextField));
+Finder get _saveButton => find.descendant(
+  of: find.byType(HoldingEditorFooter),
+  matching: find.byType(FilledButton),
+);
 
 EditableText _editableField(WidgetTester tester, String label) =>
     tester.widget<EditableText>(
@@ -392,7 +399,7 @@ void main() {
     await tester.enterText(_textField('Quantity'), '2');
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.tap(_saveButton);
     await tester.pump();
     await tester.tap(find.byTooltip('Back'));
     await tester.pump();
@@ -442,8 +449,8 @@ void main() {
       );
       expect(expanded.color, color);
       expect(find.byType(BackdropFilter), findsOneWidget);
-      expect(find.text('New asset').hitTestable(), findsOneWidget);
-      expect(find.text('New liability').hitTestable(), findsOneWidget);
+      expect(find.text('An asset').hitTestable(), findsOneWidget);
+      expect(find.text('A liability').hitTestable(), findsOneWidget);
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.byType(BackdropFilter), findsNothing);
@@ -524,21 +531,14 @@ void main() {
       tester,
       const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
     );
-    final FilledButton emptySave = tester.widget(
-      find.widgetWithText(FilledButton, 'Save'),
-    );
+    final FilledButton emptySave = tester.widget(_saveButton);
     expect(emptySave.onPressed, isNull);
     final String family = '👨‍👩‍👧';
     await tester.enterText(_textField('Name'), family * 61);
     expect(_editableField(tester, 'Name').controller.text, family * 60);
     await tester.enterText(_textField('Outstanding amount'), '0');
     await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Save'))
-          .onPressed,
-      isNotNull,
-    );
+    expect(tester.widget<FilledButton>(_saveButton).onPressed, isNotNull);
     await _tap(tester, find.byTooltip('Back'));
     expect(find.text('Discard changes?'), findsOneWidget);
     await _tap(tester, find.text('Keep editing'));
@@ -583,7 +583,7 @@ void main() {
         _editableField(tester, 'Custom name (optional)').controller.text,
         'x' * 60,
       );
-      await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+      await _tap(tester, _saveButton);
       expect(container.assetRepository.quoteFetches, 1);
       expect(container.assetRepository.saved?.quantity, 2);
       expect(container.assetRepository.saved?.customName, 'x' * 60);
@@ -828,11 +828,11 @@ void main() {
       );
       expect(find.text('No liabilities'), findsOneWidget);
       await _tap(tester, find.byKey(const ValueKey<String>('add-holding')));
-      await _tap(tester, find.text('New asset'));
+      await _tap(tester, find.text('An asset'));
       expect(editors, <String>['asset']);
       expect(find.text('No assets yet'), findsOneWidget);
       await _tap(tester, find.byKey(const ValueKey<String>('add-holding')));
-      await _tap(tester, find.text('New liability'));
+      await _tap(tester, find.text('A liability'));
       expect(editors, <String>['asset', 'liability']);
       expect(find.text('No liabilities'), findsOneWidget);
     },
@@ -1185,6 +1185,7 @@ void main() {
         createdAt: 0,
         updatedAt: 0,
       );
+
       await tester.pumpWidget(
         _app(
           container,
@@ -1200,10 +1201,9 @@ void main() {
       expect(find.byType(DropdownMenu<Object>), findsNothing);
       expect(find.byType(DropdownMenu<AssetType>), findsNothing);
       final Text amount = tester.widget<Text>(
-        find.text(CurrencyUtil.format(3864, 'USD')),
+        find.text(CurrencyUtil.format(3864, 'USD')).first,
       );
-      expect(amount.style?.fontSize, 38);
-      expect(amount.style?.fontWeight, FontWeight.w500);
+      expect(amount.style?.fontSize, 32);
       expect(
         tester.getRect(find.byType(PageHeading)).top,
         greaterThan(tester.getRect(find.byTooltip('Back')).bottom),
@@ -1218,11 +1218,11 @@ void main() {
       );
       expect(
         tester.getRect(_field('Company or Ticker')).top,
-        tester.getRect(_field('Quantity')).top,
+        lessThan(tester.getRect(_field('Quantity')).top),
       );
       expect(
         tester.getRect(_field('Company or Ticker')).left,
-        lessThan(tester.getRect(_field('Quantity')).left),
+        tester.getRect(_field('Quantity')).left,
       );
       final Scaffold scaffold = tester.widget<Scaffold>(
         find.descendant(
@@ -1231,8 +1231,8 @@ void main() {
         ),
       );
       expect(scaffold.bottomNavigationBar, isNotNull);
-      expect(find.text('Save asset'), findsNothing);
-      final Finder save = find.widgetWithText(FilledButton, 'Save');
+      expect(find.text('Save asset'), findsOneWidget);
+      final Finder save = _saveButton;
       final Finder cancel = find.widgetWithText(OutlinedButton, 'Cancel');
       await tester.scrollUntilVisible(
         save,
@@ -1245,6 +1245,127 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('holding kind tabs preserve both drafts and guard Back', (
+    tester,
+  ) async {
+    Future<void> switchKind(String label) async {
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position
+          .jumpTo(0);
+      await tester.pumpAndSettle();
+      await _tap(tester, find.text(label));
+    }
+
+    await open(tester, const HoldingCreateScreen(portfolioId: 1, asset: true));
+    await _tap(tester, _textField('Company or Ticker'));
+    await tester.enterText(_textField('Company or Ticker'), 'AAPL');
+    await _tap(tester, _textField('Quantity'));
+    await tester.enterText(_textField('Quantity'), '2');
+    await switchKind('Liability / I owe');
+    await tester.enterText(_textField('Outstanding amount'), '250.75');
+    await _tap(tester, _textField('Name'));
+    await tester.enterText(_textField('Name'), 'Example loan');
+    await switchKind('Asset / I own');
+    await _tap(tester, _textField('Company or Ticker'));
+    expect(_editableField(tester, 'Company or Ticker').controller.text, 'AAPL');
+    expect(_editableField(tester, 'Quantity').controller.text, '2');
+    await switchKind('Liability / I owe');
+    expect(
+      _editableField(tester, 'Outstanding amount').controller.text,
+      '250.75',
+    );
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsOneWidget);
+    await tester.tap(find.text('Keep editing'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HoldingCreateScreen), findsOneWidget);
+    expect(container.assetRepository.saved, isNull);
+    expect(container.liabilityRepository.saved, isNull);
+  });
+
+  for (final (bool asset, int id, double value, double next) scenario
+      in <(bool, int, double, double)>[
+        (true, 0, 100, 60),
+        (true, 1, 120, 20),
+        (false, 0, 120, -50),
+        (false, 2, 120, -10),
+      ]) {
+    testWidgets(
+      'net worth preview handles ${scenario.$1 ? 'assets' : 'liabilities'} ${scenario.$2 == 0 ? 'added' : 'edited'} with FX',
+      (tester) async {
+        container.assetRepository.items = const <AssetEntity>[
+          AssetEntity(
+            id: 1,
+            portfolioId: 1,
+            type: AssetType.cash,
+            name: 'Cash',
+            manualValue: 100,
+            currency: 'EUR',
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+        ];
+        container.liabilityRepository.items = const <LiabilityEntity>[
+          LiabilityEntity(
+            id: 2,
+            portfolioId: 1,
+            type: LiabilityType.loan,
+            name: 'Loan',
+            amount: 40,
+            currency: 'USD',
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+        ];
+        container.fxRepository.rates = const CurrencyConverter(<String, double>{
+          'EUR': 2,
+        });
+        await open(
+          tester,
+          HoldingNetWorthPreview(
+            portfolioId: 1,
+            holdingId: scenario.$2,
+            asset: scenario.$1,
+            value: scenario.$3,
+            currency: 'EUR',
+          ),
+        );
+        final Finder current = find
+            .ancestor(
+              of: find.text('Current net worth'),
+              matching: find.byType(Row),
+            )
+            .first;
+        final Finder next = find
+            .ancestor(
+              of: find.text(
+                scenario.$2 == 0 ? 'After this holding' : 'After this update',
+              ),
+              matching: find.byType(Row),
+            )
+            .first;
+        expect(
+          find.descendant(
+            of: current,
+            matching: find.text(CurrencyUtil.format(10, 'USD')),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: next,
+            matching: find.text(CurrencyUtil.format(scenario.$4, 'USD')),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+  }
 
   testWidgets(
     'one theme choice maps Dark to Midnight and keeps dynamic color available in Light',
@@ -1716,6 +1837,11 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isFalse);
         expect(container.assetRepository.saved, isNull);
+        await tester.scrollUntilVisible(
+          _field('Custom name (optional)'),
+          100,
+          scrollable: find.byType(Scrollable).first,
+        );
         expect(
           _editableField(tester, 'Custom name (optional)').controller.text,
           isEmpty,
@@ -1810,7 +1936,7 @@ void main() {
           matching: find.byType(TextField),
         );
         await _tap(tester, input);
-        expect(renderedStyle('Custom name (optional)').color, colors.primary);
+        expect(renderedStyle('Custom name (optional)').color, colors.onSurface);
         expect(renderedStyle('Example company').color, colors.onSurfaceVariant);
         await tester.enterText(input, 'My shares');
         await tester.pumpAndSettle();
@@ -1826,7 +1952,7 @@ void main() {
             matching: find.text('Notes (optional)'),
           ),
         );
-        expect(notesLabel.style?.color, colors.onSurface);
+        expect(notesLabel.style?.color, colors.onSurfaceVariant);
         expect(notesLabel.style?.fontWeight, FontWeight.w500);
         final RichText notesHint = tester.widget<RichText>(
           find.descendant(
@@ -1971,7 +2097,7 @@ void main() {
 
   for (final bool liability in <bool>[false, true]) {
     testWidgets(
-      '${liability ? 'liability' : 'asset'} editor text stays close to the underline',
+      '${liability ? 'liability' : 'asset'} Canvas fields keep labels above outlined inputs',
       (WidgetTester tester) async {
         final Locale locale = Locale(liability ? 'ar' : 'en');
         final AppLocalizations strings = AppLocalizations(locale);
@@ -1990,7 +2116,7 @@ void main() {
         await tester.tap(find.text('Open'));
         await tester.pumpAndSettle();
 
-        void expectTextNearUnderline(Finder field) {
+        void expectFieldLayout(Finder field) {
           final Rect input = tester.getRect(
             find.descendant(of: field, matching: find.byType(EditableText)),
           );
@@ -2001,7 +2127,20 @@ void main() {
               tester.widget(field) is LabeledTextField
               ? tester.widget<LabeledTextField>(field)
               : null;
-          if (labeled?.maxLength == null) {
+          if (labeled?.canvas ?? false) {
+            final TextField textField = tester.widget<TextField>(
+              find.descendant(of: field, matching: find.byType(TextField)),
+            );
+            expect(
+              textField.decoration?.enabledBorder,
+              isA<OutlineInputBorder>(),
+            );
+            expect(decoration.bottom, greaterThan(input.bottom));
+            expect(
+              tester.getRect(find.text(labeled!.label)).bottom,
+              lessThan(input.top),
+            );
+          } else if (labeled?.maxLength == null) {
             expect(decoration.bottom - input.bottom, inInclusiveRange(4, 8));
           } else {
             expect(decoration.bottom, greaterThan(input.bottom));
@@ -2017,13 +2156,14 @@ void main() {
           liability ? 'Name' : 'Company or Ticker',
         );
         final Finder field = _field(label);
-        expectTextNearUnderline(field);
+        await _tap(tester, _textField(label));
+        expectFieldLayout(field);
         await tester.enterText(
           find.descendant(of: field, matching: find.byType(TextField)),
           liability ? 'Home loan' : 'AAPL',
         );
         await tester.pumpAndSettle();
-        expectTextNearUnderline(field);
+        expectFieldLayout(field);
         final Rect floatingLabel = tester.getRect(find.text(label));
         final Rect input = tester.getRect(
           find.descendant(of: field, matching: find.byType(EditableText)),
@@ -2031,12 +2171,12 @@ void main() {
         expect(floatingLabel.bottom, lessThanOrEqualTo(input.top));
         FocusManager.instance.primaryFocus?.unfocus();
         await tester.pumpAndSettle();
-        expectTextNearUnderline(field);
+        expectFieldLayout(field);
 
         await _toggleNotes(tester);
         await tester.enterText(_notesInput, 'First line\nSecond line');
         await tester.pumpAndSettle();
-        expectTextNearUnderline(find.byType(OptionalNotesField));
+        expectFieldLayout(find.byType(OptionalNotesField));
         expect(tester.takeException(), isNull);
       },
     );
@@ -2103,6 +2243,11 @@ void main() {
         case ValuationMode.quantity:
           expect(_field('Name'), findsOneWidget);
           expect(_field('Custom name (optional)'), findsNothing);
+          await tester.scrollUntilVisible(
+            _field('Quantity'),
+            100,
+            scrollable: find.byType(Scrollable).first,
+          );
           expect(_field('Quantity'), findsOneWidget);
           expect(_field('Price per g'), findsOneWidget);
           expect(find.text('Estimated value'), findsOneWidget);
@@ -2125,7 +2270,7 @@ void main() {
             isFalse,
           );
       }
-      await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+      await _tap(tester, _saveButton);
       expect(container.assetRepository.saved?.type, type);
       expect(container.assetRepository.saved?.currency, 'USD');
       expect(find.byType(AssetEditScreen), findsNothing);
@@ -2250,7 +2395,7 @@ void main() {
     await _tap(tester, find.byType(CurrencySelector));
     await tester.tap(find.text('EUR — Euro'));
     await tester.pumpAndSettle();
-    await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+    await _tap(tester, _saveButton);
     expect(container.assetRepository.saved?.name, 'Savings');
     expect(container.assetRepository.saved?.manualValue, 123);
     expect(container.assetRepository.saved?.notes, 'Keep this note');
@@ -2260,6 +2405,10 @@ void main() {
   testWidgets(
     'existing asset notes open automatically and estimates stay live',
     (WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
       container.assetRepository.existing = const AssetEntity(
         id: 1,
         portfolioId: 1,
@@ -2274,7 +2423,8 @@ void main() {
       );
       await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 1));
       expect(_notesInput, findsOneWidget);
-      expect(find.text('\$20'), findsOneWidget);
+      expect(find.text('\$20'), findsWidgets);
+      await _tap(tester, _textField('Price per g'));
       await tester.enterText(
         find.descendant(
           of: _field('Price per g'),
@@ -2283,7 +2433,7 @@ void main() {
         '12',
       );
       await tester.pumpAndSettle();
-      expect(find.text('\$24'), findsOneWidget);
+      expect(find.text('\$24'), findsWidgets);
       expect(
         tester.widget<TextField>(_notesInput).controller?.text,
         'Existing asset note',
@@ -2329,14 +2479,20 @@ void main() {
             .hasFocus,
         isFalse,
       );
+      await tester.scrollUntilVisible(
+        find.byType(OptionalNotesField),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(_notesInput, findsOneWidget);
       expect(
         tester.widget<TextField>(_notesInput).controller?.text,
         'Existing note',
       );
       await _toggleNotes(tester);
-      expect(find.text('Save liability'), findsNothing);
-      await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+      expect(find.text('Save liability'), findsOneWidget);
+      await _tap(tester, _saveButton);
       expect(container.liabilityRepository.saved?.type, type);
       expect(container.liabilityRepository.saved?.amount, 500);
       expect(container.liabilityRepository.saved?.notes, 'Existing note');
@@ -2368,12 +2524,7 @@ void main() {
       tester,
       const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
     );
-    expect(
-      tester
-          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Save'))
-          .onPressed,
-      isNull,
-    );
+    expect(tester.widget<FilledButton>(_saveButton).onPressed, isNull);
     expect(container.liabilityRepository.saved, isNull);
     await tester.enterText(
       find.descendant(of: _field('Name'), matching: find.byType(TextField)),
@@ -2389,7 +2540,7 @@ void main() {
     await _tap(tester, find.byType(CurrencySelector));
     await tester.tap(find.text('EUR — Euro'));
     await tester.pumpAndSettle();
-    await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+    await _tap(tester, _saveButton);
     expect(container.liabilityRepository.saved?.amount, 42);
     expect(container.liabilityRepository.saved?.currency, 'EUR');
     expect(container.liabilityRepository.saved?.notes, isNull);

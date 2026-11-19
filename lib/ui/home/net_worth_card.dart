@@ -26,6 +26,15 @@ class NetWorthCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        Text(
+          'Your financial picture'.tr(context).toUpperCase(),
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontSize: 10,
+            letterSpacing: 1.35,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 12),
         Row(
           children: <Widget>[
             Flexible(

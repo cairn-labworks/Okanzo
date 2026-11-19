@@ -10,8 +10,8 @@ import '../../util/currency_util.dart';
 import '../asset/asset_edit_view_model.dart' show AssetEditEventType;
 import '../components/form_components.dart';
 import '../components/holding_editor_guard.dart';
+import '../components/holding_editor_chrome.dart';
 import '../components/type_icons.dart';
-import '../components/ui_components.dart';
 import 'liability_edit_view_model.dart';
 import 'liability_form_state.dart';
 
@@ -20,11 +20,17 @@ class LiabilityEditScreen extends StatefulWidget {
   const LiabilityEditScreen({
     required this.portfolioId,
     required this.liabilityId,
+    this.viewModel,
+    this.hasUnsavedChanges,
+    this.onKindSelected,
     super.key,
   });
 
   final int portfolioId;
   final int liabilityId;
+  final LiabilityEditViewModel? viewModel;
+  final bool? hasUnsavedChanges;
+  final ValueChanged<bool>? onKindSelected;
 
   @override
   State<LiabilityEditScreen> createState() => _LiabilityEditScreenState();
@@ -55,12 +61,15 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
     super.didChangeDependencies();
     if (_viewModel != null) return;
     final AppContainer container = AppScope.of(context);
-    _viewModel = LiabilityEditViewModel(
-      liabilityRepository: container.liabilityRepository,
-      settingsRepository: container.settingsRepository,
-      portfolioId: widget.portfolioId,
-      liabilityId: widget.liabilityId,
-    )..addListener(_onChanged);
+    _viewModel =
+        widget.viewModel ??
+        LiabilityEditViewModel(
+          liabilityRepository: container.liabilityRepository,
+          settingsRepository: container.settingsRepository,
+          portfolioId: widget.portfolioId,
+          liabilityId: widget.liabilityId,
+        );
+    _viewModel!.addListener(_onChanged);
   }
 
   void _onChanged() {
@@ -91,7 +100,7 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
   @override
   void dispose() {
     _viewModel?.removeListener(_onChanged);
-    _viewModel?.dispose();
+    if (widget.viewModel == null) _viewModel?.dispose();
     _name.dispose();
     _amount.dispose();
     _notes.dispose();
@@ -116,17 +125,25 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
             );
         return HoldingEditorGuard(
           key: _guard,
-          dirty: dirty || form.isSaving,
+          dirty: (widget.hasUnsavedChanges ?? dirty) || form.isSaving,
           onDiscard: () {},
           child: Scaffold(
             appBar: AppBar(
               toolbarHeight: 48,
+              centerTitle: true,
+              title: Text(
+                'OKANZO',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  letterSpacing: 2,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
               actions: <Widget>[
                 Padding(
                   padding: const EdgeInsetsDirectional.only(end: 16),
                   child: Center(
-                    child: Text(
-                      'OKANZO',
+                    child: HoldingPortfolioLabel(
+                      portfolioId: widget.portfolioId,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         letterSpacing: 1.2,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -153,39 +170,39 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
             ),
             bottomNavigationBar: form.loading
                 ? null
-                : Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.viewInsetsOf(context).bottom,
-                    ),
-                    child: SafeArea(
-                      minimum: const EdgeInsets.fromLTRB(26, 12, 26, 12),
-                      child: FormActionRow(
-                        showCancel: false,
-                        isSaving: form.isSaving,
-                        onCancel: null,
-                        onSave: form.isSaving || form.validate() != null
-                            ? null
-                            : () {
-                                FocusScope.of(context).unfocus();
-                                unawaited(viewModel.save());
-                              },
-                      ),
-                    ),
+                : HoldingEditorFooter(
+                    portfolioId: widget.portfolioId,
+                    asset: false,
+                    amount: double.tryParse(form.amount) ?? 0,
+                    currency: form.currency,
+                    saving: form.isSaving,
+                    ready: form.validate() == null,
+                    onSave: () {
+                      FocusScope.of(context).unfocus();
+                      unawaited(viewModel.save());
+                    },
                   ),
             body: form.loading
                 ? const Center(child: CircularProgressIndicator())
                 : ListView(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 26,
-                      vertical: 12,
+                      horizontal: 24,
+                      vertical: 10,
                     ),
                     children: <Widget>[
-                      PageHeading(
-                        (form.isEditing ? 'Edit liability' : 'Add liability')
-                            .tr(context),
+                      HoldingEditorHeading(
+                        portfolioId: widget.portfolioId,
+                        asset: false,
+                        onKindSelected: widget.onKindSelected,
+                        enabled: !form.isSaving,
+                        title:
+                            (form.isEditing
+                                    ? 'Edit liability'
+                                    : 'Add liability')
+                                .tr(context),
                       ),
-                      const SizedBox(height: 20),
                       LabeledTextField(
+                        canvas: true,
                         controller: _amount,
                         focusNode: _amountFocus,
                         textInputAction: requiredFieldInputAction(
@@ -195,6 +212,7 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                         onSubmitted: (_) => _focusNextRequired(),
                         autofocus: !form.isEditing,
                         label: 'Outstanding amount'.tr(context),
+                        placeholder: '0.00',
                         prefix: CurrencyUtil.symbol(form.currency),
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
@@ -204,32 +222,31 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                         onChanged: viewModel.onAmountChange,
                       ),
                       const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: <Widget>[
-                          DropdownSelector<LiabilityType>(
-                            label: 'Type'.tr(context),
-                            selected: form.type,
-                            options: LiabilityType.values,
-                            optionLabel: (LiabilityType type) =>
-                                type.displayName.tr(context),
-                            optionIcon: liabilityTypeIcon,
-                            onSelected: (LiabilityType type) {
-                              viewModel.onTypeChange(type);
-                              _focusNextRequired();
-                            },
-                            compact: true,
-                          ),
-                          CurrencySelector(
-                            currency: form.currency,
-                            compact: true,
-                            onTap: () => _pickCurrency(form.currency),
-                          ),
-                        ],
+                      FormFieldPair(
+                        first: DropdownSelector<LiabilityType>(
+                          canvas: true,
+                          label: 'Type'.tr(context),
+                          selected: form.type,
+                          options: LiabilityType.values,
+                          optionLabel: (LiabilityType type) =>
+                              type.displayName.tr(context),
+                          optionIcon: liabilityTypeIcon,
+                          onSelected: (LiabilityType type) {
+                            viewModel.onTypeChange(type);
+                            _focusNextRequired();
+                          },
+                          compact: true,
+                        ),
+                        second: CurrencySelector(
+                          canvas: true,
+                          currency: form.currency,
+                          compact: true,
+                          onTap: () => _pickCurrency(form.currency),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       LabeledTextField(
+                        canvas: true,
                         controller: _name,
                         focusNode: _nameFocus,
                         textInputAction: requiredFieldInputAction(
@@ -244,8 +261,16 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                       ),
                       const SizedBox(height: 16),
                       OptionalNotesField(
+                        canvas: true,
                         controller: _notes,
                         onChanged: viewModel.onNotesChange,
+                      ),
+                      HoldingNetWorthPreview(
+                        portfolioId: widget.portfolioId,
+                        holdingId: widget.liabilityId,
+                        asset: false,
+                        value: double.tryParse(form.amount) ?? 0,
+                        currency: form.currency,
                       ),
                       const SizedBox(height: 24),
                     ],
