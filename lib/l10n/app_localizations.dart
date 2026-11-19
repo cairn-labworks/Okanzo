@@ -1164,7 +1164,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
         'Læs tydeligere etiketter, genkend valgikoner, og gå til det næste tomme obligatoriske felt.',
         'Les tydeligere etiketter, gjenkjenn valgikoner og gå til neste tomme obligatoriske felt.',
       ],
-  'Simpler market holdings': <String>[
+  'Custom names and price lookup': <String>[
     'Activos de mercado más sencillos',
     'Ativos de mercado mais simples',
     'Positions de marché simplifiées',
@@ -1186,7 +1186,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Enklere markedsbeholdninger',
     'Enklere markedsbeholdninger',
   ],
-  'Use optional custom names and fetch missing market prices automatically when saving.':
+  'Set an optional custom name. Okanzo fetches missing market prices when you save.':
       <String>[
         'Usa nombres personalizados opcionales y obtén automáticamente los precios de mercado que falten al guardar.',
         'Use nomes personalizados opcionais e busque automaticamente os preços de mercado ausentes ao salvar.',
@@ -1231,7 +1231,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Din standardportefølje først',
     'Standardporteføljen din først',
   ],
-  'Open your default portfolio on launch and switch immediately when the default changes.':
+  'Okanzo opens your default portfolio on launch. It switches to the new default when you change it.':
       <String>[
         'Abre tu cartera predeterminada al iniciar y cambia de inmediato cuando cambies la predeterminada.',
         'Abra sua carteira padrão ao iniciar e alterne imediatamente quando o padrão mudar.',
@@ -1254,7 +1254,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
         'Åbn din standardportefølje ved start, og skift straks, når standardvalget ændres.',
         'Åpne standardporteføljen ved oppstart og bytt umiddelbart når standardvalget endres.',
       ],
-  'Readable large totals': <String>[
+  'Compact chart totals': <String>[
     'Totales grandes legibles',
     'Totais grandes legíveis',
     'Grands totaux lisibles',
@@ -1276,7 +1276,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Læsbare store totaler',
     'Lesbare store totalsummer',
   ],
-  'Keep large totals readable in donut charts with currency-aware compact values.':
+  'Donut charts show large totals in abbreviated units for each currency.':
       <String>[
         'Mantén legibles los totales grandes en los gráficos de anillo con valores compactos adaptados a la moneda.',
         'Mantenha os totais grandes legíveis nos gráficos de rosca com valores compactos adequados à moeda.',
@@ -1321,7 +1321,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Søg efter virksomheder og kryptotickere',
     'Søk etter selskaper og kryptotickere',
   ],
-  'Search stocks, funds and cryptocurrencies by name or ticker while keeping manual symbol entry.':
+  'Search stocks, funds and cryptocurrencies by name or ticker. You can also enter a ticker manually.':
       <String>[
         'Busca acciones, fondos y criptomonedas por nombre o símbolo sin perder la entrada manual.',
         'Pesquise ações, fundos e criptomoedas por nome ou código mantendo a digitação manual.',
@@ -1366,7 +1366,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Kontakt til skærmbilledbeskyttelse',
     'Bryter for skjermbildebeskyttelse',
   ],
-  'Screenshots and recent-apps previews stay blocked by default, with a toggle in Security settings.':
+  'Okanzo blocks screenshots and recent-apps previews by default. Change this in Security settings.':
       <String>[
         'Las capturas y vistas previas en recientes siguen bloqueadas por defecto, con opción en Seguridad.',
         'Capturas de tela e prévias em apps recentes seguem bloqueadas por padrão, com opção em Segurança.',
@@ -1720,7 +1720,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Kunne ikke gemme skærmbilledbeskyttelse: {error}',
     'Kunne ikke lagre skjermbildebeskyttelse: {error}',
   ],
-  'Refreshed Midnight and sage store visuals': <String>[
+  'Midnight and sage store screenshots': <String>[
     'Imágenes de tienda Midnight y salvia renovadas',
     'Visuais renovados Midnight e sálvia na loja',
     'Visuels de boutique Midnight et sauge actualisés',
@@ -1742,7 +1742,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Opdaterede Midnight- og salviebilleder i butikken',
     'Oppdaterte Midnight- og salviebilder i butikken',
   ],
-  'Update store screenshots and promotional previews to match the Quiet overview and Midnight interface.':
+  'Store screenshots and promotional previews match the home overview and Midnight theme.':
       <String>[
         'Actualiza las capturas de la tienda y las vistas promocionales con la vista general serena y la interfaz Midnight.',
         'Atualiza as capturas de tela da loja e prévias promocionais para a visão geral tranquila e a interface Midnight.',
@@ -1787,7 +1787,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Android-builds kompatible med F-Droid',
     'Android-bygg kompatible med F-Droid',
   ],
-  'Disable opaque dependency metadata in Android packages.': <String>[
+  'Android packages omit opaque dependency metadata.': <String>[
     'Desactiva los metadatos opacos de dependencias en los paquetes de Android.',
     'Desativa metadados opacos de dependências nos pacotes Android.',
     'Désactive les métadonnées opaques des dépendances dans les paquets Android.',
@@ -1809,7 +1809,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Deaktiverer uigennemsigtige afhængighedsmetadata i Android-pakker.',
     'Deaktiverer ugjennomsiktige avhengighetsmetadata i Android-pakker.',
   ],
-  'Midnight and Quiet overview': <String>[
+  'Midnight theme and home overview': <String>[
     'Midnight y vista general serena',
     'Midnight e visão geral tranquila',
     'Midnight et aperçu épuré',
@@ -1831,7 +1831,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Midnight og roligt overblik',
     'Midnight og rolig oversikt',
   ],
-  'Enjoy sage accents, a clear net-worth headline and separate Assets and Liabilities tabs.':
+  'The home overview has sage accents and a net worth total. Assets and Liabilities have separate tabs.':
       <String>[
         'Disfruta de tonos salvia, un patrimonio neto claro y pestañas separadas de activos y pasivos.',
         'Aproveite tons de sálvia, patrimônio líquido em destaque e abas separadas de ativos e dívidas.',
@@ -1854,7 +1854,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
         'Salviefarver, tydelig nettoformue og separate faner til aktiver og gæld.',
         'Salviefarger, tydelig nettoformue og egne faner for eiendeler og gjeld.',
       ],
-  'Simpler settings and forms': <String>[
+  'Grouped settings and compact forms': <String>[
     'Ajustes y formularios más simples',
     'Configurações e formulários mais simples',
     'Réglages et formulaires simplifiés',
@@ -1876,7 +1876,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Enklere indstillinger og formularer',
     'Enklere innstillinger og skjemaer',
   ],
-  "Use grouped settings, one Theme choice and compact entry forms. App information is separate from What's new.":
+  "Settings groups options by category and has one Theme control. Entry forms use less space. App information is separate from What's new.":
       <String>[
         'Usa ajustes agrupados, una opción de tema y formularios compactos. La información de la app está separada de Novedades.',
         'Use configurações agrupadas, uma opção de tema e formulários compactos. As informações do app são separadas das novidades.',
@@ -1899,7 +1899,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
         'Grupperede indstillinger, ét temavalg og kompakte formularer. Appoplysninger er adskilt fra nyheder.',
         'Grupperte innstillinger, ett temavalg og kompakte skjemaer. Appinformasjon er atskilt fra nyhetene.',
       ],
-  'Reliable currency conversion': <String>[
+  'Prices in your chosen currency': <String>[
     'Conversión de moneda fiable',
     'Conversão de moeda confiável',
     'Conversion monétaire fiable',
@@ -1921,7 +1921,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Pålidelig valutaomregning',
     'Pålitelig valutaomregning',
   ],
-  'Market prices stay in your holding currency when fetching, refreshing or switching currencies.':
+  "Okanzo converts market prices into your asset's currency when you fetch or refresh them. Prices also convert when you change the currency.":
       <String>[
         'Los precios de mercado mantienen la moneda de tu activo al consultar, actualizar o cambiar de moneda.',
         'Os preços de mercado ficam na moeda do ativo ao buscar, atualizar ou trocar moedas.',
@@ -1944,7 +1944,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
         'Markedspriser forbliver i aktivets valuta ved hentning, opdatering eller valutaskift.',
         'Markedspriser forblir i eiendelens valuta ved henting, oppdatering eller valutabytte.',
       ],
-  'Smoother refresh and backups': <String>[
+  'Price refresh and backup encryption': <String>[
     'Actualizaciones y copias más fluidas',
     'Atualizações e backups mais fluidos',
     'Actualisations et sauvegardes plus fluides',
@@ -1966,7 +1966,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Smidigere opdatering og sikkerhedskopiering',
     'Smidigere oppdatering og sikkerhetskopiering',
   ],
-  'Reduce duplicate lookups and keep backup encryption off the main thread.':
+  'Okanzo avoids duplicate price lookups. Backup encryption runs off the main thread.':
       <String>[
         'Reduce las consultas duplicadas y cifra las copias fuera del hilo principal.',
         'Reduza consultas duplicadas e mantenha a criptografia dos backups fora da thread principal.',
@@ -2803,30 +2803,29 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'f.eks. {symbol}',
     'f.eks. {symbol}',
   ],
-  'Enter a Yahoo Finance ticker. Full exchange-qualified tickers are also accepted.':
-      <String>[
-        'Introduce un símbolo de Yahoo Finance. También se aceptan símbolos completos con sufijo de bolsa.',
-        'Insira um código do Yahoo Finance. Códigos completos com sufixo da bolsa também são aceitos.',
-        'Saisissez un symbole Yahoo Finance. Les symboles complets avec suffixe boursier sont aussi acceptés.',
-        'Geben Sie ein Yahoo-Finance-Symbol ein. Vollständige Symbole mit Börsenkürzel werden ebenfalls akzeptiert.',
-        'Yahoo Financeのティッカーを入力してください。取引所サフィックス付きの完全なティッカーも使えます。',
-        'Yahoo Finance 종목 코드를 입력하세요. 거래소 접미사가 포함된 전체 코드도 사용할 수 있습니다.',
-        '请输入 Yahoo Finance 代码，也可输入包含交易所后缀的完整代码。',
-        'Inserisci un simbolo Yahoo Finance. Sono accettati anche simboli completi con suffisso della borsa.',
-        'Yahoo Finance टिकर दर्ज करें। एक्सचेंज प्रत्यय वाले पूरे टिकर भी स्वीकार किए जाते हैं।',
-        'أدخل رمز Yahoo Finance. تُقبل أيضًا الرموز الكاملة التي تتضمن لاحقة البورصة.',
-        'Masukkan kode Yahoo Finance. Kode lengkap dengan akhiran bursa juga diterima.',
-        'Bir Yahoo Finance sembolü girin. Borsa eki içeren tam semboller de kabul edilir.',
-        'Wpisz symbol Yahoo Finance. Akceptowane są również pełne symbole z przyrostkiem giełdy.',
-        'Voer een Yahoo Finance-symbool in. Volledige symbolen met beurssuffix worden ook geaccepteerd.',
-        'Nhập mã Yahoo Finance. Cũng chấp nhận mã đầy đủ có hậu tố sàn giao dịch.',
-        'ป้อนสัญลักษณ์ Yahoo Finance หรือสัญลักษณ์เต็มที่มีส่วนต่อท้ายตลาดหลักทรัพย์',
-        'Введите тикер Yahoo Finance. Полные тикеры с суффиксом биржи также принимаются.',
-        'Ange en Yahoo Finance-symbol. Fullständiga symboler med börssuffix accepteras också.',
-        'Indtast et Yahoo Finance-symbol. Fuldstændige symboler med børssuffiks accepteres også.',
-        'Skriv inn et Yahoo Finance-symbol. Fullstendige symboler med børssuffiks godtas også.',
-      ],
-  '{suffix} is added automatically. Full Yahoo Finance tickers are also accepted.':
+  'Enter a Yahoo Finance ticker with or without an exchange suffix.': <String>[
+    'Introduce un símbolo de Yahoo Finance. También se aceptan símbolos completos con sufijo de bolsa.',
+    'Insira um código do Yahoo Finance. Códigos completos com sufixo da bolsa também são aceitos.',
+    'Saisissez un symbole Yahoo Finance. Les symboles complets avec suffixe boursier sont aussi acceptés.',
+    'Geben Sie ein Yahoo-Finance-Symbol ein. Vollständige Symbole mit Börsenkürzel werden ebenfalls akzeptiert.',
+    'Yahoo Financeのティッカーを入力してください。取引所サフィックス付きの完全なティッカーも使えます。',
+    'Yahoo Finance 종목 코드를 입력하세요. 거래소 접미사가 포함된 전체 코드도 사용할 수 있습니다.',
+    '请输入 Yahoo Finance 代码，也可输入包含交易所后缀的完整代码。',
+    'Inserisci un simbolo Yahoo Finance. Sono accettati anche simboli completi con suffisso della borsa.',
+    'Yahoo Finance टिकर दर्ज करें। एक्सचेंज प्रत्यय वाले पूरे टिकर भी स्वीकार किए जाते हैं।',
+    'أدخل رمز Yahoo Finance. تُقبل أيضًا الرموز الكاملة التي تتضمن لاحقة البورصة.',
+    'Masukkan kode Yahoo Finance. Kode lengkap dengan akhiran bursa juga diterima.',
+    'Bir Yahoo Finance sembolü girin. Borsa eki içeren tam semboller de kabul edilir.',
+    'Wpisz symbol Yahoo Finance. Akceptowane są również pełne symbole z przyrostkiem giełdy.',
+    'Voer een Yahoo Finance-symbool in. Volledige symbolen met beurssuffix worden ook geaccepteerd.',
+    'Nhập mã Yahoo Finance. Cũng chấp nhận mã đầy đủ có hậu tố sàn giao dịch.',
+    'ป้อนสัญลักษณ์ Yahoo Finance หรือสัญลักษณ์เต็มที่มีส่วนต่อท้ายตลาดหลักทรัพย์',
+    'Введите тикер Yahoo Finance. Полные тикеры с суффиксом биржи также принимаются.',
+    'Ange en Yahoo Finance-symbol. Fullständiga symboler med börssuffix accepteras också.',
+    'Indtast et Yahoo Finance-symbol. Fuldstændige symboler med børssuffiks accepteres også.',
+    'Skriv inn et Yahoo Finance-symbol. Fullstendige symboler med børssuffiks godtas også.',
+  ],
+  'Okanzo adds {suffix} automatically. You can also enter a full Yahoo Finance ticker.':
       <String>[
         '{suffix} se añade automáticamente. También se aceptan símbolos completos de Yahoo Finance.',
         '{suffix} é adicionado automaticamente. Códigos completos do Yahoo Finance também são aceitos.',
@@ -5271,7 +5270,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Indtast adgangskoden, der blev brugt til at eksportere sikkerhedskopien.',
     'Skriv inn passordet som ble brukt da sikkerhetskopien ble eksportert.',
   ],
-  'Choose portfolios and set a password. You\'ll need this exact password to import the file again.':
+  'Choose portfolios and set a password. Use the same password to import the backup.':
       <String>[
         'Elige carteras y establece una contraseña. Necesitarás la misma para volver a importar el archivo.',
         'Escolha os portfólios e defina uma senha. Você precisará dela para importar o arquivo novamente.',
@@ -5338,7 +5337,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Denne enhed kan ikke godkende dig',
     'Denne enheten kan ikke autentisere deg',
   ],
-  'Your data is stored encrypted on this device and never leaves it, except when you export a backup. Stock and exchange-rate lookups send only the ticker or currency code.':
+  'Okanzo encrypts your data on this device. Your data leaves it only when you export a backup. Price and exchange-rate lookups send only the ticker or currency code.':
       <String>[
         'Tus datos se guardan cifrados en este dispositivo y nunca salen de él, salvo al exportar una copia. Las consultas de precios solo envían el símbolo o el código de moneda.',
         'Seus dados ficam criptografados neste dispositivo e nunca saem dele, exceto ao exportar um backup. As consultas de preços enviam apenas o ticker ou o código da moeda.',
@@ -5647,7 +5646,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Tilføj aktiver eller forpligtelser til porteføljen for at se fordelingen.',
     'Legg til eiendeler eller gjeld i porteføljen for å se fordelingen.',
   ],
-  '"{portfolio}" and all of its assets and liabilities will be permanently removed.':
+  'This permanently deletes "{portfolio}" and all its assets and liabilities.':
       <String>[
         'Se eliminarán permanentemente «{portfolio}» y todos sus activos y pasivos.',
         '“{portfolio}” e todos os seus ativos e passivos serão removidos permanentemente.',
@@ -5912,28 +5911,6 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Nyt i {version}',
     'Nytt i {version}',
   ],
-  'Here are the key highlights from this update.': <String>[
-    'Estos son los puntos clave de esta actualización.',
-    'Aqui estão os principais destaques desta atualização.',
-    'Voici les principaux points forts de cette mise à jour.',
-    'Hier sind die wichtigsten Neuerungen dieses Updates.',
-    'このアップデートの主なハイライトです。',
-    '이번 업데이트의 주요 변경 사항입니다.',
-    '以下是本次更新的重点内容。',
-    'Ecco le novità principali di questo aggiornamento.',
-    'इस अपडेट की मुख्य झलकियाँ यहाँ दी गई हैं।',
-    'إليك أبرز المزايا والتحسينات في هذا التحديث.',
-    'Berikut sorotan utama dari pembaruan ini.',
-    'Bu güncellemenin öne çıkan yenilikleri şunlardır.',
-    'Oto najważniejsze zmiany w tej aktualizacji.',
-    'Dit zijn de belangrijkste vernieuwingen in deze update.',
-    'Dưới đây là những điểm nổi bật chính trong bản cập nhật này.',
-    'นี่คือไฮไลต์สำคัญจากการอัปเดตครั้งนี้',
-    'Вот основные изменения в этом обновлении.',
-    'Här är de viktigaste nyheterna i den här uppdateringen.',
-    'Her er de vigtigste højdepunkter i denne opdatering.',
-    'Her er de viktigste høydepunktene i denne oppdateringen.',
-  ],
   'Got it': <String>[
     'Entendido',
     'Entendi',
@@ -5978,29 +5955,28 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     '21 appsprog',
     '21 appspråk',
   ],
-  'Choose your preferred app language in Settings, or follow your device language automatically.':
-      <String>[
-        'Elige tu idioma preferido en Ajustes o usa automáticamente el idioma del dispositivo.',
-        'Escolha o idioma preferido nas Configurações ou siga automaticamente o idioma do dispositivo.',
-        'Choisissez la langue de l’application dans les Paramètres ou suivez automatiquement celle de votre appareil.',
-        'Wähle deine bevorzugte App-Sprache in den Einstellungen oder folge automatisch der Gerätesprache.',
-        '設定で希望のアプリ言語を選択するか、端末の言語に自動で合わせられます。',
-        '설정에서 원하는 앱 언어를 선택하거나 기기 언어를 자동으로 따를 수 있습니다.',
-        '可在设置中选择偏好的应用语言，或自动跟随设备语言。',
-        'Scegli la lingua dell’app preferita nelle Impostazioni o segui automaticamente quella del dispositivo.',
-        'सेटिंग्स में अपनी पसंदीदा ऐप भाषा चुनें, या अपने आप डिवाइस की भाषा का उपयोग करें।',
-        'اختر لغة التطبيق المفضلة من الإعدادات أو اتبع لغة جهازك تلقائياً.',
-        'Pilih bahasa aplikasi pilihan Anda di Pengaturan, atau ikuti bahasa perangkat secara otomatis.',
-        'Ayarlar’dan tercih ettiğiniz uygulama dilini seçin veya cihaz dilini otomatik olarak izleyin.',
-        'Wybierz preferowany język aplikacji w Ustawieniach lub automatycznie używaj języka urządzenia.',
-        'Kies je voorkeurstaal in Instellingen of volg automatisch de taal van je apparaat.',
-        'Chọn ngôn ngữ ứng dụng ưa thích trong Cài đặt hoặc tự động theo ngôn ngữ thiết bị.',
-        'เลือกภาษาของแอปที่ต้องการในตั้งค่า หรือใช้ตามภาษาของอุปกรณ์โดยอัตโนมัติ',
-        'Выберите предпочитаемый язык приложения в Настройках или автоматически используйте язык устройства.',
-        'Välj önskat appspråk i Inställningar eller följ enhetens språk automatiskt.',
-        'Vælg dit foretrukne appsprog i Indstillinger, eller følg automatisk enhedens sprog.',
-        'Velg ønsket appspråk i Innstillinger, eller følg enhetens språk automatisk.',
-      ],
+  'Choose an app language in Settings or use the device language.': <String>[
+    'Elige tu idioma preferido en Ajustes o usa automáticamente el idioma del dispositivo.',
+    'Escolha o idioma preferido nas Configurações ou siga automaticamente o idioma do dispositivo.',
+    'Choisissez la langue de l’application dans les Paramètres ou suivez automatiquement celle de votre appareil.',
+    'Wähle deine bevorzugte App-Sprache in den Einstellungen oder folge automatisch der Gerätesprache.',
+    '設定で希望のアプリ言語を選択するか、端末の言語に自動で合わせられます。',
+    '설정에서 원하는 앱 언어를 선택하거나 기기 언어를 자동으로 따를 수 있습니다.',
+    '可在设置中选择偏好的应用语言，或自动跟随设备语言。',
+    'Scegli la lingua dell’app preferita nelle Impostazioni o segui automaticamente quella del dispositivo.',
+    'सेटिंग्स में अपनी पसंदीदा ऐप भाषा चुनें, या अपने आप डिवाइस की भाषा का उपयोग करें।',
+    'اختر لغة التطبيق المفضلة من الإعدادات أو اتبع لغة جهازك تلقائياً.',
+    'Pilih bahasa aplikasi pilihan Anda di Pengaturan, atau ikuti bahasa perangkat secara otomatis.',
+    'Ayarlar’dan tercih ettiğiniz uygulama dilini seçin veya cihaz dilini otomatik olarak izleyin.',
+    'Wybierz preferowany język aplikacji w Ustawieniach lub automatycznie używaj języka urządzenia.',
+    'Kies je voorkeurstaal in Instellingen of volg automatisch de taal van je apparaat.',
+    'Chọn ngôn ngữ ứng dụng ưa thích trong Cài đặt hoặc tự động theo ngôn ngữ thiết bị.',
+    'เลือกภาษาของแอปที่ต้องการในตั้งค่า หรือใช้ตามภาษาของอุปกรณ์โดยอัตโนมัติ',
+    'Выберите предпочитаемый язык приложения в Настройках или автоматически используйте язык устройства.',
+    'Välj önskat appspråk i Inställningar eller följ enhetens språk automatiskt.',
+    'Vælg dit foretrukne appsprog i Indstillinger, eller følg automatisk enhedens sprog.',
+    'Velg ønsket appspråk i Innstillinger, eller følg enhetens språk automatisk.',
+  ],
   'Global stock exchanges': <String>[
     'Bolsas de valores globales',
     'Bolsas de valores globais',
@@ -6023,7 +5999,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Globale børser',
     'Globale børser',
   ],
-  'Look up stocks and funds across US, European, and Asian exchanges, and customize your preferred exchange list.':
+  'Look up stocks and funds on exchanges in the United States, Europe and Asia. Choose which exchanges appear in your preferred list.':
       <String>[
         'Busca acciones y fondos en bolsas de EE. UU., Europa y Asia, y personaliza tu lista de bolsas preferidas.',
         'Pesquise ações e fundos em bolsas dos EUA, Europa e Ásia e personalize sua lista de bolsas preferidas.',
@@ -6046,7 +6022,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
         'Slå aktier og fonde op på amerikanske, europæiske og asiatiske børser, og tilpas din liste over foretrukne børser.',
         'Søk opp aksjer og fond på amerikanske, europeiske og asiatiske børser, og tilpass listen over foretrukne børser.',
       ],
-  'Smarter crypto & market quotes': <String>[
+  'Crypto tickers and currency conversion': <String>[
     'Cotizaciones de cripto y mercado más inteligentes',
     'Cotações mais inteligentes de cripto e mercado',
     'Cotations crypto et marché plus intelligentes',
@@ -6068,7 +6044,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Smartere krypto- og markedskurser',
     'Smartere krypto- og markedskurser',
   ],
-  'Enter bare crypto tickers like BTC or ETH, with automatic conversion from the quote currency into your holding currency.':
+  "Enter a crypto ticker such as BTC or ETH. Okanzo converts the quote into your asset's currency.":
       <String>[
         'Introduce símbolos cripto simples como BTC o ETH, con conversión automática de la moneda de cotización a la moneda de tu activo.',
         'Digite códigos simples de cripto como BTC ou ETH, com conversão automática da moeda da cotação para a moeda do seu ativo.',
@@ -6113,7 +6089,7 @@ const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
     'Nyheder ved opdatering',
     'Nyheter ved oppdatering',
   ],
-  'See key release highlights after updating Okanzo, or reopen them anytime from Settings.':
+  'Okanzo shows release notes after an update. Open them again in Settings.':
       <String>[
         'Consulta las novedades clave después de actualizar Okanzo o vuelve a abrirlas cuando quieras desde Ajustes.',
         'Veja os principais destaques após atualizar o Okanzo ou reabra-os a qualquer momento nas Configurações.',

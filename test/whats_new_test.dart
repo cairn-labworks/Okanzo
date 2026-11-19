@@ -141,23 +141,25 @@ void main() {
         expect(current, isNotNull);
         expect(current!.highlights, isNotEmpty);
 
-        for (final ReleaseHighlight highlight in current.highlights) {
-          expect(highlight.title.trim(), isNotEmpty);
-          expect(highlight.description.trim(), isNotEmpty);
-          for (final Locale locale in AppLocalizations.supportedLocales.skip(
-            1,
-          )) {
-            final AppLocalizations strings = AppLocalizations(locale);
-            expect(
-              strings.text(highlight.title),
-              isNot(highlight.title),
-              reason: '$locale title: ${highlight.title}',
-            );
-            expect(
-              strings.text(highlight.description),
-              isNot(highlight.description),
-              reason: '$locale description: ${highlight.description}',
-            );
+        for (final ReleaseNotes release in AppReleaseNotes.all) {
+          for (final ReleaseHighlight highlight in release.highlights) {
+            expect(highlight.title.trim(), isNotEmpty);
+            expect(highlight.description.trim(), isNotEmpty);
+            for (final Locale locale in AppLocalizations.supportedLocales.skip(
+              1,
+            )) {
+              final AppLocalizations strings = AppLocalizations(locale);
+              expect(
+                strings.text(highlight.title),
+                isNot(highlight.title),
+                reason: '$locale title: ${highlight.title}',
+              );
+              expect(
+                strings.text(highlight.description),
+                isNot(highlight.description),
+                reason: '$locale description: ${highlight.description}',
+              );
+            }
           }
         }
       },
@@ -307,6 +309,10 @@ void main() {
         expect(
           find.text("What's new in ${AppReleaseNotes.currentVersion}"),
           findsOneWidget,
+        );
+        expect(
+          find.text('Here are the key highlights from this update.'),
+          findsNothing,
         );
         for (final ReleaseHighlight highlight
             in AppReleaseNotes.current.highlights) {

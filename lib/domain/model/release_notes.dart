@@ -55,18 +55,18 @@ class AppReleaseNotes {
         ),
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.exchanges,
-          title: 'Simpler market holdings',
-          description: 'Use optional custom names and fetch missing market prices automatically when saving.',
+          title: 'Custom names and price lookup',
+          description: 'Set an optional custom name. Okanzo fetches missing market prices when you save.',
         ),
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.portfolio,
           title: 'Your default portfolio first',
-          description: 'Open your default portfolio on launch and switch immediately when the default changes.',
+          description: 'Okanzo opens your default portfolio on launch. It switches to the new default when you change it.',
         ),
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.statistics,
-          title: 'Readable large totals',
-          description: 'Keep large totals readable in donut charts with currency-aware compact values.',
+          title: 'Compact chart totals',
+          description: 'Donut charts show large totals in abbreviated units for each currency.',
         ),
       ],
     ),
@@ -76,12 +76,12 @@ class AppReleaseNotes {
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.exchanges,
           title: 'Company and crypto ticker search',
-          description: 'Search stocks, funds and cryptocurrencies by name or ticker while keeping manual symbol entry.',
+          description: 'Search stocks, funds and cryptocurrencies by name or ticker. You can also enter a ticker manually.',
         ),
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.security,
           title: 'Screenshot protection toggle',
-          description: 'Screenshots and recent-apps previews stay blocked by default, with a toggle in Security settings.',
+          description: 'Okanzo blocks screenshots and recent-apps previews by default. Change this in Security settings.',
         ),
       ],
     ),
@@ -90,8 +90,8 @@ class AppReleaseNotes {
       highlights: <ReleaseHighlight>[
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.theme,
-          title: 'Refreshed Midnight and sage store visuals',
-          description: 'Update store screenshots and promotional previews to match the Quiet overview and Midnight interface.',
+          title: 'Midnight and sage store screenshots',
+          description: 'Store screenshots and promotional previews match the home overview and Midnight theme.',
         ),
       ],
     ),
@@ -100,8 +100,8 @@ class AppReleaseNotes {
       highlights: <ReleaseHighlight>[
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.theme,
-          title: 'Refreshed Midnight and sage store visuals',
-          description: 'Update store screenshots and promotional previews to match the Quiet overview and Midnight interface.',
+          title: 'Midnight and sage store screenshots',
+          description: 'Store screenshots and promotional previews match the home overview and Midnight theme.',
         ),
       ],
     ),
@@ -111,8 +111,7 @@ class AppReleaseNotes {
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.security,
           title: 'F-Droid-compatible Android builds',
-          description:
-              'Disable opaque dependency metadata in Android packages.',
+          description: 'Android packages omit opaque dependency metadata.',
         ),
       ],
     ),
@@ -121,13 +120,13 @@ class AppReleaseNotes {
       highlights: <ReleaseHighlight>[
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.theme,
-          title: 'Midnight and Quiet overview',
-          description: 'Enjoy sage accents, a clear net-worth headline and separate Assets and Liabilities tabs.',
+          title: 'Midnight theme and home overview',
+          description: 'The home overview has sage accents and a net worth total. Assets and Liabilities have separate tabs.',
         ),
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.assets,
-          title: 'Simpler settings and forms',
-          description: "Use grouped settings, one Theme choice and compact entry forms. App information is separate from What's new.",
+          title: 'Grouped settings and compact forms',
+          description: "Settings groups options by category and has one Theme control. Entry forms use less space. App information is separate from What's new.",
         ),
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.currency,
@@ -137,18 +136,18 @@ class AppReleaseNotes {
         ),
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.exchanges,
-          title: 'Reliable currency conversion',
-          description: 'Market prices stay in your holding currency when fetching, refreshing or switching currencies.',
+          title: 'Prices in your chosen currency',
+          description: "Okanzo converts market prices into your asset's currency when you fetch or refresh them. Prices also convert when you change the currency.",
         ),
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.backup,
-          title: 'Smoother refresh and backups',
-          description: 'Reduce duplicate lookups and keep backup encryption off the main thread.',
+          title: 'Price refresh and backup encryption',
+          description: 'Okanzo avoids duplicate price lookups. Backup encryption runs off the main thread.',
         ),
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.releaseNotes,
           title: "What's new on update",
-          description: 'See key release highlights after updating Okanzo, or reopen them anytime from Settings.',
+          description: 'Okanzo shows release notes after an update. Open them again in Settings.',
         ),
       ],
     ),
@@ -158,22 +157,23 @@ class AppReleaseNotes {
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.language,
           title: '21 app languages',
-          description: 'Choose your preferred app language in Settings, or follow your device language automatically.',
+          description:
+              'Choose an app language in Settings or use the device language.',
         ),
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.exchanges,
           title: 'Global stock exchanges',
-          description: 'Look up stocks and funds across US, European, and Asian exchanges, and customize your preferred exchange list.',
+          description: 'Look up stocks and funds on exchanges in the United States, Europe and Asia. Choose which exchanges appear in your preferred list.',
         ),
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.crypto,
-          title: 'Smarter crypto & market quotes',
-          description: 'Enter bare crypto tickers like BTC or ETH, with automatic conversion from the quote currency into your holding currency.',
+          title: 'Crypto tickers and currency conversion',
+          description: "Enter a crypto ticker such as BTC or ETH. Okanzo converts the quote into your asset's currency.",
         ),
         ReleaseHighlight(
           icon: ReleaseHighlightIcon.releaseNotes,
           title: "What's new on update",
-          description: 'See key release highlights after updating Okanzo, or reopen them anytime from Settings.',
+          description: 'Okanzo shows release notes after an update. Open them again in Settings.',
         ),
       ],
     ),
