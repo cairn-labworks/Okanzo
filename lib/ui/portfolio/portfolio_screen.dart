@@ -128,8 +128,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
           builder: (BuildContext context) => AlertDialog(
             title: Text('Delete portfolio?'.tr(context)),
             content: Text(
-              '"{portfolio}" and all of its assets and liabilities will be '
-                      'permanently removed.'
+              'This permanently deletes "{portfolio}" and all its assets '
+                      'and liabilities.'
                   .tr(context)
                   .replaceAll('{portfolio}', portfolio.name),
             ),

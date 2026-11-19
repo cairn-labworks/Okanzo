@@ -233,8 +233,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 child: Text(
                   <String>[
-                    'Your data is stored encrypted on this device and never '
-                            'leaves it, except when you export a backup. Stock and '
+                    'Okanzo encrypts your data on this device. Your data leaves '
+                            'it only when you export a backup. Price and '
                             'exchange-rate lookups send only the ticker or currency code.'
                         .tr(context),
                     'Company/ticker search sends the text you type to Yahoo Finance.'
@@ -874,8 +874,8 @@ class _ExportDialogState extends State<_ExportDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              "Choose portfolios and set a password. You'll need this exact "
-                      'password to import the file again.'
+              'Choose portfolios and set a password. Use the same password '
+                      'to import the backup.'
                   .tr(context),
               style: theme.textTheme.bodyMedium,
             ),

@@ -62,9 +62,9 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
           : widget.selected?.displayName.tr(context) ?? 'Exchange'.tr(context);
       final String? suffix = widget.selected?.suffix;
       final String help = suffix == null || suffix.isEmpty
-          ? 'Enter a Yahoo Finance ticker. Full exchange-qualified tickers are also accepted.'
+          ? 'Enter a Yahoo Finance ticker with or without an exchange suffix.'
                 .tr(context)
-          : '{suffix} is added automatically. Full Yahoo Finance tickers are also accepted.'
+          : 'Okanzo adds {suffix} automatically. You can also enter a full Yahoo Finance ticker.'
                 .tr(context)
                 .replaceAll('{suffix}', suffix);
       return PopupMenuButton<Object>(
