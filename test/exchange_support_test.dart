@@ -36,7 +36,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'helpers/fx_test_helpers.dart';
-import 'helpers/popup_menu_helpers.dart';
+import 'helpers/picker_helpers.dart';
 
 class _AssetDao extends Fake implements AssetDao {
   final List<AssetEntity> assets = <AssetEntity>[];
@@ -607,7 +607,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    final Finder exchangeMenu = find.byType(PopupMenuButton<Object>);
+    final Finder exchangeMenu = find.byType(StockExchangeField);
     await tester.ensureVisible(exchangeMenu);
     await tester.tap(exchangeMenu);
     await tester.pumpAndSettle();
@@ -812,11 +812,11 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  List<String> menuLabels(WidgetTester tester) =>
-      popupMenuLabels<Object>(tester);
+  Future<List<String>> menuLabels(WidgetTester tester) =>
+      pickerLabels(tester, find.byType(StockExchangeField));
 
   Future<void> openPreferences(WidgetTester tester) async {
-    final Finder menu = find.byType(PopupMenuButton<Object>);
+    final Finder menu = find.byType(StockExchangeField);
     await tester.ensureVisible(menu);
     await tester.tap(menu);
     await tester.pumpAndSettle();
@@ -857,9 +857,62 @@ void main() {
   ) async {
     await openEditor(tester);
 
-    expect(menuLabels(tester), <String>[
+    expect(await menuLabels(tester), <String>[
       StockExchange.us.displayName,
       StockExchangeField.manageLabel,
+    ]);
+  });
+
+  testWidgets('exchange picker searches listings and preserves the shortlist', (
+    WidgetTester tester,
+  ) async {
+    await settings.setPreferredExchanges(<StockExchange>[
+      StockExchange.us,
+      StockExchange.bse,
+    ]);
+    await openEditor(tester);
+    final Finder selector = find.byType(StockExchangeField);
+    await tester.ensureVisible(selector);
+    await tester.tap(selector);
+    await tester.pumpAndSettle();
+    final Finder dialog = find.byType(AlertDialog);
+    expect(
+      tester
+          .widget<ListTile>(
+            find.descendant(
+              of: dialog,
+              matching: find.widgetWithText(
+                ListTile,
+                StockExchange.us.displayName,
+              ),
+            ),
+          )
+          .trailing,
+      isNotNull,
+    );
+    await tester.enterText(
+      find.descendant(of: dialog, matching: find.byType(TextField)),
+      ' bSe ',
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: dialog, matching: find.byType(ListTile)),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.descendant(
+        of: dialog,
+        matching: find.widgetWithText(ListTile, StockExchange.bse.displayName),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<StockExchangeField>(selector).selected,
+      StockExchange.bse,
+    );
+    expect(settings.current.preferredExchanges, <StockExchange>[
+      StockExchange.us,
+      StockExchange.bse,
     ]);
   });
 
@@ -872,7 +925,7 @@ void main() {
     await savePreferences(tester);
 
     expect(find.byType(AlertDialog), findsNothing);
-    expect(menuLabels(tester), <String>[
+    expect(await menuLabels(tester), <String>[
       StockExchange.us.displayName,
       StockExchange.bse.displayName,
       StockExchangeField.manageLabel,
@@ -924,7 +977,9 @@ void main() {
       await savePreferences(tester);
 
       expect(settings.current.preferredExchanges, isEmpty);
-      expect(menuLabels(tester), <String>[StockExchangeField.manageLabel]);
+      expect(await menuLabels(tester), <String>[
+        StockExchangeField.manageLabel,
+      ]);
       expect(
         tester
             .widget<StockExchangeField>(find.byType(StockExchangeField))
@@ -934,7 +989,7 @@ void main() {
       await openPreferences(tester);
       await togglePreference(tester, StockExchange.bse);
       await savePreferences(tester);
-      expect(menuLabels(tester), <String>[
+      expect(await menuLabels(tester), <String>[
         StockExchange.bse.displayName,
         StockExchangeField.manageLabel,
       ]);
@@ -960,7 +1015,7 @@ void main() {
     await togglePreference(tester, StockExchange.hongKong);
     await savePreferences(tester);
 
-    expect(menuLabels(tester), <String>[
+    expect(await menuLabels(tester), <String>[
       StockExchange.us.displayName,
       StockExchangeField.manageLabel,
     ]);
@@ -990,13 +1045,13 @@ void main() {
             .selected,
         StockExchange.bse,
       );
-      final Finder typeMenu = find.byType(PopupMenuButton<AssetType>);
+      final Finder typeMenu = find.byType(DropdownSelector<AssetType>);
       await tester.tap(typeMenu);
       await tester.pumpAndSettle();
       await tester.tap(find.text(AssetType.mutualFund.displayName).last);
       await tester.pumpAndSettle();
 
-      expect(menuLabels(tester), <String>[
+      expect(await menuLabels(tester), <String>[
         StockExchange.bse.displayName,
         StockExchangeField.manageLabel,
       ]);
@@ -1257,7 +1312,7 @@ void main() {
       ]);
       await openEditor(tester);
 
-      final Finder exchangeMenu = find.byType(PopupMenuButton<Object>);
+      final Finder exchangeMenu = find.byType(StockExchangeField);
       expect(
         tester
             .widget<PickerChip>(
@@ -1270,14 +1325,17 @@ void main() {
         Icons.candlestick_chart,
       );
 
-      final PopupMenuButton<Object> menu = tester.widget(exchangeMenu);
-      final List<IconData> menuIcons = menu
-          .itemBuilder(tester.element(exchangeMenu))
-          .whereType<PopupMenuItem<Object>>()
-          .map((PopupMenuItem<Object> item) {
-            final Row row = item.child! as Row;
-            return row.children.whereType<Icon>().single.icon!;
-          })
+      await tester.ensureVisible(exchangeMenu);
+      await tester.tap(exchangeMenu);
+      await tester.pumpAndSettle();
+      final List<IconData?> menuIcons = tester
+          .widgetList<ListTile>(
+            find.descendant(
+              of: find.byType(AlertDialog),
+              matching: find.byType(ListTile),
+            ),
+          )
+          .map((ListTile item) => (item.leading! as Icon).icon)
           .toList();
       expect(menuIcons, <IconData>[
         Icons.candlestick_chart,
@@ -1286,6 +1344,8 @@ void main() {
         Icons.public,
         Icons.tune,
       ]);
+      await tester.tap(find.widgetWithText(TextButton, 'Close'));
+      await tester.pumpAndSettle();
 
       await openPreferences(tester);
       for (final StockExchange exchange in <StockExchange>[

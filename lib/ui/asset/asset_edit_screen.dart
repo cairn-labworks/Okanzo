@@ -48,7 +48,6 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
   final TextEditingController _quantity = TextEditingController();
   final TextEditingController _pricePerUnit = TextEditingController();
   final TextEditingController _manualValue = TextEditingController();
-  final TextEditingController _notes = TextEditingController();
   final FocusNode _nameFocus = FocusNode();
   final FocusNode _symbolFocus = FocusNode();
   final FocusNode _quantityFocus = FocusNode();
@@ -130,7 +129,6 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     _quantity.text = form.quantity;
     _pricePerUnit.text = form.pricePerUnit;
     _manualValue.text = form.manualValue;
-    _notes.text = form.notes;
   }
 
   @override
@@ -143,7 +141,6 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     _quantity.dispose();
     _pricePerUnit.dispose();
     _manualValue.dispose();
-    _notes.dispose();
     _nameFocus.dispose();
     _symbolFocus.dispose();
     _quantityFocus.dispose();
@@ -353,12 +350,6 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                       const SizedBox(height: 12),
                       ..._valuationFields(form, viewModel),
                       const SizedBox(height: 8),
-                      OptionalNotesField(
-                        canvas: true,
-                        key: const ValueKey<String>('asset-notes'),
-                        controller: _notes,
-                        onChanged: viewModel.onNotesChange,
-                      ),
                       HoldingNetWorthPreview(
                         portfolioId: widget.portfolioId,
                         holdingId: widget.assetId,
@@ -429,6 +420,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                 },
               ),
             ),
+            const SizedBox(height: 12),
             quantityField,
           ] else
             StockSearchField(

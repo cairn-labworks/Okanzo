@@ -178,8 +178,6 @@ class _StockSearchFieldState extends State<StockSearchField> {
               textInputAction: widget.textInputAction,
               onSubmitted: widget.onSubmitted,
             ),
-            const SizedBox(height: 12),
-            widget.quantityField,
           ] else
             FormFieldPair(
               first: LabeledTextField(
@@ -275,6 +273,10 @@ class _StockSearchFieldState extends State<StockSearchField> {
                       ),
                     ),
             ),
+          if (widget.canvas) ...<Widget>[
+            const SizedBox(height: 12),
+            widget.quantityField,
+          ],
         ],
       ),
     );

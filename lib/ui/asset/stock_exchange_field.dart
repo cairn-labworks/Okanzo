@@ -69,33 +69,13 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
           : 'Okanzo adds {suffix} automatically. You can also enter a full Yahoo Finance ticker.'
                 .tr(context)
                 .replaceAll('{suffix}', suffix);
-      return PopupMenuButton<Object>(
-        tooltip: '${'Exchange'.tr(context)}\n$help',
-        onSelected: _select,
-        itemBuilder: (BuildContext itemContext) => <PopupMenuEntry<Object>>[
-          for (final StockExchange exchange in widget.preferredExchanges)
-            PopupMenuItem<Object>(
-              value: exchange,
-              child: buildPopupMenuOption(
-                itemContext,
-                label: exchange.displayName.tr(itemContext),
-                icon: stockExchangeIcon(exchange),
-                selected: exchange == widget.selected,
-              ),
-            ),
-          PopupMenuItem<Object>(
-            value: _ExchangeAction.preferences,
-            child: buildPopupMenuOption(
-              itemContext,
-              label: StockExchangeField.manageLabel.tr(itemContext),
-              icon: Icons.tune,
-            ),
-          ),
-        ],
+      return Tooltip(
+        message: '${'Exchange'.tr(context)}: $label\n$help',
         child: PickerChip(
           label: label,
           icon: selectedIcon,
           fieldLabel: widget.canvas ? 'Exchange'.tr(context) : null,
+          onPressed: _openPicker,
         ),
       );
     }
@@ -123,6 +103,24 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
       ],
       onSelected: _select,
     );
+  }
+
+  Future<void> _openPicker() async {
+    final Object? picked = await showSelectionPickerDialog<Object>(
+      context,
+      title: 'Exchange'.tr(context),
+      selected: widget.selected,
+      options: <Object>[
+        ...widget.preferredExchanges,
+        _ExchangeAction.preferences,
+      ],
+      optionLabel: (Object option) => option is StockExchange
+          ? option.displayName.tr(context)
+          : StockExchangeField.manageLabel.tr(context),
+      optionIcon: (Object option) =>
+          option is StockExchange ? stockExchangeIcon(option) : Icons.tune,
+    );
+    if (mounted) await _select(picked);
   }
 
   Future<void> _select(Object? value) async {

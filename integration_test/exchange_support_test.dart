@@ -17,7 +17,7 @@ import 'package:okanzo/ui/home/home_view_model.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../test/helpers/popup_menu_helpers.dart';
+import '../test/helpers/picker_helpers.dart';
 
 class _Listing {
   const _Listing(
@@ -134,16 +134,16 @@ Finder get _saveButton => find.descendant(
   matching: find.byType(FilledButton),
 );
 
-Future<void> _select<T>(WidgetTester tester, String label) async {
-  await _tap(tester, find.byType(PopupMenuButton<T>));
+Future<void> _select(WidgetTester tester, Finder picker, String label) async {
+  await _tap(tester, picker);
   await _tap(tester, find.text(label).last);
 }
 
-List<String> _exchangeLabels(WidgetTester tester) =>
-    popupMenuLabels<Object>(tester);
+Future<List<String>> _exchangeLabels(WidgetTester tester) =>
+    pickerLabels(tester, find.byType(StockExchangeField));
 
 Future<void> _openPreferences(WidgetTester tester) async {
-  await _tap(tester, find.byType(PopupMenuButton<Object>));
+  await _tap(tester, find.byType(StockExchangeField));
   await _tap(tester, find.text(StockExchangeField.manageLabel).last);
   expect(find.text('Preferred exchanges'), findsOneWidget);
 }
@@ -187,7 +187,7 @@ Future<void> _setPreferences(
     ),
   );
   expect(find.byType(AlertDialog), findsNothing);
-  expect(_exchangeLabels(tester), <String>[
+  expect(await _exchangeLabels(tester), <String>[
     for (final StockExchange exchange in StockExchange.values)
       if (desired.contains(exchange)) exchange.displayName,
     StockExchangeField.manageLabel,
@@ -204,7 +204,7 @@ Future<void> _selectExchange(
   if (!preferred.contains(exchange)) {
     await _setPreferences(tester, <StockExchange>[...preferred, exchange]);
   }
-  await _select<Object>(tester, exchange.displayName);
+  await _select(tester, find.byType(StockExchangeField), exchange.displayName);
 }
 
 Future<void> _newAsset(WidgetTester tester) async {
@@ -318,7 +318,7 @@ void main() {
         <StockExchange>[StockExchange.us],
       );
       await _newAsset(tester);
-      expect(_exchangeLabels(tester), <String>[
+      expect(await _exchangeLabels(tester), <String>[
         StockExchange.us.displayName,
         StockExchangeField.manageLabel,
       ]);
@@ -355,7 +355,11 @@ void main() {
       for (final _Listing listing in _listings) {
         await _newAsset(tester);
         if (listing.type != AssetType.stock) {
-          await _select<AssetType>(tester, listing.type.displayName);
+          await _select(
+            tester,
+            find.byType(DropdownSelector<AssetType>),
+            listing.type.displayName,
+          );
         }
         await _selectExchange(tester, listing.exchange);
         await _enter(tester, 'Company or Ticker', listing.ticker);
@@ -365,7 +369,7 @@ void main() {
         if (_captureScreenshots && listing.exchange == StockExchange.bse) {
           FocusManager.instance.primaryFocus?.unfocus();
           await tester.pumpAndSettle();
-          await _tap(tester, find.byType(PopupMenuButton<Object>));
+          await _tap(tester, find.byType(StockExchangeField));
           await binding.takeScreenshot('exchange-picker');
           await _tap(tester, find.text(StockExchange.bse.displayName).last);
         }
@@ -482,7 +486,11 @@ void main() {
       await _selectExchange(tester, StockExchange.bse);
       await _tap(tester, find.text('Fetch latest price'));
       expect(find.text('Enter a ticker symbol first'), findsOneWidget);
-      await _select<AssetType>(tester, AssetType.crypto.displayName);
+      await _select(
+        tester,
+        find.byType(DropdownSelector<AssetType>),
+        AssetType.crypto.displayName,
+      );
       expect(find.byType(StockExchangeField), findsNothing);
       await tester.pageBack();
       await tester.pumpAndSettle();
@@ -511,7 +519,9 @@ void main() {
       await (await SharedPreferences.getInstance()).reload();
       expect(container.settingsRepository.current.preferredExchanges, isEmpty);
       await _newAsset(tester);
-      expect(_exchangeLabels(tester), <String>[StockExchangeField.manageLabel]);
+      expect(await _exchangeLabels(tester), <String>[
+        StockExchangeField.manageLabel,
+      ]);
       expect(
         tester
             .widget<StockExchangeField>(find.byType(StockExchangeField))
@@ -519,7 +529,7 @@ void main() {
         isNull,
       );
       if (_captureScreenshots) {
-        await _tap(tester, find.byType(PopupMenuButton<Object>));
+        await _tap(tester, find.byType(StockExchangeField));
         await binding.takeScreenshot('empty-exchanges');
         await _tap(tester, find.text(StockExchangeField.manageLabel).last);
         await _tap(
@@ -569,7 +579,7 @@ void main() {
         <StockExchange>[StockExchange.us, StockExchange.bse],
       );
       await _newAsset(tester);
-      expect(_exchangeLabels(tester), <String>[
+      expect(await _exchangeLabels(tester), <String>[
         StockExchange.us.displayName,
         StockExchange.bse.displayName,
         StockExchangeField.manageLabel,
@@ -643,7 +653,11 @@ void main() {
       for (final (AssetType type, String symbol, String name) in holdings) {
         await _newAsset(tester);
         if (type != AssetType.stock) {
-          await _select<AssetType>(tester, type.displayName);
+          await _select(
+            tester,
+            find.byType(DropdownSelector<AssetType>),
+            type.displayName,
+          );
         }
         await _enter(
           tester,

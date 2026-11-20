@@ -97,6 +97,13 @@ class LabeledTextField extends StatelessWidget {
     if (canvas) {
       final ThemeData theme = Theme.of(context);
       final ColorScheme colors = theme.colorScheme;
+      final TextStyle? inputStyle = prominent
+          ? theme.textTheme.displaySmall?.copyWith(
+              color: colors.primary,
+              fontSize: 32,
+              height: 1.3,
+            )
+          : theme.textTheme.bodyLarge;
       final OutlineInputBorder border = OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: colors.outlineVariant),
@@ -126,13 +133,7 @@ class LabeledTextField extends StatelessWidget {
                 maxLines: singleLine ? 1 : null,
                 maxLength: maxLength,
                 keyboardType: keyboardType,
-                style: prominent
-                    ? theme.textTheme.displaySmall?.copyWith(
-                        color: colors.primary,
-                        fontSize: 32,
-                        height: 1.3,
-                      )
-                    : theme.textTheme.bodyLarge,
+                style: inputStyle,
                 inputFormatters:
                     keyboardType ==
                         const TextInputType.numberWithOptions(decimal: true)
@@ -145,7 +146,7 @@ class LabeledTextField extends StatelessWidget {
                   suffixText: suffix,
                   helperText: supportingText,
                   errorText: isError ? supportingText : null,
-                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                  hintStyle: inputStyle?.copyWith(
                     color: colors.onSurfaceVariant,
                   ),
                   filled: !prominent,
@@ -262,25 +263,23 @@ class DropdownSelector<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (compact || canvas) {
-      return PopupMenuButton<T>(
-        tooltip: label,
-        onSelected: onSelected,
-        itemBuilder: (BuildContext itemContext) => <PopupMenuEntry<T>>[
-          for (final T option in options)
-            PopupMenuItem<T>(
-              value: option,
-              child: buildPopupMenuOption(
-                itemContext,
-                label: optionLabel(option),
-                icon: optionIcon?.call(option),
-                selected: option == selected,
-              ),
-            ),
-        ],
+      return Tooltip(
+        message: '$label: ${optionLabel(selected)}',
         child: PickerChip(
           fieldLabel: canvas ? label : null,
           label: optionLabel(selected),
           icon: optionIcon?.call(selected),
+          onPressed: () async {
+            final T? picked = await showSelectionPickerDialog<T>(
+              context,
+              title: label,
+              selected: selected,
+              options: options,
+              optionLabel: optionLabel,
+              optionIcon: optionIcon,
+            );
+            if (picked != null && context.mounted) onSelected(picked);
+          },
         ),
       );
     }
@@ -359,7 +358,12 @@ class PickerChip extends StatelessWidget {
                       const SizedBox(width: 9),
                     ],
                     Expanded(
-                      child: Text(label, style: theme.textTheme.bodyMedium),
+                      child: Text(
+                        label,
+                        style: theme.textTheme.bodyMedium,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 6),
                     const Icon(Icons.expand_more, size: 16),
@@ -402,7 +406,12 @@ class PickerChip extends StatelessWidget {
                       const SizedBox(width: 6),
                     ],
                     Flexible(
-                      child: Text(label, style: theme.textTheme.bodySmall),
+                      child: Text(
+                        label,
+                        style: theme.textTheme.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 6),
                     const Icon(Icons.expand_more, size: 14),
@@ -555,118 +564,65 @@ class CurrencySelector extends StatelessWidget {
   }
 }
 
-class OptionalNotesField extends StatefulWidget {
-  const OptionalNotesField({
-    required this.controller,
-    required this.onChanged,
-    this.canvas = false,
-    super.key,
-  });
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final bool canvas;
-
-  @override
-  State<OptionalNotesField> createState() => _OptionalNotesFieldState();
-}
-
-class _OptionalNotesFieldState extends State<OptionalNotesField> {
-  late bool _expanded = widget.controller.text.trim().isNotEmpty;
-
-  @override
-  Widget build(BuildContext context) => ExpansionTile(
-    tilePadding: EdgeInsets.zero,
-    childrenPadding: const EdgeInsets.only(top: 8, bottom: 8),
-    title: Transform.translate(
-      offset: const Offset(0, -4),
-      child: Text(
-        'Notes (optional)'.tr(context),
-        style:
-            (widget.canvas
-                    ? Theme.of(context).textTheme.bodySmall
-                    : Theme.of(context).textTheme.bodyMedium)
-                ?.copyWith(
-                  color: widget.canvas
-                      ? Theme.of(context).colorScheme.onSurfaceVariant
-                      : Theme.of(context).colorScheme.onSurface,
-                  fontWeight: FontWeight.w500,
-                ),
-      ),
-    ),
-    initiallyExpanded: _expanded,
-    onExpansionChanged: (bool value) => setState(() => _expanded = value),
-    trailing: Transform.translate(
-      offset: const Offset(0, -4),
-      child: Icon(
-        _expanded ? Icons.remove : Icons.add,
-        size: 18,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-    ),
-    maintainState: true,
-    shape: widget.canvas
-        ? Border(
-            top: BorderSide(
-              color: Theme.of(context).colorScheme.outlineVariant,
-            ),
-          )
-        : const Border(),
-    collapsedShape: widget.canvas
-        ? Border(
-            top: BorderSide(
-              color: Theme.of(context).colorScheme.outlineVariant,
-            ),
-          )
-        : const Border(),
-    children: <Widget>[
-      TextField(
-        controller: widget.controller,
-        onChanged: widget.onChanged,
-        minLines: 2,
-        maxLines: null,
-        style: Theme.of(context).textTheme.bodyLarge,
-        decoration: InputDecoration(
-          hintText: 'Notes (optional)'.tr(context),
-          contentPadding: _editorFieldPadding,
-        ),
-      ),
-    ],
-  );
-}
-
 /// A searchable currency picker dialog. Returns the chosen code, or null.
 Future<String?> showCurrencyPickerDialog(
   BuildContext context, {
   required String selected,
+}) => showSelectionPickerDialog<String>(
+  context,
+  title: 'Choose currency'.tr(context),
+  selected: selected,
+  options: <String>[
+    ...CurrencyUtil.commonCurrencies,
+    ...CurrencyUtil.allCurrencies.where(
+      (String code) => !CurrencyUtil.commonCurrencies.contains(code),
+    ),
+  ],
+  optionLabel: (String code) => '$code — ${CurrencyUtil.displayName(code)}',
+  optionIcon: currencyIcon,
+);
+
+Future<T?> showSelectionPickerDialog<T>(
+  BuildContext context, {
+  required String title,
+  required T? selected,
+  required List<T> options,
+  required String Function(T) optionLabel,
+  IconData Function(T)? optionIcon,
 }) {
-  return showDialog<String>(
+  return showDialog<T>(
     context: context,
-    builder: (BuildContext context) =>
-        _CurrencyPickerDialog(selected: selected),
+    builder: (BuildContext context) => _SelectionPickerDialog<T>(
+      title: title,
+      selected: selected,
+      options: options,
+      optionLabel: optionLabel,
+      optionIcon: optionIcon,
+    ),
   );
 }
 
-class _CurrencyPickerDialog extends StatefulWidget {
-  const _CurrencyPickerDialog({required this.selected});
+class _SelectionPickerDialog<T> extends StatefulWidget {
+  const _SelectionPickerDialog({
+    required this.title,
+    required this.selected,
+    required this.options,
+    required this.optionLabel,
+    this.optionIcon,
+  });
 
-  final String selected;
+  final String title;
+  final T? selected;
+  final List<T> options;
+  final String Function(T) optionLabel;
+  final IconData Function(T)? optionIcon;
 
   @override
-  State<_CurrencyPickerDialog> createState() => _CurrencyPickerDialogState();
+  State<_SelectionPickerDialog<T>> createState() =>
+      _SelectionPickerDialogState<T>();
 }
 
-class _CurrencyPickerDialogState extends State<_CurrencyPickerDialog> {
-  static final Set<String> _commonSet = CurrencyUtil.commonCurrencies.toSet();
-  static final List<String> _orderedCurrencies = List<String>.unmodifiable(
-    <String>[
-      ...CurrencyUtil.commonCurrencies,
-      ...CurrencyUtil.allCurrencies.where(
-        (String code) => !_commonSet.contains(code),
-      ),
-    ],
-  );
-
+class _SelectionPickerDialogState<T> extends State<_SelectionPickerDialog<T>> {
   final TextEditingController _query = TextEditingController();
 
   @override
@@ -675,23 +631,21 @@ class _CurrencyPickerDialogState extends State<_CurrencyPickerDialog> {
     super.dispose();
   }
 
-  List<String> get _results {
+  List<T> get _results {
     final String query = _query.text.trim().toUpperCase();
-    if (query.isEmpty) return _orderedCurrencies;
-    return _orderedCurrencies
+    return widget.options
         .where(
-          (String code) =>
-              code.contains(query) ||
-              CurrencyUtil.displayName(code).toUpperCase().contains(query),
+          (T option) =>
+              widget.optionLabel(option).toUpperCase().contains(query),
         )
         .toList(growable: false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<String> results = _results;
+    final List<T> results = _results;
     return AlertDialog(
-      title: Text('Choose currency'.tr(context)),
+      title: Text(widget.title),
       content: SizedBox(
         width: 400,
         child: Column(
@@ -712,24 +666,26 @@ class _CurrencyPickerDialogState extends State<_CurrencyPickerDialog> {
                   shrinkWrap: true,
                   itemCount: results.length,
                   itemBuilder: (BuildContext context, int index) {
-                    final String code = results[index];
-                    final bool isSelected = code == widget.selected;
+                    final T option = results[index];
+                    final bool isSelected = option == widget.selected;
                     final ColorScheme colors = Theme.of(context).colorScheme;
                     return ListTile(
                       minLeadingWidth: 20,
                       horizontalTitleGap: 10,
-                      leading: Icon(
-                        currencyIcon(code),
-                        size: 20,
-                        color: isSelected
-                            ? colors.primary
-                            : colors.onSurfaceVariant,
-                      ),
-                      title: Text('$code — ${CurrencyUtil.displayName(code)}'),
+                      leading: widget.optionIcon == null
+                          ? null
+                          : Icon(
+                              widget.optionIcon!(option),
+                              size: 20,
+                              color: isSelected
+                                  ? colors.primary
+                                  : colors.onSurfaceVariant,
+                            ),
+                      title: Text(widget.optionLabel(option)),
                       trailing: isSelected
                           ? Text('✓', style: TextStyle(color: colors.primary))
                           : null,
-                      onTap: () => Navigator.of(context).pop(code),
+                      onTap: () => Navigator.of(context).pop(option),
                     );
                   },
                 ),

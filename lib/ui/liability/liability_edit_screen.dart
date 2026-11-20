@@ -40,7 +40,6 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
   LiabilityEditViewModel? _viewModel;
   final TextEditingController _name = TextEditingController();
   final TextEditingController _amount = TextEditingController();
-  final TextEditingController _notes = TextEditingController();
   final FocusNode _amountFocus = FocusNode();
   final FocusNode _nameFocus = FocusNode();
   bool _controllersPrimed = false;
@@ -94,7 +93,6 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
     _initialForm = form;
     _name.text = form.name;
     _amount.text = form.amount;
-    _notes.text = form.notes;
   }
 
   @override
@@ -103,7 +101,6 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
     if (widget.viewModel == null) _viewModel?.dispose();
     _name.dispose();
     _amount.dispose();
-    _notes.dispose();
     _amountFocus.dispose();
     _nameFocus.dispose();
     super.dispose();
@@ -260,11 +257,6 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                         onChanged: viewModel.onNameChange,
                       ),
                       const SizedBox(height: 16),
-                      OptionalNotesField(
-                        canvas: true,
-                        controller: _notes,
-                        onChanged: viewModel.onNotesChange,
-                      ),
                       HoldingNetWorthPreview(
                         portfolioId: widget.portfolioId,
                         holdingId: widget.liabilityId,
