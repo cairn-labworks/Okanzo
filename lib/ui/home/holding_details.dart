@@ -28,10 +28,10 @@ Future<HoldingDetailsAction?> showHoldingDetails(
   final String name = asset?.displayName ?? liability!.name;
   final String currency = asset?.currency ?? liability!.currency;
   final String typeLabel =
-      (asset?.type.displayName ?? liability!.type.displayName).tr(context);
+      (asset?.type.displayCategory.displayName ?? liability!.type.displayName)
+          .tr(context);
   final String kindLabel = (isAsset ? 'Asset' : 'Liability').tr(context);
-  final bool isPriced =
-      !isAsset || !asset.type.isMarketLinked || asset.lastPrice != null;
+  final bool isPriced = asset?.isPriced ?? true;
   String money(double value) => hideBalances
       ? CurrencyUtil.maskShort
       : CurrencyUtil.format(value, currency);
@@ -46,6 +46,10 @@ Future<HoldingDetailsAction?> showHoldingDetails(
   final List<(String, String)> detailRows = <(String, String)>[
     ('Type'.tr(context), typeLabel),
     ('Currency'.tr(context), currency),
+    if (asset?.displayedMetal != null)
+      ('Metal'.tr(context), asset!.displayedMetal!.label.tr(context)),
+    if (asset?.type == AssetType.metals && asset?.purity != null)
+      ('Purity'.tr(context), asset!.purity!),
     if (isAsset && asset.symbol != null && asset.symbol!.trim().isNotEmpty)
       ('Ticker'.tr(context), asset.symbol!.trim()),
     if (isAsset && asset.type.isMarketLinked && asset.quantity != null)
@@ -58,7 +62,8 @@ Future<HoldingDetailsAction?> showHoldingDetails(
             : 'Pending'.tr(context),
       ),
     if (isAsset &&
-        asset.type.valuationMode == ValuationMode.quantity &&
+        (asset.type.valuationMode == ValuationMode.quantity ||
+            asset.type == AssetType.metals) &&
         asset.quantity != null)
       (
         'Weight'.tr(context),
@@ -72,6 +77,15 @@ Future<HoldingDetailsAction?> showHoldingDetails(
             .tr(context)
             .replaceAll('{unit}', asset.type.unitLabel ?? 'unit'),
         money(asset.pricePerUnit!),
+      ),
+    if (isAsset && asset.type == AssetType.metals)
+      (
+        'Price per gram'.tr(context),
+        !asset.isPriced
+            ? 'Pending'.tr(context)
+            : hideBalances
+            ? CurrencyUtil.maskShort
+            : CurrencyUtil.formatRate(asset.lastPrice!, currency),
       ),
     if ((asset?.notes ?? liability?.notes)?.trim().isNotEmpty ?? false)
       ('Notes'.tr(context), (asset?.notes ?? liability!.notes)!.trim()),

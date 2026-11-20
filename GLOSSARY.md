@@ -15,7 +15,7 @@ Any individual **Asset** or **Liability** recorded inside a portfolio.
 _Avoid_: Item, position, entry
 
 **Asset**:
-A holding with positive economic value owned in a portfolio, categorized by asset type (such as stock, mutual fund, crypto, gold, cash, bank deposit, real estate, vehicle, bond, or other).
+A holding with positive economic value owned in a portfolio, categorized by asset type (such as stock, mutual fund, crypto, metals, cash, bank deposit, real estate, vehicle, bond, or other).
 
 **Liability**:
 A debt or financial obligation owed inside a portfolio (such as a loan, mortgage, credit card, pending payment, tax, or other) subtracted from total assets to compute net worth.
@@ -26,7 +26,11 @@ A portfolio's point-in-time total assets minus total liabilities, converted into
 ### Valuation & Currency
 
 **Valuation Mode**:
-The rule that determines an asset's value in its native currency: **Market** (quantity multiplied by latest fetched quote), **Quantity** (quantity multiplied by a manual unit price, such as gold per gram), or **Flat** (a single manual total value).
+The rule that determines an asset's value in its native currency: **Market** (units multiplied by the latest quote), **Metal** (grams multiplied by a purity-adjusted rate), **Quantity** (units multiplied by a manual unit price), or **Flat** (a single manual total value).
+
+**Metal Purity**:
+The share of a holding's weight made of the named metal. Gold purity is expressed in karats; Silver, Platinum, and Palladium use fineness in parts per thousand.
+_Avoid_: Carat (a unit of gemstone weight)
 
 **Base Currency**:
 The display currency into which all holdings and totals are converted using USD-pivoted foreign exchange rates.

@@ -88,6 +88,8 @@ class BackupAsset {
     required this.currency,
     this.quantity,
     this.pricePerUnit,
+    this.metal,
+    this.purity,
     this.symbol,
     this.lastPrice,
     this.lastPriceTimestamp,
@@ -103,6 +105,8 @@ class BackupAsset {
     currency: json['currency'] as String? ?? '',
     quantity: (json['quantity'] as num?)?.toDouble(),
     pricePerUnit: (json['pricePerUnit'] as num?)?.toDouble(),
+    metal: _nonEmptyText(json['metal']),
+    purity: _nonEmptyText(json['purity']),
     symbol: json['symbol'] as String?,
     lastPrice: (json['lastPrice'] as num?)?.toDouble(),
     lastPriceTimestamp: (json['lastPriceTimestamp'] as num?)?.toInt(),
@@ -117,6 +121,8 @@ class BackupAsset {
   final String currency;
   final double? quantity;
   final double? pricePerUnit;
+  final String? metal;
+  final String? purity;
   final String? symbol;
   final double? lastPrice;
   final int? lastPriceTimestamp;
@@ -131,6 +137,8 @@ class BackupAsset {
     'currency': currency,
     if (quantity != null) 'quantity': quantity,
     if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
+    if (metal != null) 'metal': metal,
+    if (purity != null) 'purity': purity,
     if (symbol != null) 'symbol': symbol,
     if (lastPrice != null) 'lastPrice': lastPrice,
     if (lastPriceTimestamp != null) 'lastPriceTimestamp': lastPriceTimestamp,

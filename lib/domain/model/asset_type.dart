@@ -6,6 +6,9 @@ enum ValuationMode {
   /// value = quantity * a manually entered price per unit (e.g. gold grams).
   quantity,
 
+  /// Grams multiplied by an indicative market rate adjusted for purity.
+  metal,
+
   /// value = a single, manually entered total amount (e.g. cash, property).
   flat,
 }
@@ -17,6 +20,7 @@ enum AssetType {
   mutualFund('MUTUAL_FUND', 'Mutual fund / ETF', ValuationMode.market),
   crypto('CRYPTO', 'Cryptocurrency', ValuationMode.market),
   gold('GOLD', 'Gold', ValuationMode.quantity, unitLabel: 'g'),
+  metals('METALS', 'Metals', ValuationMode.metal, unitLabel: 'g'),
   cash('CASH', 'Cash', ValuationMode.flat),
   bankDeposit('BANK_DEPOSIT', 'Bank / deposit', ValuationMode.flat),
   realEstate('REAL_ESTATE', 'Real estate', ValuationMode.flat),
@@ -42,12 +46,17 @@ enum AssetType {
 
   bool get isMarketLinked => valuationMode == ValuationMode.market;
 
+  bool get requiresQuote => isMarketLinked || this == AssetType.metals;
+
+  AssetType get displayCategory => this == AssetType.gold ? metals : this;
+
   /// Short category hint shown beneath the label in selection pickers.
   String get pickerHint => switch (this) {
     AssetType.stock => 'Company shares',
     AssetType.mutualFund => 'Funds and indexes',
     AssetType.crypto => 'Coins and tokens',
     AssetType.gold => 'Weight in grams',
+    AssetType.metals => 'Gold, silver, platinum and palladium',
     AssetType.cash => 'Money on hand',
     AssetType.bankDeposit => 'Savings and deposits',
     AssetType.realEstate => 'Property value',
@@ -61,7 +70,7 @@ enum AssetType {
     AssetType.stock => 'e.g. Long-term shares',
     AssetType.mutualFund => 'e.g. Retirement index fund',
     AssetType.crypto => 'e.g. Cold wallet BTC',
-    AssetType.gold => 'e.g. Family gold',
+    AssetType.gold || AssetType.metals => 'e.g. Family gold',
     AssetType.cash => 'e.g. Emergency fund',
     AssetType.bankDeposit => 'e.g. High-yield savings',
     AssetType.realEstate => 'e.g. Primary residence',

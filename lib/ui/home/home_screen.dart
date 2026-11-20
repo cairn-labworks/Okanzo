@@ -4,6 +4,7 @@ import '../../data/local/entity/asset_entity.dart';
 import '../../data/local/entity/liability_entity.dart';
 import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
+import '../../domain/model/asset_type.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../components/drag_reorder_column.dart';
@@ -382,6 +383,12 @@ class _HomeContent extends StatelessWidget {
                   ) {
                     final String key = 'asset-${group.type.storageName}';
                     final String sortKey = '${state.activePortfolio!.id}-$key';
+                    final metal = group.items.first.asset.displayedMetal;
+                    final bool singleMetal =
+                        metal != null &&
+                        group.items.every(
+                          (line) => line.asset.displayedMetal == metal,
+                        );
                     return ValueListenableBuilder<Set<String>>(
                       valueListenable: expanded,
                       builder:
@@ -390,13 +397,21 @@ class _HomeContent extends StatelessWidget {
                             Set<String> expandedKeys,
                             _,
                           ) => _CategoryCardShell(
-                            icon: assetTypeIcon(group.type),
+                            icon: singleMetal
+                                ? metalIcon(metal)
+                                : assetTypeIcon(group.type),
                             accent: colorful
                                 ? categoryColorAt(group.type.index)
                                 : null,
                             title: group.type.displayName.tr(context),
                             count: group.items.length,
-                            totalText: state.hideBalances
+                            totalText:
+                                group.type == AssetType.metals &&
+                                    group.items.every(
+                                      (line) => !line.asset.isPriced,
+                                    )
+                                ? 'Price pending'.tr(context)
+                                : state.hideBalances
                                 ? CurrencyUtil.maskShort
                                 : CurrencyUtil.format(
                                     group.total,
@@ -412,9 +427,7 @@ class _HomeContent extends StatelessWidget {
                                   items: group.items,
                                   name: (line) => line.asset.displayName,
                                   value: (line) => line.convertedValue,
-                                  priced: (line) =>
-                                      !line.asset.type.isMarketLinked ||
-                                      line.asset.lastPrice != null,
+                                  priced: (line) => line.asset.isPriced,
                                   sort: sorts[sortKey] ?? HoldingSort.custom,
                                   onSort: (sort) => onSort(sortKey, sort),
                                   onReordered: (List<AssetLine> items) =>
@@ -425,14 +438,26 @@ class _HomeContent extends StatelessWidget {
                                       ),
                                   itemBuilder: (AssetLine line) =>
                                       _HoldingItemRow(
+                                        icon: line.asset.displayedMetal == null
+                                            ? null
+                                            : metalIcon(
+                                                line.asset.displayedMetal!,
+                                              ),
                                         title: line.asset.displayName,
                                         subtitle: assetSubtitle(
                                           line.asset,
                                           group.baseCurrency,
                                           unitsLabel: 'units'.tr(context),
                                           hideBalances: state.hideBalances,
+                                          localize: (label) =>
+                                              label.tr(context),
                                         ),
-                                        amount: state.hideBalances
+                                        amount:
+                                            line.asset.type ==
+                                                    AssetType.metals &&
+                                                !line.asset.isPriced
+                                            ? 'Price pending'.tr(context)
+                                            : state.hideBalances
                                             ? CurrencyUtil.maskShort
                                             : CurrencyUtil.format(
                                                 line.convertedValue,
@@ -734,12 +759,14 @@ class _HoldingItemRow extends StatelessWidget {
     required this.subtitle,
     required this.amount,
     required this.onOpen,
+    this.icon,
   });
 
   final String title;
   final String subtitle;
   final String amount;
   final VoidCallback onOpen;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -752,6 +779,10 @@ class _HoldingItemRow extends StatelessWidget {
           padding: const EdgeInsetsDirectional.only(top: 16, bottom: 16),
           child: Row(
             children: <Widget>[
+              if (icon != null) ...<Widget>[
+                Icon(icon, size: 19, color: theme.colorScheme.primary),
+                const SizedBox(width: 10),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -168,7 +168,7 @@ class StatisticsViewModel extends ChangeNotifier {
     final String base = settings.baseCurrency;
     final List<TypeAmount> assetsByType = _amounts<AssetType, AssetEntity>(
       _assets,
-      (AssetEntity a) => a.type,
+      (AssetEntity a) => a.type.displayCategory,
       (AssetType t) => t.displayName,
       (AssetType t) => t.storageName,
       (AssetEntity a) => _converter.convert(a.value, a.currency, base),

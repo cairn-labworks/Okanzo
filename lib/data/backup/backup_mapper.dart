@@ -1,5 +1,6 @@
 import '../../domain/model/asset_type.dart';
 import '../../domain/model/liability_type.dart';
+import '../../domain/model/precious_metal.dart';
 import '../local/entity/asset_entity.dart';
 import '../local/entity/liability_entity.dart';
 import 'backup_models.dart';
@@ -13,6 +14,8 @@ BackupAsset assetToBackup(AssetEntity asset) => BackupAsset(
   currency: asset.currency,
   quantity: asset.quantity,
   pricePerUnit: asset.pricePerUnit,
+  metal: asset.metal?.name,
+  purity: asset.purity,
   symbol: asset.symbol,
   lastPrice: asset.lastPrice,
   lastPriceTimestamp: asset.lastPriceTimestamp,
@@ -39,6 +42,8 @@ AssetEntity backupToAsset(BackupAsset asset, int portfolioId, int now) =>
       currency: asset.currency,
       quantity: asset.quantity,
       pricePerUnit: asset.pricePerUnit,
+      metal: PreciousMetal.fromName(asset.metal),
+      purity: asset.purity,
       symbol: asset.symbol,
       lastPrice: asset.lastPrice,
       lastPriceTimestamp: asset.lastPriceTimestamp,

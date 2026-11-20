@@ -823,6 +823,7 @@ Future<T?> showSelectionPickerDialog<T>(
   String? searchPlaceholder,
   String? Function(T)? optionSubtitle,
   IconData Function(T)? optionIcon,
+  bool searchable = true,
 }) {
   final bool dark = Theme.of(context).brightness == Brightness.dark;
   return showDialog<T>(
@@ -839,6 +840,7 @@ Future<T?> showSelectionPickerDialog<T>(
         optionLabel: optionLabel,
         optionSubtitle: optionSubtitle,
         optionIcon: optionIcon,
+        searchable: searchable,
       ),
     ),
   );
@@ -854,6 +856,7 @@ class _SelectionPickerDialog<T> extends StatefulWidget {
     this.searchPlaceholder,
     this.optionSubtitle,
     this.optionIcon,
+    required this.searchable,
   });
 
   final String? eyebrow;
@@ -864,6 +867,7 @@ class _SelectionPickerDialog<T> extends StatefulWidget {
   final String Function(T) optionLabel;
   final String? Function(T)? optionSubtitle;
   final IconData Function(T)? optionIcon;
+  final bool searchable;
 
   @override
   State<_SelectionPickerDialog<T>> createState() =>
@@ -953,46 +957,48 @@ class _SelectionPickerDialogState<T> extends State<_SelectionPickerDialog<T>> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(
-              searchLabel,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: colors.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 7),
-            Semantics(
-              label: searchLabel,
-              child: TextField(
-                controller: _query,
-                onChanged: (_) => setState(() {}),
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colors.onSurface,
-                ),
-                decoration: InputDecoration(
-                  labelText: null,
-                  hintText: widget.searchPlaceholder ?? searchLabel,
-                  hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                  filled: true,
-                  fillColor: theme.brightness == Brightness.dark
-                      ? colors.surfaceContainerLow
-                      : colors.surfaceContainerLowest,
-                  border: searchBorder,
-                  enabledBorder: searchBorder,
-                  focusedBorder: searchBorder.copyWith(
-                    borderSide: BorderSide(color: colors.primary, width: 1.5),
-                  ),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 13,
-                    vertical: 13,
-                  ),
+            if (widget.searchable) ...<Widget>[
+              Text(
+                searchLabel,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 7),
+              Semantics(
+                label: searchLabel,
+                child: TextField(
+                  controller: _query,
+                  onChanged: (_) => setState(() {}),
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colors.onSurface,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: null,
+                    hintText: widget.searchPlaceholder ?? searchLabel,
+                    hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                    filled: true,
+                    fillColor: theme.brightness == Brightness.dark
+                        ? colors.surfaceContainerLow
+                        : colors.surfaceContainerLowest,
+                    border: searchBorder,
+                    enabledBorder: searchBorder,
+                    focusedBorder: searchBorder.copyWith(
+                      borderSide: BorderSide(color: colors.primary, width: 1.5),
+                    ),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 13,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
             Flexible(
               child: ConstrainedBox(
                 constraints: BoxConstraints(

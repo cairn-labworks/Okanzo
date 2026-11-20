@@ -93,12 +93,13 @@ class _AssetDao extends Fake implements AssetDao {
   }
 
   @override
-  Future<void> updatePrices(
+  Future<int> updatePrices(
     List<
       ({int id, double price, int timestamp, String? currency, String? name})
     >
-    updates,
-  ) async {
+    updates, {
+    Map<int, AssetEntity> expectedMetals = const {},
+  }) async {
     for (final ({
           int id,
           double price,
@@ -116,6 +117,7 @@ class _AssetDao extends Fake implements AssetDao {
         name: update.name,
       );
     }
+    return updates.length;
   }
 }
 

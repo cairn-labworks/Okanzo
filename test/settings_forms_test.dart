@@ -20,6 +20,7 @@ import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/app_theme.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/liability_type.dart';
+import 'package:okanzo/domain/model/precious_metal.dart';
 import 'package:okanzo/domain/model/release_notes.dart';
 import 'package:okanzo/domain/model/stock_exchange.dart';
 import 'package:okanzo/domain/model/theme_mode.dart';
@@ -68,6 +69,7 @@ class _Assets extends Fake implements AssetRepository {
   List<AssetEntity> items = const <AssetEntity>[];
   int quoteFetches = 0;
   Future<Result<StockQuote>>? pendingQuote;
+  Future<Result<double>>? pendingMetalPrice;
 
   @override
   Stream<List<AssetEntity>> observeForPortfolio(int portfolioId) =>
@@ -103,6 +105,14 @@ class _Assets extends Fake implements AssetRepository {
         ? Result<StockQuote>.offline()
         : await pendingQuote!;
   }
+
+  @override
+  Future<Result<double>> fetchMetalPrice(
+    PreciousMetal metal,
+    String purity, {
+    required String currency,
+  }) async =>
+      await (pendingMetalPrice ?? Future.value(Result<double>.offline()));
 }
 
 class _Liabilities extends Fake implements LiabilityRepository {
@@ -373,6 +383,110 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('choosing Metals opens the picker and saves fractional silver', (
+    WidgetTester tester,
+  ) async {
+    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+    await _tap(tester, find.text('Stock'));
+    await _tap(tester, find.text('Metals'));
+    expect(find.text('Choose a metal'), findsOneWidget);
+    expect(find.text('Gold'), findsOneWidget);
+    expect(find.text('Silver'), findsOneWidget);
+    expect(find.text('Platinum'), findsOneWidget);
+    expect(find.text('Palladium'), findsOneWidget);
+    container.assetRepository.pendingMetalPrice = Future.value(
+      Result<double>.success(0.8),
+    );
+    await _tap(tester, find.text('Silver'));
+    await _tap(tester, find.text('Choose grade'));
+    expect(find.text('Choose fineness'), findsOneWidget);
+    await _tap(tester, find.text('925'));
+    await tester.enterText(
+      find.widgetWithText(TextField, 'e.g. Silver coins'),
+      'Silver coins',
+    );
+    final weight = find.widgetWithText(TextField, 'e.g. 10.5');
+    await tester.ensureVisible(weight);
+    await tester.enterText(weight, '12.5');
+    await tester.pumpAndSettle();
+    await _tap(tester, find.text('Save asset'));
+    final saved = container.assetRepository.saved!;
+    expect(saved.metal, PreciousMetal.silver);
+    expect(saved.purity, '925');
+    expect(saved.value, 10.0);
+  });
+
+  testWidgets('an offline metal still saves as pending, not a zero quote', (
+    WidgetTester tester,
+  ) async {
+    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+    await _tap(tester, find.text('Stock'));
+    await _tap(tester, find.text('Metals'));
+    await _tap(tester, find.text('Platinum'));
+    await _tap(tester, find.text('Choose grade'));
+    await _tap(tester, find.text('950'));
+    await tester.enterText(
+      find.widgetWithText(TextField, 'e.g. Platinum ring'),
+      'Platinum ring',
+    );
+    final weight = _textField('Weight (grams)');
+    await tester.ensureVisible(weight);
+    await tester.enterText(weight, '3.2');
+    await tester.pumpAndSettle();
+    await _tap(tester, find.text('Save asset'));
+    final saved = container.assetRepository.saved!;
+    expect(saved.quantity, 3.2);
+    expect(saved.lastPrice, isNull);
+    expect(saved.isPriced, isFalse);
+    expect(find.text('Price pending'), findsWidgets);
+  });
+
+  testWidgets(
+    'Metals groups existing Gold with Silver and keeps individual icons',
+    (WidgetTester tester) async {
+      container.assetRepository.items = const [
+        AssetEntity(
+          id: 21,
+          portfolioId: 1,
+          type: AssetType.gold,
+          name: 'Family jewellery',
+          currency: 'USD',
+          quantity: 2,
+          pricePerUnit: 75,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+        AssetEntity(
+          id: 22,
+          portfolioId: 1,
+          type: AssetType.metals,
+          metal: PreciousMetal.silver,
+          purity: '925',
+          name: 'Silver coins',
+          currency: 'USD',
+          quantity: 12.5,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+      await open(
+        tester,
+        HomeScreen(
+          onOpenAssetEditor: (_, _) {},
+          onOpenLiabilityEditor: (_, _) {},
+          onManagePortfolios: () {},
+          onOpenSettings: () {},
+        ),
+      );
+      await _tap(tester, find.text('Metals'));
+      expect(find.text('Family jewellery'), findsOneWidget);
+      expect(find.text('Silver · 925'), findsOneWidget);
+      expect(find.byIcon(metalIcon(PreciousMetal.gold)), findsOneWidget);
+      expect(find.byIcon(metalIcon(PreciousMetal.silver)), findsOneWidget);
+      expect(find.text('Price pending'), findsOneWidget);
+    },
+  );
 
   void seedHoldings() {
     container.assetRepository.items = const <AssetEntity>[
@@ -1817,7 +1931,10 @@ void main() {
       expect(amountRect.center.dy, closeTo(copyCenterY, 2));
 
       // Contextual helper examples change with Exchange and Type
-      expect(find.text('e.g. Stock, Cash, Gold, Real estate'), findsOneWidget);
+      expect(
+        find.text('e.g. Stock, Cash, Metals, Real estate'),
+        findsOneWidget,
+      );
       expect(find.text('e.g. INR, USD, EUR, GBP'), findsOneWidget);
       expect(find.text('e.g. Apple (AAPL) · NYSE / Nasdaq'), findsOneWidget);
       expect(find.text('Search Apple, or enter AAPL'), findsOneWidget);
@@ -2408,13 +2525,14 @@ void main() {
     expect(container.assetRepository.saved, isNull);
 
     await _tap(tester, find.byType(DropdownSelector<AssetType>));
-    await _tap(tester, find.text('Gold').last);
-    expect(_editableField(tester, 'Quantity').focusNode.hasFocus, isTrue);
-    await tester.enterText(_textField('Quantity'), '2');
-    await tester.testTextInput.receiveAction(TextInputAction.next);
-    await tester.pumpAndSettle();
-    expect(_editableField(tester, 'Price per g').focusNode.hasFocus, isTrue);
-    await tester.enterText(_textField('Price per g'), '50');
+    await _tap(tester, find.text('Metals').last);
+    await _tap(tester, find.text('Gold'));
+    await _tap(tester, find.text('Choose karat'));
+    await _tap(tester, find.text('22K'));
+    expect(_editableField(tester, 'Name').controller.text, 'Savings');
+    final weight = _textField('Weight (grams)');
+    await tester.ensureVisible(weight);
+    await tester.enterText(weight, '2');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
     expect(tester.testTextInput.isVisible, isFalse);
@@ -2836,6 +2954,8 @@ void main() {
         currency: 'USD',
         quantity: 2,
         pricePerUnit: 10,
+        metal: type == AssetType.metals ? PreciousMetal.gold : null,
+        purity: type == AssetType.metals ? '22K' : null,
         lastPrice: 10,
         symbol: 'AAPL',
         manualValue: 20,
@@ -2905,6 +3025,16 @@ void main() {
           expect(_field('Quantity'), findsOneWidget);
           expect(_field('Price per g'), findsOneWidget);
           expect(find.text('Estimated value'), findsOneWidget);
+        case ValuationMode.metal:
+          expect(find.text('Gold'), findsOneWidget);
+          expect(find.text('22K'), findsOneWidget);
+          await tester.scrollUntilVisible(
+            _field('Weight (grams)'),
+            100,
+            scrollable: find.byType(Scrollable).first,
+          );
+          expect(find.text('Price per gram'), findsOneWidget);
+          expect(_field('Price per gram'), findsNothing);
         case ValuationMode.flat:
           expect(_field('Name'), findsOneWidget);
           expect(_field('Custom name (optional)'), findsNothing);
@@ -3717,7 +3847,7 @@ void main() {
       }
 
       await expectTypeIcons<AssetType>(
-        AssetType.values,
+        AssetType.values.where((type) => type != AssetType.gold).toList(),
         (AssetType type) => type.displayName,
         assetTypeIcon,
       );
