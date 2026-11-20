@@ -20,6 +20,9 @@ class FakeFxRateDao extends Fake implements FxRateDao {
   final Map<String, FxRateEntity> _rates;
   int getAllCalls = 0;
   int upsertCalls = 0;
+  @override
+  Stream<List<FxRateEntity>> observeAll() =>
+      Stream.value(_rates.values.toList());
 
   @override
   Future<List<FxRateEntity>> getAll() async {

@@ -1,0 +1,1368 @@
+<!doctype html>
+<!-- Throwaway exploration: Canvas and Guide flows via ?variant=A or B; compare ?add=expand or dialog. Open directly; no server or dependencies. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Canvas and Guide holding-entry concepts with expandable and dialog add actions. Fictional data, simulated quotes, no persistence, no connection to the app.">
+<title>Okanzo / The holding experience</title>
+<style>
+:root{color-scheme:light;--lab-bg:#f5f4ef;--lab-ink:#26392f;--lab-muted:#617268;--lab-line:#d8ded4;--lab-sage:#dfe8d8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--lab-bg);color:var(--lab-ink);font:14px/1.5 "Segoe UI",Arial,sans-serif}
+button,input,select,textarea{font:inherit}
+button,select,summary{cursor:pointer}
+button{color:inherit}
+button:disabled{cursor:not-allowed;opacity:.45}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #63917b;outline-offset:3px}
+button{border:0}
+a{color:inherit;text-underline-offset:3px}
+svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sprite{position:absolute;width:0;height:0;overflow:hidden}
+.lab-header{max-width:1392px;margin:auto;padding:25px 48px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--lab-line);gap:16px}
+.brand{display:flex;align-items:center;gap:12px;font-size:19px;font-weight:650;letter-spacing:-.7px}
+.brand-mark{width:32px;height:32px;border:1px solid #6c8370;border-radius:50%;display:grid;place-items:center}
+.brand-mark svg{width:18px;height:18px}
+.brand span:last-child{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--lab-muted);font-weight:500;border-left:1px solid var(--lab-line);padding-left:15px;margin-left:4px}
+.lab-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--lab-muted)}
+.dot{width:6px;height:6px;display:inline-block;background:#527751;border-radius:50%;flex-shrink:0}
+.studio{max-width:1330px;margin:0 auto;padding:38px 38px 118px;display:grid;grid-template-columns:minmax(210px,1fr) 412px minmax(210px,1fr);gap:48px;align-items:start}
+.intro{padding-top:25px}
+.eyebrow{font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:var(--lab-muted);margin:0 0 16px}
+.intro h1{font-family:Georgia,"Times New Roman",serif;font-size:43px;line-height:1.12;font-weight:400;letter-spacing:-1.6px;margin:0 0 20px}
+.intro>p:not(.eyebrow){color:var(--lab-muted);font-size:14px;max-width:250px;line-height:1.75}
+.concepts{display:grid;gap:7px;margin:30px 0}
+.concept{display:grid;grid-template-columns:30px 1fr;gap:12px;width:100%;text-align:left;padding:14px 12px;border:1px solid transparent;border-radius:12px;background:transparent}
+.concept[aria-pressed=true]{background:#e8eddf;border-color:#cdd8c5}
+.concept-key{width:27px;height:27px;display:grid;place-items:center;border:1px solid #c5d0c0;border-radius:8px;font-size:11px}
+.concept strong{display:block;font-size:13px;font-weight:650;margin-bottom:3px}
+.concept small{color:var(--lab-muted);font-size:11px}
+.intro-foot{border-top:1px solid var(--lab-line);padding-top:18px;font-size:11px;color:var(--lab-muted);max-width:255px}
+.intro-foot strong{display:block;color:var(--lab-ink);margin-bottom:5px;font-weight:600}
+.rail{padding-top:27px}
+.rail-section{padding:0 0 22px;margin-bottom:21px;border-bottom:1px solid var(--lab-line)}
+.rail-section h2{font-size:12px;font-weight:650;letter-spacing:.1px;margin:0 0 13px}
+.rail-section p{color:var(--lab-muted);font-size:12px;line-height:1.75;margin:8px 0}
+.hypothesis{font-family:Georgia,"Times New Roman",serif;font-size:20px!important;color:var(--lab-ink)!important;line-height:1.45!important}
+.tradeoff{font-size:11px!important}
+.control{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:12px 0;color:var(--lab-muted);font-size:12px}
+.lab-select{border:1px solid var(--lab-line);border-radius:7px;background:#fff;padding:7px 9px;color:var(--lab-ink);max-width:137px;min-height:36px;font-size:11px}
+.scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.scenario{border:1px solid #d5ddcf;background:transparent;border-radius:8px;padding:10px 8px;display:flex;align-items:center;gap:7px;text-align:left;font-size:11px;min-height:42px}
+.scenario:hover{background:#e7eddf}
+.scenario svg{width:16px;height:16px}
+.text-link{padding:8px 0;background:none;text-decoration:underline;text-underline-offset:3px;font-size:11px;color:var(--lab-muted)}
+.state-details summary{font-size:11px;color:var(--lab-muted);padding:4px 0}
+.state-details pre{font:10px/1.65 Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:270px;overflow:auto;background:#e9ede3;border-radius:8px;padding:12px}
+.caption{text-align:center;color:var(--lab-muted);font-size:10px;margin-top:12px;letter-spacing:.2px}
+.device,.app-dialog{--bg:#f6f8f3;--surface:#fff;--soft:#edf2ea;--panel:#e5ecdf;--ink:#25332b;--muted:#5e7062;--line:#d6e0d1;--box-line:#c5d3c0;--accent:#3d6249;--on-accent:#fff;--tint:#dce9d8;--danger:#a23a35;--danger-bg:#faeae6;--warm:#855c24;--warm-bg:#f7ecd9;color:var(--ink);font-size:16px;color-scheme:light}
+body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--surface:#1d2c26;--soft:#20302A;--panel:#293e32;--ink:#e8f0e9;--muted:#a3b8aa;--line:#2d4036;--box-line:#3b5446;--accent:#c1e1bd;--on-accent:#1e3025;--tint:#2d4635;--danger:#ffb4ab;--danger-bg:#432b29;--warm:#e8c48a;--warm-bg:#3c3425;color-scheme:dark}
+.device-wrap{width:min(100%,max(280px,calc((100dvh - 230px)*.45)));justify-self:center}
+.device{width:390px;zoom:var(--preview-scale,1);aspect-ratio:9/20;border:7px solid #243b2e;border-radius:39px;background:var(--bg);box-shadow:0 18px 55px #253c2b17,0 2px 6px #253c2b0d;display:flex;flex-direction:column;position:relative;overflow:hidden;isolation:isolate}
+.device[data-large=true]{font-size:25px}
+.status-bar{height:30px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:5px 22px 0;font-size:10px;font-weight:650;letter-spacing:.3px}
+.status-bar>span:last-child{display:flex;align-items:center;gap:5px}
+.status-bar svg{width:13px;height:13px}
+.camera{position:absolute;width:9px;height:9px;background:#17231b;border-radius:50%;left:calc(50% - 4.5px);top:12px;box-shadow:inset 0 0 0 2px #3d4d40}
+#app{position:relative;display:flex;flex-direction:column;flex:1;min-height:0}
+.root-page{position:relative;display:flex;flex-direction:column;flex:1;min-height:0}
+.main-navigation{display:flex;flex-shrink:0;gap:4px;padding:8px 8px 10px;background:var(--bg);border-top:1px solid var(--line);transition:filter .2s ease}
+.main-navigation.is-blurred{filter:blur(4px);pointer-events:none}
+.main-navigation button{flex:1;min-width:0;min-height:54px;padding:0 2px;background:transparent;color:var(--muted);font-size:.66em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.main-navigation .nav-icon{display:grid;place-items:center;width:60px;height:30px;border-radius:20px}
+.main-navigation [aria-current=page]{color:var(--ink);font-weight:600}
+.main-navigation [aria-current=page] .nav-icon{background:var(--tint);color:var(--accent)}
+.allocation-row{padding:15px 0;border-bottom:1px solid var(--line)}
+.allocation-row .row{font-size:.78em}
+.allocation-row .row>span{display:flex;align-items:center;gap:9px}
+.allocation-track{height:5px;border-radius:4px;background:var(--soft);margin-top:12px;overflow:hidden}
+.allocation-track span{height:100%;display:block;background:var(--accent);border-radius:4px}
+.app-header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 20px;flex-shrink:0;min-height:58px}
+.app-header>label{flex:1;min-width:0}
+.app-header>.row{gap:0}
+.header-brand{font-size:.64em;letter-spacing:2px;color:var(--muted);font-weight:600}
+.header-sub{font-size:.65em;color:var(--muted);display:block}
+.header-name{font-size:.86em;font-weight:600;display:block}
+.icon-button{width:44px;min-width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:transparent;color:var(--ink)}
+.icon-button:hover{background:var(--panel)}
+.app-scroll{overflow:auto;overscroll-behavior:contain;flex:1;min-height:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.page{--page-inset:24px;padding:10px var(--page-inset) 24px}
+.home-scroll>.page{padding-bottom:var(--home-action-clearance,88px)}
+.home-scroll .holdings{margin-bottom:0}
+.home-scroll .holding-group:last-child .group-holdings{margin-bottom:0;padding-bottom:0}
+.app-eyebrow{font-size:.62em;letter-spacing:1.35px;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 9px}
+.page-title{font-size:1.9em;font-weight:500;line-height:1.16;letter-spacing:-1.3px;margin:0 0 10px}
+.app-copy{color:var(--muted);font-size:.78em;line-height:1.65;margin:0 0 18px;overflow-wrap:anywhere}
+.app-copy small{font-size:.88em}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.muted{color:var(--muted)}
+.portfolio-select{width:100%;max-width:230px;min-width:0;border:0;background:transparent;color:var(--ink);font-size:.94em;font-weight:600;padding:8px 22px 8px 0}
+.home-hero{padding:14px 0 24px}
+.networth{font-size:2.55em;line-height:1.15;letter-spacing:-1.5px;margin:8px 0 5px;color:var(--accent);font-weight:500;overflow-wrap:anywhere}
+.subtle{font-size:.69em;color:var(--muted);margin:4px 0}
+.totals{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:27px}
+.totals small{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:.69em;margin-bottom:6px}
+.totals svg{width:16px;height:16px}
+.totals strong{font-size:1.05em;font-weight:550;overflow-wrap:anywhere}
+.segmented{display:flex;background:var(--soft);border-radius:30px;padding:5px;gap:4px;margin:10px 0 19px}
+.segmented button{flex:1;background:transparent;border-radius:25px;min-height:41px;padding:8px 10px;font-size:.75em;color:var(--muted)}
+.segmented button[aria-pressed=true]{background:var(--tint);color:var(--ink);font-weight:600}
+.holdings{background:var(--soft);border-radius:18px;padding:0 16px;margin:14px 0}
+.holding{display:flex;align-items:center;gap:12px;padding:18px 0;border-bottom:1px solid var(--line);font-size:.8em}
+.holding:last-child{border:0}
+.holding .grow{min-width:0;flex:1}
+.holding strong{display:block;font-weight:550;overflow-wrap:anywhere}
+.holding small{display:block;font-size:.8em;color:var(--muted);margin-top:4px}
+.holding .value{font-size:.96em;text-align:right;font-weight:500;overflow-wrap:anywhere;max-width:47%}
+.holding-group{border-bottom:1px solid var(--line)}
+.holding-group:last-child{border:0}
+.group-toggle{display:flex;align-items:center;gap:11px;width:100%;background:transparent;color:var(--ink);text-align:left;padding:17px 0;min-height:75px}
+.group-toggle .grow{flex:1;min-width:0}
+.group-toggle strong{font-size:.85em;font-weight:550;display:block;overflow-wrap:anywhere}
+.group-toggle small{font-size:.66em;color:var(--muted);overflow-wrap:anywhere}
+.group-total{text-align:right;font-size:.81em;overflow-wrap:anywhere;max-width:39%}
+.group-toggle>svg{width:16px;height:16px;transition:transform .15s}
+.group-toggle[aria-expanded=true]>svg{transform:rotate(90deg)}
+.group-holdings{padding:0 0 10px 12px;border-left:1px solid var(--line);margin:0 0 12px 19px}
+.group-list-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:38px;margin-top:-3px}
+.group-list-heading>span{font-size:.59em;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
+.group-options{width:44px;height:44px;min-width:44px;margin-right:-10px;color:var(--muted)}
+.group-options svg{width:19px;height:19px}
+.holding-row{display:flex;align-items:center;gap:5px}
+.holding-row+.holding-row{border-top:1px solid var(--line)}
+.holding-open{display:flex;align-items:center;gap:14px;flex:1;min-width:0;min-height:70px;padding:15px 0;background:transparent;color:var(--ink);text-align:left;border-radius:8px}
+.holding-open:hover{background:var(--panel)}
+.holding-open .grow{flex:1;min-width:0}
+.holding-open strong{font-size:.82em;font-weight:550;display:block;overflow-wrap:anywhere;line-height:1.45}
+.holding-open small{font-size:.65em;color:var(--muted);display:block;margin-top:5px;letter-spacing:.25px}
+.holding-open .value{font-size:.8em;font-weight:500;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;text-align:right;max-width:46%}
+.arrange-row{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding:10px 0}
+.arrange-row .grow{min-width:0;flex:1}
+.arrange-row strong{display:block;font-size:.84em;font-weight:500;overflow-wrap:anywhere}
+.arrange-row small{display:block;font-size:.68em;color:var(--muted);margin-top:5px}
+.reorder-buttons{display:flex;flex-direction:column;flex-shrink:0}
+.reorder-buttons button{width:44px;height:44px;background:transparent;color:var(--muted);display:grid;place-items:center}
+.reorder-buttons svg{width:16px;height:16px}
+.move-up svg{transform:rotate(-90deg)}
+.move-down svg{transform:rotate(90deg)}
+.picker{display:flex;align-items:center;gap:9px;width:100%;min-height:54px;padding:11px;border:1px solid var(--box-line);border-radius:10px;background:var(--surface);color:var(--ink);text-align:left}
+.picker .picker-value{flex:1;min-width:0;font-size:.8em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.picker .picker-value.is-placeholder{color:var(--muted)}
+.picker .picker-detail{display:grid;min-width:0;flex:1;gap:2px}
+.picker .picker-detail strong{font-size:.82em;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.picker .picker-detail small{font-size:.64em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.picker[aria-invalid=true]{border-color:var(--danger);background:var(--danger-bg)}
+.picker>svg:last-child{width:14px;transform:rotate(90deg)}
+.picker>svg.picker-search-trail{width:16px;transform:none;color:var(--accent)}
+.picker>svg:first-child{width:19px;color:var(--accent)}
+.currency-glyph{display:grid;place-items:center;min-width:24px;min-height:24px;color:var(--accent);font-weight:600;font-size:1.05em}
+.picker-search{margin:8px 0 10px}
+.picker-list{max-height:min(320px,46dvh);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.picker-empty{font-size:.75em;color:var(--muted);padding:16px 4px;margin:0}
+.picker-option{display:flex;align-items:center;gap:12px;padding:12px 8px;min-height:58px;width:100%;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);text-align:left}
+.picker-option:last-child{border-bottom:0}
+.picker-option[aria-pressed=true]{background:var(--tint);border-radius:9px}
+.picker-option .grow{flex:1;min-width:0}
+.picker-option strong{display:block;font-size:.84em;font-weight:500}
+.picker-option small{display:block;font-size:.69em;color:var(--muted)}
+.picker-option>svg:first-child{color:var(--accent)}
+.picker-option>svg:last-child{width:17px;color:var(--accent)}
+.picker-option>svg.option-chevron{width:15px;color:var(--muted)}
+.field-meta{display:flex;justify-content:space-between;gap:12px;font-size:.62em;color:var(--muted);margin-top:5px}
+.field-meta .at-limit{color:var(--warm)}
+.save-hint{font-size:.61em;color:var(--muted);margin:8px 0 0;line-height:1.5}
+.selected-quote{width:100%;text-align:left;color:var(--ink)}
+.selected-quote .grow{flex:1;min-width:0}
+.selected-quote .quote-change{font-size:.63em;color:var(--accent);display:flex;gap:4px;align-items:center}
+.selected-quote .quote-change svg{width:15px;height:15px}
+.danger-button{color:var(--danger);border-color:var(--danger);margin-top:10px}
+.detail-title{overflow-wrap:anywhere}
+.detail-close{margin-left:auto}
+.detail-caption{font-size:.7em;color:var(--muted);margin-top:8px}
+.design-notes summary{font-size:11px;color:var(--lab-muted)}
+.design-notes p{font-size:11px;color:var(--lab-muted);line-height:1.7}
+.tile-icon{background:var(--panel);color:var(--accent);border-radius:12px;width:40px;height:40px;display:grid;place-items:center;flex-shrink:0}
+.tile-icon svg{width:20px;height:20px}
+.new-label{font-size:.63em;color:var(--accent);border:1px solid var(--line);border-radius:4px;padding:1px 5px;display:inline-block;margin-left:5px}
+.home-bottom{position:absolute;bottom:18px;left:24px;right:24px;z-index:2;pointer-events:none}
+.home-backdrop{position:absolute;inset:0;z-index:1;background:#0d191414;backdrop-filter:blur(4px);opacity:0;visibility:hidden;pointer-events:none;touch-action:none;transition:opacity .2s ease,visibility 0s .2s}
+.home-backdrop.is-active{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .2s ease,visibility 0s}
+.home-bottom>.primary{width:max-content;max-width:100%;margin-left:auto;padding:13px 12px;gap:8px;pointer-events:auto;box-shadow:0 3px 9px #00000012}
+.add-anchor{position:relative;min-height:54px}
+.add-launcher{position:absolute;bottom:0;right:0;display:flex;flex-direction:column-reverse;width:min(8.25em,100%);background:var(--accent);color:var(--on-accent);border-radius:17px;z-index:2;pointer-events:auto;box-shadow:0 3px 9px #00000012;transition:width .36s cubic-bezier(.2,0,0,1),border-radius .36s cubic-bezier(.2,0,0,1),box-shadow .36s ease}
+.add-launcher.is-open{width:min(17em,100%);border-radius:22px;box-shadow:0 8px 26px #00000030,inset 0 0 0 1px color-mix(in srgb,var(--on-accent) 12%,transparent)}
+.add-reveal{display:grid;grid-template-rows:0fr;visibility:hidden;transition:grid-template-rows .36s cubic-bezier(.2,0,0,1),visibility 0s .36s}
+.is-open .add-reveal{grid-template-rows:1fr;visibility:visible;transition:grid-template-rows .36s cubic-bezier(.2,0,0,1),visibility 0s}
+.add-options{min-height:0;overflow:hidden}
+.add-options-inner{display:grid;gap:8px;padding:10px 10px 8px}
+.add-option{display:flex;align-items:center;gap:12px;min-height:66px;width:100%;padding:12px 10px;background:color-mix(in srgb,var(--on-accent) 7%,transparent);color:inherit;text-align:left;border-radius:13px;opacity:0;transform:translateY(8px);transition:opacity .1s ease,transform .15s ease,background-color .15s ease}
+.is-open .add-option{opacity:1;transform:translateY(0);transition:opacity .18s ease,transform .28s cubic-bezier(.2,0,0,1),background-color .15s ease}
+.is-open .add-option:nth-child(1){transition-delay:.12s,.12s,0s}
+.is-open .add-option:nth-child(2){transition-delay:.08s,.08s,0s}
+.add-option:hover,.add-option:focus-visible{background:color-mix(in srgb,var(--on-accent) 13%,transparent)}
+.add-option>svg{width:32px;height:32px;padding:6px;border-radius:10px;background:color-mix(in srgb,var(--on-accent) 10%,transparent)}
+.add-option[data-value=asset]>svg{background:#b8d7b1;color:#27583b}
+.add-option[data-value=liability]>svg{background:#f0d7b9;color:#754424}
+.add-option strong{display:block;font-size:.86em;font-weight:600}
+.add-option small{display:block;font-size:.64em;margin-top:3px;opacity:.92}
+.add-trigger{display:flex;align-items:center;gap:8px;width:100%;min-height:54px;padding:13px 12px;background:transparent;color:inherit;text-align:left;border-top:1px solid transparent;border-radius:17px;font-size:.85em;font-weight:600;white-space:nowrap;transition:color .18s ease}
+.add-trigger>svg{width:20px;height:20px;transition:transform .36s cubic-bezier(.2,0,0,1)}
+.is-open .add-trigger>svg{transform:rotate(45deg)}
+.is-open .add-trigger{color:color-mix(in srgb,var(--on-accent) 80%,var(--accent));font-weight:500;border-top-color:color-mix(in srgb,var(--on-accent) 14%,transparent);border-radius:0 0 22px 22px}
+.add-label{display:grid}
+.add-label>span{grid-area:1/1;transition:opacity .16s ease,transform .24s cubic-bezier(.2,0,0,1)}
+.add-label-expanded{opacity:0;transform:translateY(5px)}
+.is-open .add-label-collapsed{opacity:0;transform:translateY(-5px)}
+.is-open .add-label-expanded{opacity:1;transform:translateY(0)}
+.primary,.secondary{width:100%;min-height:50px;border-radius:13px;padding:13px 18px;font-size:.85em;font-weight:600;display:flex;gap:8px;align-items:center;justify-content:center;text-align:center}
+.primary{background:var(--accent);color:var(--on-accent)}
+.secondary{background:var(--soft);color:var(--ink);border:1px solid var(--line)}
+.primary svg,.secondary svg{width:18px;height:18px}
+.quiet{background:transparent;color:var(--muted);font-size:.75em;min-height:44px;padding:9px 5px;text-align:center}
+.asset-kind{display:flex;gap:4px;margin:0 0 23px}
+.asset-kind button{background:transparent;border-bottom:2px solid transparent;color:var(--muted);padding:9px 13px;font-size:.74em;min-height:44px}
+.asset-kind button[aria-pressed=true]{border-color:var(--accent);color:var(--accent);font-weight:600}
+.amount-summary{border-bottom:1px solid var(--line);margin:8px 0 20px;padding:13px 0 20px}
+.amount-summary .label{font-size:.7em;color:var(--muted);display:block}
+.estimated{display:block;font-size:2em;line-height:1.3;letter-spacing:-.8px;color:var(--accent);overflow-wrap:anywhere;margin:7px 0}
+.estimated.pending{font-size:1.55em}
+.calculation{font-size:.68em;color:var(--muted);display:block;min-height:18px}
+.fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fields-grid>*{min-width:0}
+.field{display:block;margin:0 0 18px;position:relative}
+.field>span:first-child{display:block;font-size:.68em;color:var(--muted);font-weight:500;margin-bottom:7px}
+.field input,.field select,.field textarea{width:100%;min-width:0;min-height:50px;padding:12px 13px;border:1px solid var(--box-line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:.87em;line-height:1.35;outline-offset:2px}
+.field input::placeholder,.field textarea::placeholder{font:inherit;letter-spacing:inherit;line-height:inherit;color:var(--muted);opacity:1}
+.field textarea{resize:vertical;min-height:90px}
+.field input[aria-invalid=true]{border-color:var(--danger);background:var(--danger-bg)}
+.prominent-wrap{display:flex;align-items:baseline;gap:6px;border-bottom:1px solid var(--line);padding:4px 0 14px;min-height:62px}
+.prominent-wrap:focus-within{border-bottom-color:var(--accent);box-shadow:0 1px 0 0 var(--accent)}
+.prominent-wrap[data-invalid=true]{border-bottom-color:var(--danger);box-shadow:0 1px 0 0 var(--danger)}
+.prominent-prefix{font-size:2em;line-height:1.3;letter-spacing:-.8px;color:var(--muted);flex-shrink:0;user-select:none}
+.field input.prominent{font-size:2em;line-height:1.3;letter-spacing:-.8px;border:0;border-radius:0;background:transparent;padding:0;min-height:0;color:var(--accent)}
+.field input.prominent[aria-invalid=true]{background:transparent}
+.field input.prominent:focus-visible{outline:none}
+.field .hint{display:block;font-size:.61em;color:var(--muted);line-height:1.6;margin-top:7px}
+.field .hint:empty,.error:empty{display:none}
+.error{display:block;font-size:.66em;color:var(--danger);margin-top:5px;line-height:1.5}
+.section-heading{font-size:.73em;font-weight:600;display:flex;align-items:center;justify-content:space-between;margin:20px 0 14px}
+.section-heading small{font-weight:400;color:var(--muted)}
+.search-stack{margin:0 0 14px}
+.search-stack>.field{margin-bottom:0}
+.search-stack>#quote-results:not(:empty){margin-top:8px}
+.inline-button{background:transparent;color:var(--accent);display:inline-flex;align-items:center;gap:7px;padding:4px 0;min-height:40px;font-size:.72em;font-weight:550;text-align:left}
+.inline-button svg{width:16px;height:16px}
+.banner{background:var(--soft);border:1px solid var(--line);border-radius:11px;padding:12px 13px;font-size:.7em;line-height:1.6;display:flex;gap:9px;align-items:flex-start;margin:14px 0}
+.banner svg{width:17px;height:17px;margin-top:2px}
+.banner.warning{background:var(--warm-bg);color:var(--warm);border-color:transparent}
+.banner.error-banner{background:var(--danger-bg);color:var(--danger);border-color:transparent}
+.banner strong{display:block;font-weight:600}
+.result-list{display:grid;gap:6px;margin:0}
+.result{background:var(--soft);border:1px solid var(--line);border-radius:11px;display:flex;gap:10px;text-align:left;padding:12px;align-items:center;width:100%;color:var(--ink);min-height:63px}
+.result .grow{flex:1;min-width:0}
+.result strong{display:block;font-size:.76em;font-weight:550}
+.result small{display:block;color:var(--muted);font-size:.62em;margin-top:3px}
+.result>svg{width:17px}
+.ticker-mark{width:33px;height:33px;flex-shrink:0;border-radius:9px;display:grid;place-items:center;color:var(--accent);background:var(--tint);font-size:11px;font-weight:650}
+.selected-quote{background:var(--soft);border:1px solid var(--line);border-radius:13px;padding:14px;display:flex;gap:12px;align-items:center;margin-bottom:18px}
+.selected-quote strong{font-size:.8em;font-weight:550;display:block;overflow-wrap:anywhere}
+.selected-quote small{font-size:.65em;color:var(--muted)}
+.custom-name{border-top:1px solid var(--line);margin:12px 0 4px}
+.custom-name summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:12px 0;font-size:.75em;font-weight:500;color:var(--muted)}
+.custom-name summary::-webkit-details-marker{display:none}
+.custom-name summary svg{width:16px;height:16px;color:var(--muted)}
+.custom-name .icon-collapse{display:none}
+.custom-name[open] .icon-expand{display:none}
+.custom-name[open] .icon-collapse{display:block}
+.custom-name .field{margin:2px 0 12px}
+.app-footer{border-top:1px solid var(--line);padding:14px 24px 18px;flex-shrink:0;background:var(--bg)}
+.footer-estimate{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:2px 0 13px;margin:0 0 12px;border-bottom:1px solid var(--line)}
+.footer-estimate-copy{min-width:0;flex:1}
+.footer-estimate .label{display:block;font-size:.72em;line-height:1.25;color:var(--muted);font-weight:500}
+.footer-estimate .estimated{flex-shrink:0;max-width:52%;font-size:1.58em;line-height:1.1;letter-spacing:-.65px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;margin:0;text-align:right;overflow-wrap:anywhere}
+.footer-estimate .calculation{font-size:.66em;line-height:1.35;color:var(--muted);display:block;margin-top:4px;overflow-wrap:anywhere}
+.footer-actions{display:flex;gap:10px}
+.footer-actions .secondary{width:52px;padding:12px;flex-shrink:0}
+.progress{display:flex;gap:5px;margin:11px 0 22px}
+.progress span{height:3px;background:var(--line);border-radius:3px;flex:1}
+.progress span.done{background:var(--accent)}
+.step-label{font-size:.62em;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:21px}
+.type-option{background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:16px 12px;text-align:left;min-height:100px;position:relative;color:var(--ink)}
+.type-option[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--tint)}
+.type-option>svg{color:var(--accent);width:22px;height:22px;margin-bottom:8px}
+.type-option strong{display:block;font-size:.74em;font-weight:550}
+.type-option small{display:block;font-size:.59em;color:var(--muted);margin-top:4px}
+.review-panel{background:var(--soft);border-radius:17px;padding:4px 18px;margin:22px 0}
+.review-line{padding:13px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:18px;font-size:.75em}
+.review-line:last-child{border:0}
+.review-line dt{color:var(--muted)}
+.review-line dd{margin:0;text-align:right;max-width:64%;overflow-wrap:anywhere}
+.picker-error{display:block;font-size:.66em;color:var(--danger);padding:10px 4px 4px;line-height:1.5}
+.success-mark{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;background:var(--tint);color:var(--accent);margin:29px auto 24px}
+.success-mark svg{width:32px;height:32px}
+.success-heading{text-align:center;font-size:1.8em;letter-spacing:-.7px;line-height:1.2;font-weight:500;margin:0 0 10px}
+.success-value{text-align:center;color:var(--accent);font-size:2.1em;line-height:1.4;overflow-wrap:anywhere;margin:10px 0}
+.center{text-align:center}
+.app-dialog{border:1px solid var(--box-line);border-radius:24px;padding:24px;width:calc(100% - 40px);max-width:375px;max-height:85dvh;overflow:auto;background:var(--bg);box-shadow:0 24px 90px #0003}
+.app-dialog::backdrop{background:#10231baa;backdrop-filter:blur(3px)}
+.app-dialog h2{font-size:1.4em;font-weight:500;letter-spacing:-.6px;line-height:1.25;margin:5px 0 10px}
+.app-dialog .primary{margin-top:12px}
+.app-dialog .quiet{width:100%}
+.dialog-choice{width:100%;display:flex;align-items:center;gap:14px;background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:17px;margin:10px 0;text-align:left;color:var(--ink)}
+.dialog-choice strong{display:block;font-size:.9em;font-weight:550}
+.dialog-choice small{display:block;font-size:.7em;color:var(--muted);margin-top:5px}
+.check-row{display:flex;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:.75em;min-height:45px}
+.check-row input{width:18px;height:18px;accent-color:var(--accent)}
+.prototype-switcher{position:fixed;bottom:19px;left:50%;transform:translateX(-50%);z-index:5;display:flex;align-items:center;gap:8px;background:#253c2e;color:#f5f8ee;border:1px solid #4b6251;border-radius:40px;padding:6px;box-shadow:0 7px 24px #172b2526;white-space:nowrap}
+.prototype-switcher button{height:39px;width:39px;border-radius:50%;background:#ffffff0b;display:grid;place-items:center;color:#e8f1e4}
+.prototype-switcher button:hover{background:#ffffff20}
+.switcher-label{min-width:146px;text-align:center;padding:0 14px;font-size:12px;font-weight:550}
+.switcher-label small{display:block;color:#b9cbb5;font-size:9px;letter-spacing:.8px;font-weight:400;text-transform:uppercase;margin-top:1px}
+.live-region{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.device[data-large=true] .fields-grid,.device[data-large=true] .totals{grid-template-columns:1fr}
+.device[data-large=true] .type-grid{grid-template-columns:1fr}
+.device[data-large=true] .app-footer{padding:10px 17px}
+.device[data-large=true] .page{--page-inset:18px}
+.device[data-large=true] .page-title{font-size:1.65em}
+.device[data-large=true] .networth{font-size:1.7em}
+@media(min-height:1000px){.studio{padding-top:55px}}
+@media(max-width:1150px){.studio{grid-template-columns:210px minmax(350px,412px);justify-content:center;gap:36px}.rail{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:30px;padding-top:0}.rail-section{margin:0}.rail-section:nth-child(3){grid-column:1/-1}.state-details{grid-column:1/-1}.lab-header{padding:20px 30px}}
+@media(max-width:700px){.lab-header{padding:17px 19px}.lab-status{display:none}.brand span:last-child{font-size:9px}.studio{display:flex;flex-direction:column;padding:23px 16px 110px;gap:22px;align-items:center}.intro{width:100%;max-width:412px;padding:0}.intro h1{font-size:30px;letter-spacing:-.8px;margin-bottom:9px}.intro h1 br{display:none}.intro>p:not(.eyebrow){max-width:none;font-size:12px;margin:0}.intro .eyebrow{display:none}.intro-foot{display:none}.concepts{display:flex;gap:5px;margin:18px 0 0}.concept{display:block;padding:10px;flex:1}.concept-key{display:none}.concept strong{font-size:11px}.concept small{font-size:9px}.device-wrap{width:100%;max-width:412px}.device{border-width:5px;border-radius:29px}.rail{display:flex;flex-direction:column;width:100%;max-width:412px;gap:20px}.rail-section{padding-bottom:18px}.rail-section:first-child{display:none}.prototype-switcher{bottom:12px}.caption{font-size:9px}.page{--page-inset:20px}.app-header{padding-left:16px;padding-right:16px}.lab-header .brand{font-size:17px}}
+@media(prefers-reduced-motion:no-preference){.page{animation:appear .18s ease-out}@keyframes appear{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}}
+@media(prefers-reduced-motion:reduce){.add-launcher,.add-reveal,.is-open .add-reveal,.add-trigger,.add-trigger>svg,.add-option,.is-open .add-option,.add-label>span,.is-open .add-label>span,.home-backdrop,.home-backdrop.is-active,.main-navigation{transition:none}}
+</style>
+</head>
+<body data-theme="dark">
+<svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6M8 12h12"/></symbol>
+<symbol id="i-next" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></symbol>
+<symbol id="i-trend" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-10M15 5h6v6"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="m3 7 6 6 4-4 8 10M15 19h6v-6"/></symbol>
+<symbol id="i-bank" viewBox="0 0 24 24"><path d="m3 8 9-5 9 5H3ZM5 10v8M10 10v8M15 10v8M20 10v8M3 21h18"/></symbol>
+<symbol id="i-wallet" viewBox="0 0 24 24"><path d="M20 8H5a2 2 0 0 1 0-4h13v4M3 6v13a2 2 0 0 0 2 2h15V8M20 12h-6v5h6"/><path d="M16.5 14.5h.1"/></symbol>
+<symbol id="i-gold" viewBox="0 0 24 24"><path d="m6 6-4 5 10 10 10-10-4-5H6ZM2 11h20M6 6l6 15 6-15"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 9v12h14V9M10 21v-7h4v7"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M12 3v9h9A9 9 0 1 1 12 3ZM16 3.9A9 9 0 0 1 20.1 8H16V3.9Z"/></symbol>
+<symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/></symbol>
+<symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 7h4a2.5 2.5 0 0 1 0 5H9h5a2.5 2.5 0 0 1 0 5H9V7ZM11 5v2M11 17v2"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
+<symbol id="i-car" viewBox="0 0 24 24"><path d="m5 8 2-4h10l2 4M3 10h18v8H3v-8ZM5 18v3M19 18v3M6 13h2M16 13h2"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6V3ZM14 3v5h4M9 12h6M9 16h6"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><path d="m9 3-.5 3-2 1L4 6 2 10l2.5 2v2L2 16l2 4 2.5-1 2 1 .5 2h6l.5-2 2-1 2.5 1 2-4-2.5-2v-2L22 10l-2-4-2.5 1-2-1-.5-3H9Z"/><circle cx="12" cy="12.5" r="3"/></symbol>
+<symbol id="i-offline" viewBox="0 0 24 24"><path d="m3 3 18 18M2 8a17 17 0 0 1 4-2M9 5a17 17 0 0 1 13 3M5 12a11 11 0 0 1 5-2M14 10a11 11 0 0 1 5 2M8 16a6 6 0 0 1 8 0M12 20h.01"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M19 12a7 7 0 0 0-12-5l-3 3M5 12a7 7 0 0 0 12 5l3-3"/></symbol>
+<symbol id="i-candle" viewBox="0 0 24 24"><path d="M8 4v3M8 15v5M6 7h4v8H6zM16 5v4M16 17v3M14 9h4v8h-4z"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+<symbol id="i-tune" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M13 5v4M4 17h3M11 17h9M7 15v4"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+<symbol id="i-signal" viewBox="0 0 24 24"><path d="M4 19v-3M9 19v-7M14 19V8M19 19V4"/></symbol>
+<symbol id="i-battery" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M23 10v4M5 10h11v4H5z"/></symbol>
+</defs></svg>
+<header class="lab-header">
+  <div class="brand"><div class="brand-mark"><svg aria-hidden="true"><use href="#i-trend"/></svg></div>okanzo<span>Design exploration / 01</span></div>
+  <div class="lab-status"><span class="dot"></span> Interactive prototype. Fictional data. Nothing persists.</div>
+</header>
+<main class="studio">
+  <section class="intro" aria-label="Design options">
+    <p class="eyebrow">One intention. Two ways in.</p>
+    <h1>A little less effort.<br>A clearer picture.</h1>
+    <p>Explore the entire journey of adding what you own, and what you owe.</p>
+    <nav class="concepts" aria-label="Choose a design">
+      <button class="concept" data-action="variant" data-value="A" aria-pressed="true"><span class="concept-key">A</span><span><strong>The canvas</strong><small>Everything in one place</small></span></button>
+      <button class="concept" data-action="variant" data-value="B" aria-pressed="false"><span class="concept-key">B</span><span><strong>The guide</strong><small>One decision at a time</small></span></button>
+    </nav>
+    <div class="intro-foot"><strong>Compare the structure, not the colors.</strong>The same categories, financial rules, and example data power both designs. Switch designs without losing your draft.</div>
+  </section>
+  <section class="device-wrap" aria-label="Interactive Android-style preview">
+    <div class="device" id="device" data-large="false">
+      <div class="status-bar" aria-hidden="true"><span>9:41</span><span class="camera"></span><span><svg><use href="#i-signal"/></svg><svg><use href="#i-battery"/></svg></span></div>
+      <div id="app"></div>
+    </div>
+    <p class="caption">390px phone layout, scaled uniformly / 9:20 portrait / HTML study, not a native Android test.</p>
+  </section>
+  <aside class="rail" aria-label="Prototype controls and context">
+    <section class="rail-section"><p class="eyebrow">The question</p><p class="hypothesis" id="hypothesis"></p><p class="tradeoff" id="tradeoff"></p></section>
+    <section class="rail-section">
+      <h2>Try a different condition</h2>
+      <label class="control">Add holding action<select id="add-layout" class="lab-select"><option value="expand">Expanding button</option><option value="dialog">Dialog (original)</option></select></label>
+      <label class="control">Connectivity<select id="connectivity" class="lab-select"><option value="online">Online (simulated)</option><option value="offline">Offline</option><option value="error">Quote service error</option></select></label>
+      <label class="control">Appearance<select id="appearance" class="lab-select"><option value="dark">Midnight</option><option value="light">Classic</option></select></label>
+      <label class="control">Text size<select id="text-size" class="lab-select"><option value="normal">Default</option><option value="large">Large preview</option></select></label>
+      <p>Quotes, search, FX rates, and saves are simulated locally. Large text is a browser approximation, not Android font scaling.</p>
+      <p>The compact button floats over the list without a background strip. At the bottom, the last holding clears the closed button. Expanding it leaves the list still and blurs the background; tap outside, tap Close, or press Escape to return.</p>
+    </section>
+    <section class="rail-section">
+      <h2>Start a fresh scenario</h2>
+      <div class="scenario-grid">
+        <button class="scenario" data-action="scenario" data-kind="asset" data-type="cash"><svg aria-hidden="true"><use href="#i-wallet"/></svg>Cash asset</button>
+        <button class="scenario" data-action="scenario" data-kind="asset" data-type="stock"><svg aria-hidden="true"><use href="#i-trend"/></svg>Stock asset</button>
+        <button class="scenario" data-action="scenario" data-kind="asset" data-type="gold"><svg aria-hidden="true"><use href="#i-gold"/></svg>Gold asset</button>
+        <button class="scenario" data-action="scenario" data-kind="liability" data-type="loan"><svg aria-hidden="true"><use href="#i-bank"/></svg>Loan liability</button>
+      </div>
+      <p>Or begin with <strong>Add holding</strong>. On Home, open a type group, sort its holdings, and tap one for details, edit, or delete.</p>
+      <button class="text-link" data-action="sample">Fill this draft with example data</button><br>
+      <button class="text-link" data-action="reset">Reset all demo data</button>
+    </section>
+    <details class="design-notes"><summary>Why these Canvas choices?</summary><p><strong>One exit:</strong> Back leaves the form; a changed draft gets a discard confirmation. A second Cancel action is useful in a dialog without clear navigation, but redundant in this screen. <a href="https://www.nngroup.com/articles/ten-usability-heuristics/#toc-3-user-control-and-freedom-3" target="_blank" rel="noreferrer">The principle is a clear exit</a>, not a mandatory extra button.</p><p><strong>Focused fields, live bottom estimate &amp; input guardrails:</strong> All form boxes share a crisp outline and type-aware examples. Market search opens a searchable popup dialog that filters to valid ticker/company characters (`A–Z`, `0–9`, `.`, `-` — since Tokyo/Hong Kong/Shanghai tickers like `7203.T`, `0700.HK`, `600519.SS` and funds like `S&amp;P 500` include digits alongside alphabetical tickers), while Quantity accepts positive fractional decimals only (`&gt; 0`). For assets, Estimated value starts at `0` (`₹0` / `$0`) pinned directly above Save, without a redundant Current / After net-worth block below the form.</p><p><strong>60 characters:</strong> a proposed product limit for custom names and required holding names. It allows descriptive labels while keeping lists readable. The counter counts user-perceived characters; fetched company names are not truncated.</p><p><strong>Ready to save:</strong> required fields must be valid; a quote is optional so offline entry still works. Selecting a market holding fetches once automatically, without waiting for a quantity. Bonds keep the app's current manual-value model, not an invented ticker lookup.</p><p><strong>Holdings first:</strong> names, tickers, and values are the reading experience. The small group menu holds name/value sorting and an explicit Arrange manually view; reorder arrows never occupy the normal list. Switching sorts does not erase your custom arrangement. Values are compared in the base currency; unpriced holdings stay last.</p></details>
+    <details class="state-details"><summary>Under the surface / live state</summary><pre id="state-output"></pre></details>
+  </aside>
+</main>
+<nav class="prototype-switcher" aria-label="Prototype variant switcher">
+  <button data-action="previous-variant" aria-label="Previous design"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+  <div class="switcher-label"><span id="variant-label">A / The canvas</span><small>Prototype controls / arrow keys</small></div>
+  <button data-action="next-variant" aria-label="Next design"><svg aria-hidden="true"><use href="#i-next"/></svg></button>
+</nav>
+<dialog id="modal" class="app-dialog" aria-labelledby="dialog-title"></dialog>
+<div id="announcer" class="live-region" role="status" aria-live="polite"></div>
+<script>
+'use strict';
+const ASSETS = [
+  {id:'stock',label:'Stock',icon:'trend',mode:'market',hint:'Company shares'},
+  {id:'mutualFund',label:'Mutual fund / ETF',icon:'grid',mode:'market',hint:'Funds and indexes'},
+  {id:'crypto',label:'Cryptocurrency',icon:'coin',mode:'market',hint:'Coins and tokens'},
+  {id:'gold',label:'Gold',icon:'gold',mode:'quantity',hint:'Weight in grams'},
+  {id:'cash',label:'Cash',icon:'wallet',mode:'flat',hint:'Money on hand'},
+  {id:'bankDeposit',label:'Bank / deposit',icon:'bank',mode:'flat',hint:'Savings and deposits'},
+  {id:'realEstate',label:'Real estate',icon:'home',mode:'flat',hint:'Property value'},
+  {id:'vehicle',label:'Vehicle',icon:'car',mode:'flat',hint:'Current resale value'},
+  {id:'bond',label:'Bond',icon:'file',mode:'flat',hint:'Current holding value'},
+  {id:'other',label:'Other',icon:'grid',mode:'flat',hint:'Something else you own'}
+];
+const LIABILITIES = [
+  {id:'loan',label:'Loan',icon:'bank',hint:'Personal or other borrowing'},
+  {id:'mortgage',label:'Mortgage',icon:'home',hint:'Property borrowing'},
+  {id:'creditCard',label:'Credit card',icon:'card',hint:'Outstanding card balance'},
+  {id:'pendingPayment',label:'Pending payment',icon:'wallet',hint:'A payment still owed'},
+  {id:'tax',label:'Tax due',icon:'file',hint:'Outstanding taxes'},
+  {id:'other',label:'Other',icon:'grid',hint:'Another financial obligation'}
+];
+const EXCHANGES = [
+  {id:'us',label:'US (NYSE / Nasdaq)',suffix:'',currency:'USD'},
+  {id:'shanghai',label:'Shanghai',suffix:'.SS',currency:'CNY'},
+  {id:'paris',label:'Euronext Paris',suffix:'.PA',currency:'EUR'},
+  {id:'amsterdam',label:'Euronext Amsterdam',suffix:'.AS',currency:'EUR'},
+  {id:'brussels',label:'Euronext Brussels',suffix:'.BR',currency:'EUR'},
+  {id:'lisbon',label:'Euronext Lisbon',suffix:'.LS',currency:'EUR'},
+  {id:'dublin',label:'Euronext Dublin',suffix:'.IR',currency:'EUR'},
+  {id:'oslo',label:'Euronext Oslo',suffix:'.OL',currency:'NOK'},
+  {id:'milan',label:'Euronext Milan',suffix:'.MI',currency:'EUR'},
+  {id:'tokyo',label:'Tokyo',suffix:'.T',currency:'JPY'},
+  {id:'hongKong',label:'Hong Kong',suffix:'.HK',currency:'HKD'},
+  {id:'bse',label:'BSE (India)',suffix:'.BO',currency:'INR'},
+  {id:'other',label:'Other / full Yahoo ticker',suffix:'',currency:null}
+];
+const CURRENCIES = {INR:'Indian rupee',USD:'US dollar',EUR:'Euro',GBP:'Pound sterling',JPY:'Japanese yen',CNY:'Chinese yuan',HKD:'Hong Kong dollar',NOK:'Norwegian krone'};
+const FX = {INR:1,USD:83,EUR:90,GBP:105,JPY:.55,CNY:11.5,HKD:10.6,NOK:7.8};
+const QUOTES = [
+  {symbol:'AAPL',name:'Apple Inc.',type:'stock',exchange:'us',currency:'USD',price:215.3},
+  {symbol:'MSFT',name:'Microsoft Corporation',type:'stock',exchange:'us',currency:'USD',price:425.52},
+  {symbol:'RELIANCE.BO',name:'Reliance Industries',type:'stock',exchange:'bse',currency:'INR',price:1343},
+  {symbol:'AIR.PA',name:'Airbus SE',type:'stock',exchange:'paris',currency:'EUR',price:169.2},
+  {symbol:'ASML.AS',name:'ASML Holding',type:'stock',exchange:'amsterdam',currency:'EUR',price:712.8},
+  {symbol:'7203.T',name:'Toyota Motor',type:'stock',exchange:'tokyo',currency:'JPY',price:2700},
+  {symbol:'0700.HK',name:'Tencent Holdings',type:'stock',exchange:'hongKong',currency:'HKD',price:455},
+  {symbol:'VOO',name:'Vanguard S&P 500 ETF',type:'mutualFund',exchange:'us',currency:'USD',price:525},
+  {symbol:'VWRL.AS',name:'Vanguard FTSE All-World ETF',type:'mutualFund',exchange:'amsterdam',currency:'EUR',price:110},
+  {symbol:'BTC-USD',name:'Bitcoin / US dollar',type:'crypto',currency:'USD',price:67500},
+  {symbol:'ETH-USD',name:'Ethereum / US dollar',type:'crypto',currency:'USD',price:3500},
+  {symbol:'BTC-EUR',name:'Bitcoin / Euro',type:'crypto',currency:'EUR',price:62500}
+];
+const CONCEPTS = {
+  A:{name:'The canvas',question:'Can a familiar form feel effortless, without hiding anything?',tradeoff:'Amount-led, one screen, immediate save. Fast for repeat use; more decisions visible at once.'},
+  B:{name:'The guide',question:'Would a little guidance make the first holding feel easier?',tradeoff:'Choose a type, enter details, review. Lower initial density; extra transitions for experienced users.'}
+};
+const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const money = (value,currency='INR') => new Intl.NumberFormat(currency==='INR'?'en-IN':'en-US',{style:'currency',currency,minimumFractionDigits:0,maximumFractionDigits:0}).format(value);
+const numeric = value => value !== '' && /^\d+(\.\d*)?$|^\.\d+$/.test(value) && Number.isFinite(Number(value));
+const positiveDecimal = value => numeric(value) && Number(value) > 0;
+const sanitizePositiveDecimal = raw => {
+  let out='',dot=false;
+  for(const ch of String(raw??'')){
+    if(ch>='0'&&ch<='9')out+=ch;
+    else if(ch==='.'&&!dot){out+=ch;dot=true;}
+  }
+  return out;
+};
+const sanitizeMarketQuery = raw => String(raw??'').replace(/[^\p{L}\p{N}\s.&/\-]/gu,'');
+const validTickerSymbol = (value,type='stock') => {
+  const cleaned=String(value??'').trim().toUpperCase();
+  if(!cleaned||cleaned.length>24)return false;
+  return type==='crypto'
+    ?/^[A-Z0-9]{1,12}(-[A-Z]{2,6})?$/.test(cleaned)
+    :/^[A-Z0-9]{1,12}([.-][A-Z0-9]{1,6})?$/.test(cleaned);
+};
+const NAME_LIMIT = 60;
+const nameSegmenter = new Intl.Segmenter(undefined,{granularity:'grapheme'});
+const nameCharacters = value => Array.from(nameSegmenter.segment(value),part=>part.segment);
+const currencyGlyph = code => escapeHTML(new Intl.NumberFormat('en',{style:'currency',currency:code,currencyDisplay:'narrowSymbol'}).formatToParts(0).find(part=>part.type==='currency').value);
+const initialDraft = kind => ({id:null,kind,type:kind==='asset'?'stock':'loan',currency:'INR',exchange:'us',name:'',customName:'',customNameOpen:false,symbol:'',quantity:'',unitPrice:'',amount:'',notes:'',price:null,quoteName:'',quoteMessage:'',quoteAttempted:false,searching:false,dirty:false});
+const seed = () => [
+  {id:1,portfolio:'Personal',kind:'asset',type:'stock',name:'Apple Inc.',quoteName:'Apple Inc.',symbol:'AAPL',exchange:'us',quantity:'100',price:17869.9,amount:1786990,currency:'INR',priced:true,order:0},
+  {id:7,portfolio:'Personal',kind:'asset',type:'stock',name:'Microsoft Corporation',quoteName:'Microsoft Corporation',symbol:'MSFT',exchange:'us',quantity:'50',price:31220.38,amount:1561019,currency:'INR',priced:true,order:1},
+  {id:2,portfolio:'Personal',kind:'asset',type:'gold',name:'Family gold',quantity:'100',unitPrice:'9847.09',amount:984709,currency:'INR',priced:true,order:0},
+  {id:3,portfolio:'Personal',kind:'asset',type:'cash',name:'Emergency fund',amount:350000,currency:'INR',notes:'Liquid reserve',priced:true,order:0},
+  {id:8,portfolio:'Personal',kind:'asset',type:'cash',name:'Travel fund',amount:240825,currency:'INR',priced:true,order:1},
+  {id:4,portfolio:'Personal',kind:'liability',type:'mortgage',name:'Home loan',amount:3800000,currency:'INR',priced:true,order:0},
+  {id:9,portfolio:'Personal',kind:'liability',type:'mortgage',name:'Apartment loan',amount:205000,currency:'INR',priced:true,order:1},
+  {id:5,portfolio:'Family',kind:'asset',type:'bankDeposit',name:'Shared savings',amount:235000,currency:'INR',priced:true,order:0},
+  {id:6,portfolio:'Family',kind:'liability',type:'creditCard',name:'Shared card',amount:15000,currency:'INR',priced:true,order:0}
+];
+const requestedVariant = new URLSearchParams(location.search).get('variant');
+const state = {
+  variant:Object.hasOwn(CONCEPTS,requestedVariant)?requestedVariant:'A',
+  screen:'home',kind:'asset',phase:'type',portfolio:'Personal',homeTab:'asset',
+  connection:'online',hidden:false,errors:{},message:'',
+  addLayout:new URLSearchParams(location.search).get('add')==='dialog'?'dialog':'expand',addOpen:false,
+  busy:false,request:0,preferred:['us','bse'],holdings:seed(),
+  drafts:{asset:initialDraft('asset'),liability:initialDraft('liability')},saved:null,
+  expanded:{},sorts:{},undoOriginal:null,nextId:100,quoteFetches:0
+};
+let pendingAction = null;
+let pickerConfig = null;
+const draft = () => state.drafts[state.kind];
+const types = () => state.kind==='asset'?ASSETS:LIABILITIES;
+const currentType = () => types().find(type=>type.id===draft().type);
+const market = () => state.kind==='asset'&&currentType().mode==='market';
+const usesExchange = () => market()&&draft().type!=='crypto';
+const amount = () => {
+  const d=draft();
+  if(state.kind==='liability'||currentType().mode==='flat') return Number(d.amount)||0;
+  return (Number(d.quantity)||0)*(market()?(d.price??0):(Number(d.unitPrice)||0));
+};
+const isPriced = () => !market()||draft().price!==null;
+const totals = (portfolio=state.portfolio) => {
+  const holdings=state.holdings.filter(holding=>holding.portfolio===portfolio);
+  const assets=holdings.filter(holding=>holding.kind==='asset').reduce((sum,holding)=>sum+holding.amount*FX[holding.currency],0);
+  const liabilities=holdings.filter(holding=>holding.kind==='liability').reduce((sum,holding)=>sum+holding.amount*FX[holding.currency],0);
+  return {assets,liabilities,net:assets-liabilities,unpriced:holdings.filter(holding=>!holding.priced).length};
+};
+const quoteSymbol = () => {
+  const d=draft(),symbol=d.symbol.trim().toUpperCase();
+  if(!symbol) return '';
+  if(d.type==='crypto') return symbol.includes('-')?symbol:`${symbol}-USD`;
+  const suffix=EXCHANGES.find(exchange=>exchange.id===d.exchange).suffix;
+  return symbol.includes('.')?symbol:symbol+suffix;
+};
+const announce = text => { document.getElementById('announcer').textContent=text; };
+function exposeState() {
+  document.getElementById('state-output').textContent=JSON.stringify({
+    variant:state.variant,screen:state.screen,phase:state.phase,portfolio:state.portfolio,connection:state.connection,
+    addLayout:state.addLayout,addOpen:state.addOpen,
+    kind:state.kind,draft:draft(),errors:state.errors,busy:state.busy,totals:totals(),
+    savedHoldings:state.holdings.filter(holding=>holding.isNew),preferredExchanges:state.preferred,
+    holdings:state.holdings,expanded:state.expanded,sorts:state.sorts,quoteFetches:state.quoteFetches
+  },null,2);
+}
+function appHeader(back=true) {
+  return `<header class="app-header">${back?`<button class="icon-button" data-action="back" aria-label="Go back">${icon('back')}</button>`:state.screen==='success'?`<span class="header-name">${escapeHTML(state.portfolio)}</span>`:`<label><span class="live-region">Portfolio</span><select class="portfolio-select" id="portfolio"><option${state.portfolio==='Personal'?' selected':''}>Personal</option><option${state.portfolio==='Family'?' selected':''}>Family</option></select></label>`}
+    ${back?`<span class="header-brand">OKANZO</span><span class="header-sub">${escapeHTML(state.portfolio)}</span>`:state.screen==='success'?'<span class="header-brand">OKANZO</span>':`<div class="row"><button class="icon-button" data-action="refresh-holdings" aria-label="Refresh pending example prices"${state.busy?' disabled':''}>${icon('refresh')}</button><button class="icon-button" data-action="hide" aria-label="${state.hidden?'Show':'Hide'} balances" aria-pressed="${state.hidden}">${icon('eye')}</button><button class="icon-button" data-action="settings" aria-label="Settings">${icon('settings')}</button></div>`}</header>`;
+}
+function offlineBanner() {
+  return state.connection==='online'?'':`<div class="banner warning">${icon(state.connection==='offline'?'offline':'info')}<span><strong>${state.connection==='offline'?"You're offline. Keep going.":'Quote service is unavailable.'}</strong>${market()?'You can save the holding without a latest price, then refresh later.':'Manual values can still be saved in this demo.'}</span></div>`;
+}
+function addHoldingControl() {
+  if(state.addLayout==='dialog')return `<button class="primary" data-action="add">${icon('plus')}Add holding</button>`;
+  return `<div class="add-anchor"><div class="add-launcher${state.addOpen?' is-open':''}" id="add-launcher"><button class="add-trigger" id="add-trigger" data-action="add" aria-expanded="${state.addOpen}" aria-controls="add-options" aria-label="${state.addOpen?'Close add holding options':'Add holding'}">${icon('plus')}<span class="add-label" aria-hidden="true"><span class="add-label-collapsed">Add holding</span><span class="add-label-expanded">Close</span></span></button><div class="add-reveal" id="add-options"${state.addOpen?'':' inert'}><div class="add-options"><div class="add-options-inner"><button class="add-option" data-action="start" data-value="asset">${icon('trend')}<span><strong>An asset</strong><small>Something you own</small></span></button><button class="add-option" data-action="start" data-value="liability">${icon('down')}<span><strong>A liability</strong><small>Something you owe</small></span></button></div></div></div></div></div>`;
+}
+function syncHomeClearance() {
+  const scroll=document.querySelector('.home-scroll'),action=document.querySelector('.home-bottom .add-trigger,.home-bottom>.primary');
+  if(!scroll||!action)return;
+  const atBottom=scroll.scrollHeight-scroll.clientHeight-scroll.scrollTop<2;
+  const app=document.getElementById('app'),clearance=Math.ceil(action.offsetHeight+34)+'px';
+  if(app.style.getPropertyValue('--home-action-clearance')===clearance)return;
+  app.style.setProperty('--home-action-clearance',clearance);
+  if(atBottom)scroll.scrollTop=scroll.scrollHeight;
+}
+const homeActionObserver=new ResizeObserver(syncHomeClearance);
+function setAddOpen(open,restoreFocus=false) {
+  state.addOpen=open;
+  const launcher=document.getElementById('add-launcher'),trigger=document.getElementById('add-trigger'),options=document.getElementById('add-options');
+  if(launcher&&trigger&&options){
+    const focusWasInOptions=options.contains(document.activeElement);
+    launcher.classList.toggle('is-open',open);trigger.setAttribute('aria-expanded',String(open));trigger.setAttribute('aria-label',open?'Close add holding options':'Add holding');
+    options.inert=!open;
+    document.getElementById('home-backdrop').classList.toggle('is-active',open);
+    document.querySelector('#app .app-header').inert=open;
+    document.querySelector('.home-scroll').inert=open;
+    const navigation=document.querySelector('.main-navigation');
+    navigation.classList.toggle('is-blurred',open);navigation.inert=open;
+    if(restoreFocus||(!open&&focusWasInOptions)||(open&&!launcher.contains(document.activeElement)))trigger.focus({preventScroll:true});
+  }
+  syncHomeClearance();
+  exposeState();
+}
+function addHolding() {
+  if(state.addLayout==='expand'){
+    if(state.screen!=='home'){goHome();setAddOpen(true,true);}
+    else setAddOpen(!state.addOpen);
+    return;
+  }
+  showDialog(`<p class="app-eyebrow">To ${escapeHTML(state.portfolio)}</p><h2 id="dialog-title">A fuller picture starts here.</h2><p class="app-copy">What would you like to add?</p><button class="dialog-choice" data-action="start" data-value="asset"><span class="tile-icon">${icon('trend')}</span><span><strong>An asset</strong><small>Something you own. Adds to net worth.</small></span></button><button class="dialog-choice" data-action="start" data-value="liability"><span class="tile-icon">${icon('down')}</span><span><strong>A liability</strong><small>Something you owe. Reduces net worth.</small></span></button><button class="quiet" data-action="close-modal">Not now</button>`);
+}
+const groupKey = (kind,type) => `${state.portfolio}:${kind}:${type}`;
+const groupLabels = {stock:'Stocks',mutualFund:'Mutual funds / ETFs',crypto:'Cryptocurrency',bankDeposit:'Bank / deposits',bond:'Bonds',loan:'Loans',mortgage:'Mortgages',creditCard:'Credit cards',pendingPayment:'Pending payments'};
+const GROUP_SORTS = [['custom','My arrangement'],['name-asc','Name / A to Z'],['name-desc','Name / Z to A'],['value-desc','Value / high to low'],['value-asc','Value / low to high']];
+function groupHoldings(kind,type,sort='custom') {
+  const holdings=state.holdings.filter(holding=>holding.portfolio===state.portfolio&&holding.kind===kind&&holding.type===type);
+  return holdings.sort((a,b)=>{
+    if(sort==='name-asc'||sort==='name-desc')return (sort==='name-desc'?-1:1)*a.name.localeCompare(b.name);
+    if(sort==='value-desc'||sort==='value-asc'){
+      if(a.priced!==b.priced)return a.priced?-1:1;
+      return (sort==='value-desc'?-1:1)*(a.amount*FX[a.currency]-b.amount*FX[b.currency])||a.name.localeCompare(b.name);
+    }
+    return a.order-b.order;
+  });
+}
+function homeGroups() {
+  const categories=state.homeTab==='asset'?ASSETS:LIABILITIES;
+  return categories.map(type=>{
+    const key=groupKey(state.homeTab,type.id),sort=state.sorts[key]||'custom',holdings=groupHoldings(state.homeTab,type.id,sort);
+    if(!holdings.length)return '';
+    const expanded=!!state.expanded[key],total=holdings.reduce((sum,holding)=>sum+holding.amount*FX[holding.currency],0),pending=holdings.filter(holding=>!holding.priced).length;
+    const id=`group-${state.homeTab}-${type.id}`,label=groupLabels[type.id]||type.label;
+    return `<section class="holding-group"><button class="group-toggle" data-action="toggle-group" data-value="${type.id}" aria-expanded="${expanded}" aria-controls="${id}"><span class="tile-icon">${icon(type.icon)}</span><span class="grow"><strong>${label}</strong><small>${holdings.length} holding${holdings.length===1?'':'s'}${pending?` / ${pending} pending`:''}</small></span><span class="group-total">${state.hidden?'******':pending===holdings.length?'Price pending':money(total)}</span>${icon('next')}</button>
+      ${expanded?`<div class="group-holdings" id="${id}"><div class="group-list-heading"><span>Your holdings</span><button class="icon-button group-options" data-action="group-options" data-value="${type.id}" aria-label="Sort or arrange ${label.toLowerCase()}" aria-haspopup="dialog">${icon('more')}</button></div>
+      ${holdings.map(holding=>`<div class="holding-row" data-holding="${holding.id}"><button class="holding-open" data-action="holding-details" data-id="${holding.id}"><span class="grow"><strong>${escapeHTML(holding.name)}${holding.isNew?'<span class="new-label">New</span>':''}</strong><small>${escapeHTML(holding.symbol||type.label)}</small></span><span class="value">${!holding.priced?'Price pending':state.hidden?'******':money(holding.amount*FX[holding.currency])}</span></button></div>`).join('')}</div>`:`<div id="${id}" hidden></div>`}</section>`;
+  }).join('')||'<p class="app-copy" style="padding:20px 0">Nothing here yet. Add your first holding.</p>';
+}
+function home() {
+  const t=totals(),visible=state.holdings.filter(holding=>holding.portfolio===state.portfolio&&holding.kind===state.homeTab);
+  const display=value=>state.hidden?'******':money(value);
+  return `${appHeader(false)}<div class="app-scroll home-scroll"><div class="page">
+    <div class="home-hero"><p class="app-eyebrow">Your financial picture</p><p class="subtle">Net worth</p><div class="networth">${display(t.net)}</div><p class="subtle">Base currency / INR${t.unpriced?` / Excludes ${t.unpriced} unpriced asset${t.unpriced===1?'':'s'}`:''}</p>
+    <div class="totals"><div><small>${icon('trend')}Assets</small><strong>${display(t.assets)}</strong></div><div><small>${icon('down')}Liabilities</small><strong>${display(t.liabilities)}</strong></div></div></div>
+    ${state.message?`<div class="banner" role="status">${icon('info')}<span>${escapeHTML(state.message)}</span></div>`:''}
+    <div class="segmented" aria-label="Holding list"><button data-action="home-tab" data-value="asset" aria-pressed="${state.homeTab==='asset'}">Assets</button><button data-action="home-tab" data-value="liability" aria-pressed="${state.homeTab==='liability'}">Liabilities</button></div>
+    <div class="row between"><span class="app-eyebrow" style="margin:0">${state.homeTab==='asset'?'What you own':'What you owe'}</span><span class="subtle">${visible.length} holding${visible.length===1?'':'s'}</span></div>
+    <div class="holdings">${homeGroups()}</div>
+    </div></div><div class="home-backdrop" id="home-backdrop" data-action="close-add" aria-hidden="true"></div><footer class="home-bottom">${addHoldingControl()}</footer>`;
+}
+function mainNavigation() {
+  return `<nav class="main-navigation" aria-label="Main navigation">${[['home','Home','home'],['statistics','Statistics','chart'],['portfolios','Portfolios','wallet']].map(([value,label,symbol])=>`<button data-action="navigate" data-value="${value}"${state.screen===value?' aria-current="page"':''}><span class="nav-icon">${icon(symbol)}</span><span>${label}</span></button>`).join('')}</nav>`;
+}
+function statisticsPreview() {
+  const t=totals(),display=value=>state.hidden?'******':money(value);
+  const categories=ASSETS.map(type=>({...type,value:state.holdings.filter(holding=>holding.portfolio===state.portfolio&&holding.kind==='asset'&&holding.type===type.id).reduce((sum,holding)=>sum+holding.amount*FX[holding.currency],0)})).filter(type=>type.value>0);
+  return `<header class="app-header"><span class="header-name">${escapeHTML(state.portfolio)}</span><span class="header-brand">OKANZO</span></header><div class="app-scroll"><div class="page"><p class="app-eyebrow">Portfolio overview</p><h1 class="page-title">Statistics</h1><p class="app-copy">Current synthetic holdings. This context preview does not simulate historical charts.</p><div class="amount-summary"><span class="label">Net worth</span><strong class="estimated">${display(t.net)}</strong></div><div class="totals"><div><small>Assets</small><strong>${display(t.assets)}</strong></div><div><small>Liabilities</small><strong>${display(t.liabilities)}</strong></div></div><h2 class="section-heading">Asset allocation</h2>${categories.map(type=>`<div class="allocation-row"><div class="row between"><span>${icon(type.icon)}${groupLabels[type.id]||type.label}</span><strong>${Math.round(type.value/t.assets*100)}%</strong></div><div class="allocation-track"><span style="width:${type.value/t.assets*100}%"></span></div></div>`).join('')||'<p class="app-copy">No priced assets to display.</p>'}${t.unpriced?'<p class="subtle">Unpriced assets are excluded from these totals.</p>':''}</div></div>`;
+}
+function portfoliosPreview() {
+  return `<header class="app-header"><span class="header-name">Your portfolios</span><span class="header-brand">OKANZO</span></header><div class="app-scroll"><div class="page"><p class="app-eyebrow">Separate, but all yours</p><h1 class="page-title">Portfolios</h1><p class="app-copy">Choose a portfolio to return to its holdings. Synthetic data only.</p>${['Personal','Family'].map(name=>`<button class="dialog-choice" data-action="choose-portfolio" data-value="${name}"><span class="tile-icon">${icon('wallet')}</span><span><strong>${name}${state.portfolio===name?' / Selected':''}</strong><small>Net worth / ${state.hidden?'******':money(totals(name).net)}</small></span></button>`).join('')}</div></div>`;
+}
+function kindTabs() {
+  if(draft().id!==null)return `<p class="app-eyebrow">Editing ${state.kind} / ${currentType().label}</p>`;
+  return `<div class="asset-kind" aria-label="Holding kind"><button data-action="kind" data-value="asset" aria-pressed="${state.kind==='asset'}">Asset / I own</button><button data-action="kind" data-value="liability" aria-pressed="${state.kind==='liability'}">Liability / I owe</button></div>`;
+}
+const EXCHANGE_EXAMPLES = {
+  us:{stock:['Apple','AAPL'],mutualFund:['Vanguard S&P 500','VOO']},
+  bse:{stock:['Reliance','RELIANCE'],mutualFund:['Nifty 50 ETF','NIFTYBEES']},
+  paris:{stock:['Airbus','AIR'],mutualFund:['Amundi MSCI World','CW8']},
+  amsterdam:{stock:['ASML','ASML'],mutualFund:['Vanguard All-World','VWRL']},
+  brussels:{stock:['AB InBev','ABI'],mutualFund:['iShares Core MSCI','IWDA']},
+  lisbon:{stock:['EDP','EDP'],mutualFund:['PSI 20 ETF','PPP']},
+  dublin:{stock:['Kingspan','KRX'],mutualFund:['iShares S&P 500','CSPX']},
+  oslo:{stock:['Equinor','EQNR'],mutualFund:['OBX ETF','OBX']},
+  milan:{stock:['Eni','ENI'],mutualFund:['FTSE MIB ETF','IMIB']},
+  shanghai:{stock:['Kweichow Moutai','600519'],mutualFund:['CSI 300 ETF','510300']},
+  tokyo:{stock:['Toyota','7203'],mutualFund:['TOPIX ETF','1306']},
+  hongKong:{stock:['Tencent','0700'],mutualFund:['Tracker Fund','2800']},
+  other:{stock:['Vodafone','VOD.L'],mutualFund:['Vanguard FTSE','VWRL.L']}
+};
+const NAME_EXAMPLES = {
+  asset:{gold:'e.g. Family gold',cash:'e.g. Emergency fund',bankDeposit:'e.g. High-yield savings',realEstate:'e.g. Primary residence',vehicle:'e.g. Family car',bond:'e.g. Treasury bond',other:'e.g. Watch collection'},
+  liability:{loan:'e.g. Personal loan',mortgage:'e.g. Home loan',creditCard:'e.g. Travel card',pendingPayment:'e.g. Contractor invoice',tax:'e.g. Income tax FY26',other:'e.g. Family borrowing'}
+};
+function typeExampleHint() {
+  return state.kind==='asset'?'e.g. Stock, Cash, Gold, Real estate':'e.g. Loan, Mortgage, Credit card';
+}
+function currencyExampleHint() {
+  return 'e.g. INR, USD, EUR, GBP';
+}
+function exchangeExampleHint() {
+  const current=activeExchange();
+  if(!current)return 'e.g. US (NYSE / Nasdaq), BSE (India), Euronext';
+  const [company,ticker]=(EXCHANGE_EXAMPLES[current.id]||EXCHANGE_EXAMPLES.us)[draft().type==='mutualFund'?'mutualFund':'stock'];
+  return current.suffix?`Adds ${current.suffix} automatically (e.g. ${ticker}${current.suffix})`:current.id==='other'?`Full Yahoo ticker with suffix (e.g. ${ticker})`:`e.g. ${company} (${ticker}) · NYSE / Nasdaq`;
+}
+function marketSearchExample(inDialog=false) {
+  const d=draft();
+  if(d.type==='crypto')return inDialog?'e.g. Bitcoin, BTC-USD, ETH-EUR':'e.g. Bitcoin, Ethereum, or BTC-USD';
+  const current=activeExchange(),[company,ticker]=(EXCHANGE_EXAMPLES[current?.id||'us']||EXCHANGE_EXAMPLES.us)[d.type==='mutualFund'?'mutualFund':'stock'];
+  const qualified=current?.suffix&&!ticker.includes('.')?ticker+current.suffix:ticker;
+  return inDialog?`e.g. ${company} or ${qualified}`:`Search ${company}, or enter ${qualified}`;
+}
+function marketHelperHint() {
+  const d=draft();
+  if(d.type==='crypto')return 'e.g. BTC defaults to BTC-USD, or pick an explicit pair like BTC-EUR.';
+  const current=activeExchange(),[,ticker]=(EXCHANGE_EXAMPLES[current?.id||'us']||EXCHANGE_EXAMPLES.us)[d.type==='mutualFund'?'mutualFund':'stock'];
+  return current?.suffix?`e.g. ${ticker} (${current.label}) or a full Yahoo ticker.`:`e.g. ${ticker}, AIR.PA, or RELIANCE.BO.`;
+}
+function typeSelect() {
+  return `<div class="field"><span id="type-label">Type</span><button class="picker" id="holding-type" type="button" data-action="type-picker" aria-haspopup="dialog" aria-labelledby="type-label type-value" aria-describedby="hint-type">${icon(currentType().icon)}<span class="picker-value" id="type-value">${currentType().label}</span>${icon('next')}</button><small class="hint" id="hint-type">${escapeHTML(typeExampleHint())}</small></div>`;
+}
+function currencySelect() {
+  return `<div class="field"><span id="currency-label">Currency</span><button class="picker" id="currency" type="button" data-action="currency-picker" aria-haspopup="dialog" aria-labelledby="currency-label currency-value" aria-describedby="hint-currency"><span class="currency-glyph" aria-hidden="true">${currencyGlyph(draft().currency)}</span><span class="picker-value" id="currency-value">${draft().currency}</span>${icon('next')}</button><small class="hint" id="hint-currency">${escapeHTML(currencyExampleHint())}</small></div>`;
+}
+function field(key,label,placeholder='',options={}) {
+  const error=state.errors[key],hint=options.hint||'',limited=key==='name'||key==='customName';
+  const input=`<input id="field-${key}" data-field="${key}" value="${escapeHTML(draft()[key])}" placeholder="${escapeHTML(placeholder)}" ${options.number?'inputmode="decimal"':''} ${options.prominent?'class="prominent"':''} autocomplete="off" ${error?'aria-invalid="true"':''} aria-describedby="hint-${key} error-${key}${limited?' count-'+key:''}">`;
+  return `<label class="field"><span>${label}</span>${options.prominent?`<span class="prominent-wrap"${error?' data-invalid="true"':''}><span class="prominent-prefix" aria-hidden="true">${currencyGlyph(draft().currency)}</span>${input}</span>`:input}<small class="hint" id="hint-${key}">${hint}</small>${limited?`<span class="field-meta"><span>Up to ${NAME_LIMIT} characters</span><span id="count-${key}">${nameCharacters(draft()[key]).length}/${NAME_LIMIT}</span></span>`:''}<small class="error" id="error-${key}">${error||''}</small></label>`;
+}
+const activeExchange = () => {
+  const d=draft();
+  return (d.id!==null||d.symbol.trim()!==''||state.preferred.includes(d.exchange))?EXCHANGES.find(exchange=>exchange.id===d.exchange):null;
+};
+const exchangeIcon = id => id==='other'?'globe':'candle';
+function exchangeSelect() {
+  const current=activeExchange(),label=current?(current.id==='us'?'US exchange':current.label):'Exchange';
+  return `<div class="field"><span id="exchange-label">Exchange</span><button class="picker" id="exchange" type="button" data-action="exchange-picker" aria-haspopup="dialog" aria-labelledby="exchange-label exchange-value" aria-describedby="hint-exchange">${icon(current?exchangeIcon(current.id):'candle')}<span class="picker-value" id="exchange-value">${escapeHTML(label)}</span>${icon('next')}</button><small class="hint" id="hint-exchange">${escapeHTML(exchangeExampleHint())}</small></div>`;
+}
+function valueSummary() {
+  return `<div class="amount-summary"><span class="label">${state.kind==='liability'?'Outstanding amount':'Estimated value'}</span><strong class="estimated" data-live="amount">${money(amount(),draft().currency)}</strong><span class="calculation" data-live="calculation">${calculation()}</span></div>`;
+}
+function footerEstimate() {
+  if(state.kind!=='asset')return '';
+  return `<div class="footer-estimate"><div class="footer-estimate-copy"><span class="label">Estimated value</span><span class="calculation" data-live="calculation">${calculation()}</span></div><strong class="estimated" data-live="amount">${money(amount(),draft().currency)}</strong></div>`;
+}
+function calculation() {
+  const d=draft();
+  if(market()) return d.price===null?`${escapeHTML(d.quantity||'0')} × ${money(0,d.currency)} · price not fetched yet`:`${escapeHTML(d.quantity||'0')} × ${money(d.price,d.currency)} / illustrative quote`;
+  if(state.kind==='asset'&&currentType().mode==='quantity') return `${escapeHTML(d.quantity||'0')} g × ${money(Number(d.unitPrice)||0,d.currency)} per gram`;
+  return state.kind==='liability'?'Only the amount you still owe, not the original loan.':`Current value in ${escapeHTML(d.currency)}`;
+}
+function quoteMatches(query) {
+  if(state.connection!=='online') return [];
+  const q=query.trim().toLowerCase();
+  return QUOTES.filter(quote=>quote.type===draft().type&&(!q||`${quote.symbol} ${quote.name}`.toLowerCase().includes(q)));
+}
+function quoteResults(query) {
+  const matches=quoteMatches(query);
+  if(state.connection!=='online') return `<div class="banner warning">${icon('offline')}<span>No internet connection. Enter a ticker manually to save offline.</span></div>`;
+  if(query.trim().length<2) return '';
+  if(!matches.length) return `<div class="banner">${icon('search')}<span>No example match. Enter a full ticker manually; this demo searches a small, fixed catalogue.</span></div>`;
+  return `<div class="result-list">${matches.slice(0,6).map(quote=>`<button class="result" type="button" data-action="quote" data-symbol="${quote.symbol}"><span class="ticker-mark">${quote.symbol.slice(0,2)}</span><span class="grow"><strong>${quote.name}</strong><small>${quote.symbol}${quote.type==='crypto'?'':` · ${EXCHANGES.find(exchange=>exchange.id===quote.exchange).label}`}</small></span>${icon('next')}</button>`).join('')}</div>`;
+}
+function customNameField() {
+  const d=draft(),error=state.errors.customName,count=nameCharacters(d.customName).length,open=d.customNameOpen||Boolean(d.customName.trim())||Boolean(error);
+  const example=d.quoteName||(d.type==='crypto'?'e.g. Cold wallet BTC':d.type==='mutualFund'?'e.g. Retirement index fund':'e.g. Long-term shares');
+  return `<details class="custom-name" id="custom-name-details"${open?' open':''}><summary><span>Custom name <span class="muted">(optional)</span></span><svg class="icon-expand" aria-hidden="true"><use href="#i-pencil"/></svg><svg class="icon-collapse" aria-hidden="true"><use href="#i-minus"/></svg></summary><div class="field"><input id="field-customName" aria-label="Custom name (optional)" data-field="customName" value="${escapeHTML(d.customName)}" placeholder="${escapeHTML(example)}" autocomplete="off" ${error?'aria-invalid="true"':''} aria-describedby="count-customName error-customName"><span class="field-meta"><span>Up to ${NAME_LIMIT} characters</span><span id="count-customName"${count===NAME_LIMIT?' class="at-limit"':''}>${count}/${NAME_LIMIT}</span></span><small class="error" id="error-customName">${error||''}</small></div></details>`;
+}
+function marketSelect() {
+  const d=draft(),label=d.type==='crypto'?'Coin or ticker':d.type==='mutualFund'?'Fund or ticker':'Company or ticker',error=state.errors.symbol,hasSymbol=Boolean(d.symbol.trim()),code=quoteSymbol();
+  const body=d.quoteName
+    ?`<span class="ticker-mark" aria-hidden="true">${escapeHTML(code.slice(0,2))}</span><span class="picker-detail" id="symbol-value"><strong>${escapeHTML(d.quoteName)}</strong><small>${escapeHTML(code)} / ${escapeHTML(d.currency)}</small></span>${icon('search').replace('<svg','<svg class="picker-search-trail"')}`
+    :hasSymbol
+    ?`<span class="ticker-mark" aria-hidden="true">${escapeHTML(code.slice(0,2))}</span><span class="picker-detail" id="symbol-value"><strong>${escapeHTML(code)}</strong><small>Manual ticker · ${escapeHTML(d.currency)}</small></span>${icon('search').replace('<svg','<svg class="picker-search-trail"')}`
+    :`${icon('search')}<span class="picker-value is-placeholder" id="symbol-value">${escapeHTML(marketSearchExample(false))}</span>${icon('next')}`;
+  return `<div class="field"><span id="symbol-label">${label}</span><button class="picker" id="field-symbol" type="button" data-action="market-picker" aria-haspopup="dialog"${error?' aria-invalid="true"':''} aria-labelledby="symbol-label symbol-value" aria-describedby="hint-symbol error-symbol">${body}</button><small class="hint" id="hint-symbol">${escapeHTML(marketHelperHint())}</small><small class="error" id="error-symbol">${error||''}</small></div>`;
+}
+function marketFields() {
+  const d=draft(),qtyHint=d.type==='crypto'?'Fractional coins supported (e.g. 0.25)':d.type==='mutualFund'?'Units held (e.g. 15.5)':'Shares held (e.g. 10)';
+  return `${marketSelect()}
+    ${field('quantity','Quantity',d.type==='crypto'?'e.g. 0.25':d.type==='mutualFund'?'e.g. 15':'e.g. 10',{number:true,hint:qtyHint})}
+    <button class="inline-button" type="button" data-action="fetch"${state.busy||!d.symbol.trim()?' disabled':''}>${icon('refresh')}${state.busy?'Getting example price...':d.quoteAttempted?'Refresh example price':'Fetch example price'}</button>
+    <div id="quote-feedback">${d.quoteMessage?`<div class="banner${d.price===null?' warning':''}" role="status">${icon('info')}<span>${escapeHTML(d.quoteMessage)}</span></div>`:''}</div>
+    ${customNameField()}`;
+}
+function detailFields({canvas=false}={}) {
+  const type=currentType(),flat=state.kind==='liability'||type.mode==='flat';
+  let html='';
+  if(canvas&&flat) html+=field('amount',state.kind==='liability'?'Outstanding amount':'Value','0.00',{number:true,prominent:true,hint:state.kind==='liability'?'The amount you still owe. Zero is allowed.':'Your estimate of its value today. Zero is allowed.'});
+  if(canvas) html+=`<div class="fields-grid">${typeSelect()}${currencySelect()}</div>`;
+  else html+=currencySelect();
+  if(usesExchange()) html+=exchangeSelect();
+  if(!market()) html+=field('name','Name',NAME_EXAMPLES[state.kind][type.id]||'e.g. Emergency fund');
+  if(!canvas&&flat) html+=field('amount',state.kind==='liability'?'Outstanding amount':'Value','0.00',{number:true,hint:state.kind==='liability'?'The remaining balance, not the monthly payment. Zero is allowed.':'Enter a total in your selected currency. Zero is allowed.'});
+  if(market()) html+=marketFields();
+  else if(type.mode==='quantity') html+=`<div class="fields-grid">${field('quantity','Weight / grams','e.g. 10',{number:true,hint:'Total weight in grams'})}${field('unitPrice','Price per gram','e.g. 7200',{number:true,hint:`Rate in ${draft().currency} / g`})}</div>`;
+  return html;
+}
+function footer(primary,action,{back=false,estimate=false}={}) {
+  const gated=action==='save'||action==='review',invalid=gated&&Object.keys(draftErrors()).length>0;
+  return `<footer class="app-footer">${estimate?footerEstimate():''}<div class="footer-actions">${back?`<button class="secondary" data-action="previous-step" aria-label="Previous step">${icon('back')}</button>`:''}<button class="primary" data-action="${action}"${state.busy||invalid?' disabled':''}${gated?' aria-describedby="save-help"':''}>${state.busy?'Working...':action==='save'&&draft().id!==null?'Save changes':primary}${!state.busy&&action!=='save'?icon('next'):''}</button></div>${gated?`<p class="save-hint" id="save-help">${invalid?'Complete the required fields with valid values.':market()&&draft().price===null?'Ready to save without a price; refresh when available.':'All required details are ready.'}</p>`:''}</footer>`;
+}
+function canvas() {
+  return `${appHeader()}<div class="app-scroll"><div class="page">${kindTabs()}<p class="app-eyebrow">To ${escapeHTML(state.portfolio)}</p><h1 class="page-title">${draft().id===null?'Add':'Edit'} ${state.kind}</h1><p class="app-copy">${state.kind==='asset'?'A little more of your picture, in one place.':'Keep what you owe in perspective.'}</p>${offlineBanner()}${detailFields({canvas:true})}</div></div>${footer('Save '+state.kind,'save',{estimate:state.kind==='asset'})}`;
+}
+function typeCards() {
+  return `<div class="type-grid">${types().map(type=>`<button class="type-option" data-action="type" data-value="${type.id}" aria-pressed="${draft().type===type.id}">${icon(type.icon)}<strong>${type.label}</strong><small>${type.hint}</small></button>`).join('')}</div>`;
+}
+function guide() {
+  const choosing=state.phase==='type';
+  return `${appHeader()}<div class="app-scroll"><div class="page">${kindTabs()}<div class="progress" aria-label="Step ${choosing?1:2} of 3"><span class="done"></span><span class="${choosing?'':'done'}"></span><span></span></div><p class="step-label">0${choosing?1:2} / 03 &nbsp; ${choosing?'The kind of holding':'The details'}</p><h1 class="page-title">${choosing?(state.kind==='asset'?'What do you own?':'What do you owe?'):(market()?'Make it yours.':'Give it some detail.')}</h1><p class="app-copy">${choosing?'Choose a category. We will only ask for what matters.':`${currentType().label} / ${escapeHTML(state.portfolio)}. You can review before saving.`}</p>
+    ${choosing?typeCards():offlineBanner()+detailFields()}</div></div>${choosing?footer('Continue with '+currentType().label,'next-type'):footer('Review holding','review',{back:true,estimate:state.kind==='asset'})}`;
+}
+function review() {
+  const d=draft(),type=currentType();
+  const rows=[['Portfolio',state.portfolio],['Category',type.label],['Name',market()?(d.customName.trim()||d.quoteName||quoteSymbol()):d.name],['Currency',d.currency]];
+  if(market()) rows.push(['Ticker',quoteSymbol()],['Quantity',d.quantity],['Price',d.price===null?'Not available':money(d.price,d.currency)]);
+  if(usesExchange()) rows.push(['Exchange',EXCHANGES.find(exchange=>exchange.id===d.exchange).label]);
+  if(type.mode==='quantity') rows.push(['Weight',d.quantity+' g'],['Price per gram',money(Number(d.unitPrice),d.currency)]);
+  if(d.notes.trim()) rows.push(['Notes',d.notes.trim()]);
+  return `${appHeader()}<div class="app-scroll"><div class="page">${state.variant==='B'?'<div class="progress" aria-label="Step 3 of 3"><span class="done"></span><span class="done"></span><span class="done"></span></div><p class="step-label">03 / 03 &nbsp; A final look</p>':'<p class="app-eyebrow">One last look</p>'}<h1 class="page-title">Does that look right?</h1><p class="app-copy">Your ${state.kind}, ready for ${escapeHTML(state.portfolio)}.</p>${valueSummary()}<dl class="review-panel">${rows.map(([label,value])=>`<div class="review-line"><dt>${label}</dt><dd>${escapeHTML(value)}</dd></div>`).join('')}</dl>${market()&&d.price===null?`<div class="banner warning">${icon('info')}<span><strong>Save now. Price later.</strong>We will try an example quote when saving. If unavailable, this holding stays unpriced and is excluded from net worth until refreshed.</span></div>`:''}<button class="inline-button" data-action="edit">${icon('back')}Edit details</button></div></div>${footer('Save '+state.kind,'save',{back:true})}`;
+}
+function success() {
+  const holding=state.saved,t=totals();
+  return `${appHeader(false)}<div class="app-scroll"><div class="page"><div class="success-mark">${icon('check')}</div><h1 class="success-heading">${holding.kind==='asset'?'Asset':'Liability'} ${state.undoOriginal?'updated':'added'}.</h1><p class="app-copy center">${escapeHTML(holding.name)} is now in ${escapeHTML(holding.portfolio)}.</p><div class="success-value">${holding.priced?(state.hidden?'******':money(holding.amount,holding.currency)):'Price pending'}</div>${!holding.priced?`<div class="banner warning">${icon('offline')}<span><strong>Saved without a latest price.</strong>${escapeHTML(holding.notice)} This asset is excluded from totals until it has a price.</span></div>`:''}
+    <dl class="review-panel"><div class="review-line"><dt>Portfolio</dt><dd>${escapeHTML(holding.portfolio)}</dd></div><div class="review-line"><dt>Net worth${t.unpriced?' (priced holdings)':''}</dt><dd>${state.hidden?'******':money(t.net)}</dd></div></dl><div class="banner">${icon('info')}<span><strong>Only saved in this demo.</strong>No real app data was changed. Refreshing this page clears your example holdings and drafts.</span></div>
+    <button class="secondary" data-action="add-another">${icon('plus')}Add another holding</button><button class="quiet" style="width:100%" data-action="undo">Undo this ${state.undoOriginal?'update':'addition'}</button></div></div>${footer('Back to portfolio','home',{preview:false})}`;
+}
+function render(keepScroll=false) {
+  const scroll=document.querySelector('.app-scroll');
+  const previousScroll=scroll?scroll.scrollTop:0;
+  const active=document.activeElement,restoreFocus=(keepScroll||state.busy)&&active.matches('#app input,#app textarea')&&active.id;
+  const selection=restoreFocus?[active.selectionStart,active.selectionEnd]:null;
+  const isRoot=['home','statistics','portfolios'].includes(state.screen);
+  const content=state.screen==='home'?home():state.screen==='statistics'?statisticsPreview():state.screen==='portfolios'?portfoliosPreview():state.screen==='success'?success():state.screen==='review'?review():state.variant==='A'?canvas():guide();
+  document.getElementById('app').innerHTML=isRoot?`<div class="root-page">${content}</div>${mainNavigation()}`:content;
+  document.querySelectorAll('.concept').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.value===state.variant)));
+  document.getElementById('variant-label').textContent=state.variant+' / '+CONCEPTS[state.variant].name;
+  document.getElementById('hypothesis').textContent=CONCEPTS[state.variant].question;
+  document.getElementById('tradeoff').textContent=CONCEPTS[state.variant].tradeoff;
+  document.getElementById('connectivity').value=state.connection;
+  document.getElementById('add-layout').value=state.addLayout;
+  const nextScroll=document.querySelector('.app-scroll');
+  homeActionObserver.disconnect();
+  const homeAction=document.querySelector('.home-bottom .add-trigger,.home-bottom>.primary');
+  if(homeAction){setAddOpen(state.addOpen);homeActionObserver.observe(homeAction);}
+  if(restoreFocus){const replacement=document.getElementById(active.id);if(replacement){replacement.focus({preventScroll:true});replacement.setSelectionRange(...selection);}}
+  if((state.busy||keepScroll)&&nextScroll) nextScroll.scrollTop=previousScroll;
+  exposeState();
+}
+function updateLive() {
+  document.querySelectorAll('[data-live="amount"]').forEach(node=>{node.textContent=money(amount(),draft().currency);});
+  document.querySelectorAll('[data-live="calculation"]').forEach(node=>{node.innerHTML=calculation();});
+  const invalid=Object.keys(draftErrors()).length>0;
+  document.querySelectorAll('#app [data-action="save"],#app [data-action="review"]').forEach(button=>{button.disabled=state.busy||invalid;});
+  const saveHelp=document.getElementById('save-help');
+  if(saveHelp)saveHelp.textContent=invalid?'Complete the required fields with valid values.':market()&&draft().price===null?'Ready to save without a price; refresh when available.':'All required details are ready.';
+  const fetchButton=document.querySelector('#app [data-action="fetch"]');
+  if(fetchButton)fetchButton.disabled=state.busy||!draft().symbol.trim();
+  exposeState();
+}
+function invalidateQuote() {
+  state.request++;state.busy=false;draft().price=null;draft().quoteName='';draft().quoteMessage='';draft().quoteAttempted=false;
+}
+function changeType(value) {
+  if(value===draft().type)return;
+  const previousMarket=market();invalidateQuote();draft().type=value;
+  if(previousMarket||market()){draft().symbol='';draft().customName='';draft().customNameOpen=false;}
+  state.errors={};draft().dirty=true;
+}
+function begin(kind,type,clear=false) {
+  state.request++;state.busy=false;state.addOpen=false;state.kind=kind;
+  if(clear) state.drafts[kind]=initialDraft(kind);
+  if(type) draft().type=type;
+  state.screen='editor';state.phase=state.variant==='B'?'type':'details';
+  state.errors={};state.message='';render();if(innerWidth<=700)document.getElementById('device').scrollIntoView({block:'center'});announce('Add '+kind+'. '+CONCEPTS[state.variant].name);
+}
+function switchVariant(value) {
+  if(!Object.hasOwn(CONCEPTS,value)) return;
+  state.request++;state.busy=false;state.addOpen=false;state.variant=value;
+  if(state.screen==='editor') state.phase=value==='B'?'type':'details';
+  const url=new URL(location.href);url.searchParams.set('variant',value);history.replaceState(null,'',url);
+  render();if(innerWidth<=700)document.getElementById('device').scrollIntoView({block:'center'});console.info('Okanzo prototype variant',value,JSON.parse(document.getElementById('state-output').textContent));
+  announce(value+'. '+CONCEPTS[value].name+'. Your draft is preserved.');
+}
+function showDialog(content) {
+  setAddOpen(false);pickerConfig=null;
+  const modal=document.getElementById('modal');modal.innerHTML=content;if(!modal.open) modal.showModal();modal.querySelector('input:not(:disabled),button:not(:disabled)')?.focus();
+}
+function closeDialog(){const focusTarget=pickerConfig?.closeFocus;pickerConfig=null;document.getElementById('modal').close();if(focusTarget)document.getElementById(focusTarget)?.focus({preventScroll:true});}
+function renderPickerItems(query='') {
+  if(!pickerConfig)return '';
+  if(pickerConfig.render)return pickerConfig.render(query);
+  const q=query.trim().toUpperCase(),matches=pickerConfig.items.filter(item=>item.search.toUpperCase().includes(q));
+  if(!matches.length)return '<p class="picker-empty">No matching options.</p>';
+  return matches.map(item=>`<button class="picker-option" type="button" data-action="${item.action}" data-value="${escapeHTML(item.value)}" aria-pressed="${item.selected}">${item.leading}<span class="grow"><strong>${escapeHTML(item.title)}</strong>${item.subtitle?`<small>${escapeHTML(item.subtitle)}</small>`:''}</span>${item.selected?icon('check'):''}</button>`).join('');
+}
+function selectionPicker({eyebrow,title,items=[],closeFocus,label='Search',placeholder='Search',initialQuery='',sanitize=null,render}) {
+  showDialog(`<p class="app-eyebrow">${escapeHTML(eyebrow)}</p><h2 id="dialog-title">${escapeHTML(title)}</h2><label class="field picker-search"><span>${escapeHTML(label)}</span><input id="picker-query" data-picker-search value="${escapeHTML(initialQuery)}" placeholder="${escapeHTML(placeholder)}" autocomplete="off"></label><div class="picker-list" id="picker-list"></div><button class="quiet" type="button" data-action="close-modal">Close</button>`);
+  pickerConfig={items,closeFocus,sanitize,render};
+  document.getElementById('picker-list').innerHTML=renderPickerItems(initialQuery);
+  const input=document.getElementById('picker-query');
+  if(input){input.focus();if(initialQuery)input.select();}
+}
+function settingsPreview() {
+  showDialog(`<p class="app-eyebrow">Appearance preview</p><h2 id="dialog-title">Settings</h2><p class="app-copy">These controls affect this HTML preview only. Other app settings are outside this holding-entry exploration.</p><label class="field"><span>Appearance</span><select data-preview-setting="appearance"><option value="light"${document.body.dataset.theme==='light'?' selected':''}>Classic</option><option value="dark"${document.body.dataset.theme==='dark'?' selected':''}>Midnight</option></select></label><label class="field"><span>Text size</span><select data-preview-setting="text-size"><option value="normal"${document.getElementById('device').dataset.large==='false'?' selected':''}>Default</option><option value="large"${document.getElementById('device').dataset.large==='true'?' selected':''}>Large preview</option></select></label><button class="primary" data-action="close-modal">Done</button>`);
+}
+function typePicker() {
+  selectionPicker({
+    eyebrow:state.kind==='asset'?'What you own':'What you owe',
+    title:'Choose a type',
+    closeFocus:'holding-type',
+    placeholder:state.kind==='asset'?'e.g. Stock, Cash, Gold, Real estate':'e.g. Loan, Mortgage, Credit card',
+    items:types().map(type=>({action:'pick-type',value:type.id,selected:draft().type===type.id,leading:icon(type.icon),title:type.label,subtitle:type.hint,search:`${type.label} ${type.hint}`}))
+  });
+}
+function currencyPicker() {
+  selectionPicker({
+    eyebrow:'Holding currency',
+    title:'Choose currency',
+    closeFocus:'currency',
+    placeholder:'e.g. INR, USD, Euro, Yen',
+    items:Object.entries(CURRENCIES).map(([code,label])=>({action:'pick-currency',value:code,selected:draft().currency===code,leading:`<span class="currency-glyph" aria-hidden="true">${currencyGlyph(code)}</span>`,title:`${code} — ${label}`,subtitle:'',search:`${code} — ${label}`}))
+  });
+}
+function exchangePicker() {
+  const current=activeExchange(),listed=EXCHANGES.filter(exchange=>state.preferred.includes(exchange.id)||exchange.id===current?.id);
+  selectionPicker({
+    eyebrow:'Market listing',
+    title:'Exchange',
+    closeFocus:'exchange',
+    placeholder:'e.g. US, BSE, Euronext, Tokyo',
+    items:[
+      ...listed.map(exchange=>({action:'pick-exchange',value:exchange.id,selected:current?.id===exchange.id,leading:icon(exchangeIcon(exchange.id)),title:exchange.label,subtitle:exchange.suffix?`Adds ${exchange.suffix} automatically`:'',search:`${exchange.label} ${exchange.suffix}`})),
+      {action:'preferences',value:'preferences',selected:false,leading:icon('tune'),title:'Manage preferred exchanges',subtitle:'',search:'Manage preferred exchanges'}
+    ]
+  });
+}
+function marketPicker() {
+  const d=draft(),isCrypto=d.type==='crypto',currentCode=quoteSymbol();
+  const title=isCrypto?'Choose coin or ticker':d.type==='mutualFund'?'Choose fund or ticker':'Choose company or ticker';
+  const placeholder=marketSearchExample(true);
+  selectionPicker({
+    eyebrow:`${currentType().label} · Market search`,
+    title,
+    closeFocus:'field-symbol',
+    placeholder,
+    initialQuery:d.symbol,
+    sanitize:sanitizeMarketQuery,
+    render(rawQuery=''){
+      const trimmed=rawQuery.trim(),upper=trimmed.toUpperCase(),matches=quoteMatches(trimmed);
+      const validManual=validTickerSymbol(upper,d.type);
+      const manualRow=trimmed&&validManual&&!matches.some(quote=>quote.symbol===upper)
+        ?`<button class="picker-option" type="button" data-action="use-manual-ticker" data-value="${escapeHTML(upper)}" aria-pressed="false">${icon('search')}<span class="grow"><strong>Use "${escapeHTML(upper)}"</strong><small>Enter ticker manually (letters/digits, e.g. ${d.type==='crypto'?'BTC-USD':'AAPL, 7203.T'})${state.connection!=='online'?' · save offline':''}</small></span>${icon('next').replace('<svg','<svg class="option-chevron"')}</button>`
+        :'';
+      const invalidNotice=trimmed&&!validManual&&!matches.length
+        ?`<small class="picker-error">Search by name or enter a valid ticker (letters/digits only, e.g. ${d.type==='crypto'?'BTC or BTC-USD':'AAPL, AIR.PA, or 7203.T'}).</small>`
+        :'';
+      if(state.connection!=='online'){
+        return `${manualRow}${invalidNotice}<p class="picker-empty">${state.connection==='offline'?'No internet connection. Enter a valid ticker above to save offline.':'Search unavailable. Enter a valid ticker above or try again.'}</p>`;
+      }
+      const rows=matches.slice(0,8).map(quote=>{
+        const selected=Boolean(d.symbol.trim())&&quote.symbol===currentCode;
+        const subtitle=quote.type==='crypto'?`${quote.symbol} · ${quote.currency}`:`${quote.symbol} · ${EXCHANGES.find(exchange=>exchange.id===quote.exchange).label}`;
+        return `<button class="picker-option" type="button" data-action="quote" data-symbol="${escapeHTML(quote.symbol)}" aria-pressed="${selected}"><span class="ticker-mark" aria-hidden="true">${escapeHTML(quote.symbol.slice(0,2))}</span><span class="grow"><strong>${escapeHTML(quote.name)}</strong><small>${escapeHTML(subtitle)}</small></span>${selected?icon('check'):''}</button>`;
+      }).join('');
+      if(!rows&&!manualRow)return `${invalidNotice}<p class="picker-empty">No matching listings.</p>`;
+      return rows+manualRow;
+    }
+  });
+}
+function useManualTicker(raw) {
+  const cleaned=raw.trim().toUpperCase();
+  if(!validTickerSymbol(cleaned,draft().type))return;
+  invalidateQuote();
+  draft().symbol=cleaned;
+  draft().searching=false;
+  if(usesExchange()&&cleaned.includes('.')){
+    const exchange=EXCHANGES.find(exchange=>exchange.suffix&&cleaned.endsWith(exchange.suffix))||EXCHANGES.find(exchange=>exchange.id==='other');
+    draft().exchange=exchange.id;
+    draft().currency=exchange.currency||draft().currency;
+  }
+  delete state.errors.symbol;
+  draft().dirty=true;
+  pickerConfig=null;
+  closeDialog();
+  render(true);
+  if(!draft().quantity.trim())document.getElementById('field-quantity')?.focus({preventScroll:true});
+  else document.getElementById('field-symbol')?.focus({preventScroll:true});
+  void fetchQuote();
+  announce('Using ticker '+quoteSymbol()+'.');
+}
+function setExchange(value) {
+  if(activeExchange()?.id===value)return;
+  const previousSymbol=quoteSymbol();invalidateQuote();draft().exchange=value;
+  draft().symbol=value==='other'?previousSymbol:previousSymbol.replace(/\.[^.]+$/,'');
+  draft().currency=EXCHANGES.find(exchange=>exchange.id===value).currency||draft().currency;
+  draft().dirty=true;
+}
+function setCurrency(value) {
+  if(value===draft().currency)return;
+  const previous=draft().currency;draft().currency=value;
+  if(draft().price!==null){draft().price=draft().price*FX[previous]/FX[value];draft().quoteMessage='Example price converted with fixed demo FX rates.';}
+  state.request++;state.busy=false;draft().dirty=true;
+}
+function holdingDetails(id) {
+  const holding=state.holdings.find(holding=>holding.id===id);
+  if(!holding)return;
+  const type=(holding.kind==='asset'?ASSETS:LIABILITIES).find(type=>type.id===holding.type);
+  const value=number=>state.hidden?'******':money(number,holding.currency);
+  const rows=[['Portfolio',holding.portfolio],['Type',type.label],['Currency',holding.currency]];
+  if(holding.symbol)rows.push(['Ticker',holding.symbol],['Quantity',state.hidden?'******':holding.quantity],['Last example price',holding.priced?value(holding.price):'Pending']);
+  if(type.mode==='quantity')rows.push(['Weight',state.hidden?'******':holding.quantity+' g'],['Price per gram',value(Number(holding.unitPrice))]);
+  if(holding.notes)rows.push(['Notes',holding.notes]);
+  showDialog(`<button class="icon-button detail-close" data-action="close-modal" aria-label="Close holding details">${icon('close')}</button><p class="app-eyebrow">${holding.kind} / ${type.label}</p><h2 class="detail-title" id="dialog-title">${escapeHTML(holding.name)}</h2><p class="success-value">${holding.priced?value(holding.amount):'Price pending'}</p><dl class="review-panel">${rows.map(([label,text])=>`<div class="review-line"><dt>${label}</dt><dd>${escapeHTML(text)}</dd></div>`).join('')}</dl><p class="detail-caption">Stored example values, not live financial data.</p><button class="primary" data-action="edit-holding" data-id="${id}">Edit ${holding.kind}</button><button class="secondary danger-button" data-action="request-delete" data-id="${id}">Delete ${holding.kind}</button>`);
+  exposeState();
+}
+function editHolding(id) {
+  const holding=state.holdings.find(holding=>holding.id===id);
+  if(!holding)return;
+  closeDialog();state.request++;state.busy=false;state.kind=holding.kind;state.portfolio=holding.portfolio;
+  const type=(holding.kind==='asset'?ASSETS:LIABILITIES).find(type=>type.id===holding.type),linked=type.mode==='market';
+  state.drafts[state.kind]={...initialDraft(state.kind),id:holding.id,type:holding.type,currency:holding.currency,
+    exchange:holding.exchange||'us',name:linked?'':holding.name,customName:holding.customName||'',customNameOpen:Boolean((holding.customName||'').trim()),symbol:holding.symbol||'',
+    quantity:holding.quantity||'',unitPrice:holding.unitPrice||'',amount:String(holding.amount),notes:holding.notes||'',
+    price:linked&&holding.priced?holding.price:null,quoteName:holding.quoteName||'',quoteAttempted:linked,dirty:false};
+  state.errors={};state.screen='editor';state.phase='details';render();announce('Editing '+holding.name);
+}
+function requestDelete(id) {
+  const holding=state.holdings.find(holding=>holding.id===id);
+  if(!holding)return;
+  showDialog(`<p class="app-eyebrow">Delete ${holding.kind}</p><h2 id="dialog-title">Remove this holding?</h2><p class="app-copy"><strong>${escapeHTML(holding.name)}</strong> will be removed from ${escapeHTML(holding.portfolio)}. Its value will no longer be included in this demo's totals.</p><button class="primary" data-action="keep-holding" data-id="${id}">Keep holding</button><button class="secondary danger-button" data-action="confirm-delete" data-id="${id}">Delete ${holding.kind}</button>`);
+}
+function groupOptions(type) {
+  const category=(state.homeTab==='asset'?ASSETS:LIABILITIES).find(category=>category.id===type),label=groupLabels[type]||category.label,sort=state.sorts[groupKey(state.homeTab,type)]||'custom';
+  showDialog(`<p class="app-eyebrow">${label} / Display order</p><h2 id="dialog-title">A view that suits you.</h2><p class="app-copy">Sort this group without changing your saved arrangement.</p>${GROUP_SORTS.map(([value,text])=>`<button class="picker-option" data-action="group-sort" data-type="${type}" data-value="${value}" aria-pressed="${sort===value}"><span class="grow"><strong>${text}</strong></span>${sort===value?icon('check'):''}</button>`).join('')}<button class="secondary" style="margin-top:18px" data-action="arrange-group" data-value="${type}">Arrange manually</button><button class="quiet" data-action="group-done" data-value="${type}">Close</button>`);
+}
+function arrangeHoldings(type) {
+  const category=(state.homeTab==='asset'?ASSETS:LIABILITIES).find(category=>category.id===type),label=groupLabels[type]||category.label;
+  state.sorts[groupKey(state.homeTab,type)]='custom';
+  const holdings=groupHoldings(state.homeTab,type);
+  showDialog(`<p class="app-eyebrow">${label} / Your arrangement</p><h2 id="dialog-title">Put things in your order.</h2><p class="app-copy">Move a holding up or down. Changes apply immediately; sorting by name or value will not erase them.</p>${holdings.map((holding,index)=>`<div class="arrange-row" data-holding="${holding.id}"><span class="grow"><strong>${escapeHTML(holding.name)}</strong><small>${escapeHTML(holding.symbol||category.label)}</small></span><span class="reorder-buttons"><button class="move-up" data-action="move-holding" data-id="${holding.id}" data-direction="-1" aria-label="Move ${escapeHTML(holding.name)} up"${index===0?' disabled':''}>${icon('next')}</button><button class="move-down" data-action="move-holding" data-id="${holding.id}" data-direction="1" aria-label="Move ${escapeHTML(holding.name)} down"${index===holdings.length-1?' disabled':''}>${icon('next')}</button></span></div>`).join('')}<button class="primary" data-action="group-done" data-value="${type}">Done</button>`);
+}
+function moveHolding(id,direction) {
+  const holding=state.holdings.find(holding=>holding.id===id);
+  if(!holding)return;
+  const key=groupKey(holding.kind,holding.type);
+  if((state.sorts[key]||'custom')!=='custom')return;
+  const siblings=groupHoldings(holding.kind,holding.type),from=siblings.findIndex(holding=>holding.id===id),to=from+direction;
+  if(to<0||to>=siblings.length)return;
+  [siblings[from],siblings[to]]=[siblings[to],siblings[from]];
+  siblings.forEach((holding,index)=>{holding.order=index;});
+  const scroll=document.getElementById('modal').scrollTop;
+  render(true);arrangeHoldings(holding.type);
+  document.getElementById('modal').scrollTop=scroll;
+  const focus=document.querySelector(`#modal [data-action="move-holding"][data-id="${id}"][data-direction="${direction}"]:not(:disabled)`)||document.querySelector(`#modal [data-action="move-holding"][data-id="${id}"]:not(:disabled)`)||document.querySelector('#modal [data-action="group-done"]');
+  focus.focus({preventScroll:true});
+  announce(holding.name+' moved '+(direction<0?'up':'down')+'.');
+}
+function confirmDiscard(action) {
+  if(state.busy){state.request++;state.busy=false;render();}
+  if(!draft().dirty){action();return;}
+  pendingAction=action;
+  showDialog(`<p class="app-eyebrow">Your unfinished holding</p><h2 id="dialog-title">Leave this draft behind?</h2><p class="app-copy">This holding has not been saved. Keep editing, or discard the draft.</p><button class="primary" data-action="keep-editing">Keep editing</button><button class="quiet" data-action="discard">Discard draft</button>`);
+}
+function goHome(){state.request++;state.busy=false;state.addOpen=false;state.screen='home';state.homeTab=state.kind;render();}
+function draftErrors() {
+  const d=draft(),errors={};
+  if(!market()&&!d.name.trim()) errors.name=`Give this ${state.kind} a name.`;
+  if(!market()&&nameCharacters(d.name).length>NAME_LIMIT)errors.name=`Use no more than ${NAME_LIMIT} characters.`;
+  if(market()&&nameCharacters(d.customName).length>NAME_LIMIT)errors.customName=`Use no more than ${NAME_LIMIT} characters.`;
+  if(state.kind==='liability'||currentType().mode==='flat'){
+    if(!numeric(d.amount)) errors.amount='Enter a valid amount, zero or greater.';
+  }else{
+    if(!positiveDecimal(d.quantity)) errors.quantity=currentType().mode==='quantity'?'Enter a valid positive weight (decimals allowed, e.g. 10.5).':'Enter a valid positive quantity (decimals allowed, e.g. 0.25 or 10).';
+    if(market()&&!validTickerSymbol(quoteSymbol(),d.type)) errors.symbol='Choose a listing or enter a valid ticker symbol (letters/digits, e.g. AAPL, 7203.T, BTC-USD).';
+    if(currentType().mode==='quantity'&&!positiveDecimal(d.unitPrice)) errors.unitPrice='Enter a valid positive price.';
+  }
+  if(!Number.isFinite(amount())||!Number.isFinite(amount()*FX[d.currency])) errors[state.kind==='liability'||currentType().mode==='flat'?'amount':'quantity']='This value is too large for the demo.';
+  return errors;
+}
+function validate() {
+  const errors=draftErrors();
+  state.errors=errors;
+  if(Object.keys(errors).length){
+    render();const first=document.getElementById('field-'+Object.keys(errors)[0]);first?.focus();first?.scrollIntoView({block:'center'});announce('Check the highlighted fields.');return false;
+  }
+  return true;
+}
+function pickQuote(symbol) {
+  const quote=QUOTES.find(quote=>quote.symbol===symbol);
+  if(!quote) return;
+  pickerConfig=null;closeDialog();
+  invalidateQuote();draft().type=quote.type;draft().symbol=quote.symbol;draft().quoteName=quote.name;
+  if(quote.exchange) draft().exchange=quote.exchange;
+  draft().currency=quote.currency;draft().dirty=true;state.errors={};state.phase='details';draft().searching=false;render(true);
+  if(!draft().quantity.trim())document.getElementById('field-quantity')?.focus({preventScroll:true});
+  void fetchQuote();
+  announce(quote.name+' selected. Fetching its example price automatically.');
+}
+function availableQuote() {
+  return QUOTES.find(quote=>quote.symbol===quoteSymbol()&&quote.type===draft().type);
+}
+function quoteFailure() {
+  return state.connection==='offline'?'No internet connection. Refresh when online.':state.connection==='error'?'The example quote service could not respond. Try again later.':'No quote in this demo catalogue. Try AAPL, RELIANCE.BO, VOO, or BTC-USD, or save without a price.';
+}
+async function fetchQuote({saving=false}={}) {
+  if(!draft().symbol.trim()){
+    state.errors.symbol='Enter a ticker symbol first.';render();document.getElementById('field-symbol')?.focus();return false;
+  }
+  const request=++state.request;state.quoteFetches++;state.busy=true;render();
+  await new Promise(resolve=>setTimeout(resolve,550));
+  if(request!==state.request) return false;
+  const quote=state.connection==='online'?availableQuote():null;
+  draft().quoteAttempted=true;
+  if(quote){draft().price=quote.price*FX[quote.currency]/FX[draft().currency];draft().quoteName=quote.name;draft().quoteMessage='Example price loaded. Not live market data.';}
+  else draft().quoteMessage=quoteFailure();
+  state.busy=false;
+  if(!saving){render(true);announce(draft().quoteMessage);}
+  return true;
+}
+async function save() {
+  if(state.busy||!validate()) return;
+  if(market()&&draft().price===null&&!draft().quoteAttempted){const completed=await fetchQuote({saving:true});if(!completed) return;}
+  if(!validate())return;
+  const original=state.holdings.find(holding=>holding.id===draft().id);
+  const d=draft(),priced=isPriced(),holding={
+    id:original?original.id:state.nextId++,portfolio:state.portfolio,kind:state.kind,type:d.type,
+    name:market()?(d.customName.trim()||d.quoteName||quoteSymbol()):d.name.trim(),
+    amount:amount(),currency:d.currency,priced,symbol:market()?quoteSymbol():null,notes:original?(original.notes||''):d.notes.trim(),
+    quantity:d.quantity,unitPrice:d.unitPrice,price:d.price,quoteName:d.quoteName,customName:d.customName,exchange:d.exchange,isNew:original?!!original.isNew:true,notice:priced?'':d.quoteMessage,
+    order:original&&original.type===d.type?original.order:Math.max(-1,...groupHoldings(state.kind,d.type).map(holding=>holding.order))+1
+  };
+  state.undoOriginal=original?{...original}:null;
+  if(original)state.holdings[state.holdings.indexOf(original)]=holding;else state.holdings.push(holding);
+  state.saved=holding;state.drafts[state.kind]=initialDraft(state.kind);
+  state.screen='success';state.busy=false;state.errors={};render();announce('Your '+holding.kind+' was saved in the demo only.');
+}
+function previousStep() {
+  if(state.busy){state.request++;state.busy=false;render(true);}
+  if(state.screen==='review'){state.screen='editor';state.phase='details';render();return;}
+  if(state.variant==='B'&&state.phase==='details'){state.phase='type';render();return;}
+  confirmDiscard(()=>{state.drafts[state.kind]=initialDraft(state.kind);goHome();});
+}
+async function refreshHoldings() {
+  if(state.busy)return;
+  const request=++state.request;state.busy=true;state.message='Refreshing pending example prices...';render();
+  await new Promise(resolve=>setTimeout(resolve,550));
+  if(request!==state.request)return;
+  let updated=0;
+  if(state.connection==='online'){
+    for(const holding of state.holdings.filter(holding=>holding.portfolio===state.portfolio&&!holding.priced)){
+      const quote=QUOTES.find(quote=>quote.symbol===holding.symbol&&quote.type===holding.type);
+      if(quote){holding.price=quote.price*FX[quote.currency]/FX[holding.currency];holding.amount=Number(holding.quantity)*holding.price;holding.priced=true;holding.notice='';updated++;}
+    }
+    state.message=updated?`Updated ${updated} pending example price${updated===1?'':'s'}. Totals now include ${updated===1?'that asset':'those assets'}.`:'No pending price could be updated. This demo only has quotes for its example catalogue.';
+  }else state.message=state.connection==='offline'?'Still offline. Pending prices and totals are unchanged.':'The quote service is unavailable. Pending prices and totals are unchanged.';
+  state.busy=false;render();announce(state.message);
+}
+function preferences() {
+  showDialog(`<p class="app-eyebrow">Demo preferences</p><h2 id="dialog-title">Your go-to exchanges.</h2><p class="app-copy">Shortlist any, or none. All exchanges remain available. Kept only until this page is refreshed.</p><div>${EXCHANGES.map(exchange=>`<label class="check-row"><input type="checkbox" name="preferred" value="${exchange.id}"${state.preferred.includes(exchange.id)?' checked':''}>${exchange.label}</label>`).join('')}</div><button class="primary" data-action="save-preferences">Save shortlist</button><button class="quiet" data-action="close-modal">Cancel</button>`);
+}
+function fillSample() {
+  state.request++;state.busy=false;
+  if(state.screen==='home'||state.screen==='success') begin('asset','cash',true);
+  const d=draft();
+  if(market()){
+    const quote=QUOTES.find(quote=>quote.type===d.type);d.symbol=quote.symbol;d.quoteName=quote.name;d.currency=quote.currency;if(quote.exchange)d.exchange=quote.exchange;d.quantity=d.type==='crypto'?'0.25':'10';d.price=null;d.quoteAttempted=false;d.searching=false;
+  }else{d.name=state.kind==='liability'?'Education loan':d.type==='gold'?'Family gold':'Emergency fund';d.amount=state.kind==='liability'?'25000':'10000';if(currentType().mode==='quantity'){d.quantity='10';d.unitPrice='7200';}}
+  d.dirty=true;state.phase='details';state.screen='editor';state.errors={};render();if(market())void fetchQuote();
+}
+document.addEventListener('click',event=>{
+  if(state.addOpen&&!event.target.closest('.add-launcher'))setAddOpen(false,document.getElementById('add-options').contains(document.activeElement));
+  const button=event.target.closest('[data-action]');if(!button||button.disabled) return;
+  const action=button.dataset.action,value=button.dataset.value;
+  if(action==='variant')switchVariant(value);
+  else if(action==='previous-variant'||action==='next-variant'){const keys=Object.keys(CONCEPTS),index=keys.indexOf(state.variant);switchVariant(keys[(index+(action==='next-variant'?1:keys.length-1))%keys.length]);}
+  else if(action==='add'||action==='add-another')addHolding();
+  else if(action==='close-add')setAddOpen(false,true);
+  else if(action==='navigate'){state.request++;state.busy=false;state.addOpen=false;state.screen=value;render();}
+  else if(action==='choose-portfolio'){state.portfolio=value;goHome();}
+  else if(action==='start'){closeDialog();begin(value);}
+  else if(action==='toggle-group'){const key=groupKey(state.homeTab,value);state.expanded[key]=!state.expanded[key];render(true);document.querySelector(`.group-toggle[data-value="${value}"]`)?.focus({preventScroll:true});}
+  else if(action==='group-options')groupOptions(value);
+  else if(action==='group-sort'){state.sorts[groupKey(state.homeTab,button.dataset.type)]=value;closeDialog();render(true);document.querySelector(`[data-action="group-options"][data-value="${button.dataset.type}"]`)?.focus({preventScroll:true});announce('Group sorted: '+GROUP_SORTS.find(([key])=>key===value)[1]+'.');}
+  else if(action==='arrange-group'){state.sorts[groupKey(state.homeTab,value)]='custom';render(true);arrangeHoldings(value);}
+  else if(action==='group-done'){closeDialog();document.querySelector(`[data-action="group-options"][data-value="${value}"]`)?.focus({preventScroll:true});}
+  else if(action==='move-holding')moveHolding(Number(button.dataset.id),Number(button.dataset.direction));
+  else if(action==='holding-details')holdingDetails(Number(button.dataset.id));
+  else if(action==='edit-holding')editHolding(Number(button.dataset.id));
+  else if(action==='request-delete')requestDelete(Number(button.dataset.id));
+  else if(action==='keep-holding')holdingDetails(Number(button.dataset.id));
+  else if(action==='confirm-delete'){
+    const id=Number(button.dataset.id),holding=state.holdings.find(holding=>holding.id===id);
+    if(holding){state.holdings=state.holdings.filter(holding=>holding.id!==id);state.message=holding.name+' deleted from this demo.';closeDialog();render(true);announce(state.message);}
+  }
+  else if(action==='type-picker')typePicker();
+  else if(action==='currency-picker')currencyPicker();
+  else if(action==='exchange-picker')exchangePicker();
+  else if(action==='market-picker'||action==='change-market')marketPicker();
+  else if(action==='pick-type'){pickerConfig=null;changeType(value);closeDialog();render(true);document.getElementById('holding-type')?.focus({preventScroll:true});}
+  else if(action==='pick-currency'){pickerConfig=null;setCurrency(value);closeDialog();render(true);document.getElementById('currency')?.focus({preventScroll:true});}
+  else if(action==='pick-exchange'){pickerConfig=null;setExchange(value);closeDialog();render(true);document.getElementById('exchange')?.focus({preventScroll:true});}
+  else if(action==='use-manual-ticker')useManualTicker(value);
+  else if(action==='scenario'){const next=()=>begin(button.dataset.kind,button.dataset.type,true);if(state.screen==='editor'||state.screen==='review')confirmDiscard(next);else next();}
+  else if(action==='kind'){if(value!==state.kind&&draft().id===null){state.request++;state.busy=false;state.kind=value;state.phase=state.variant==='B'?'type':'details';state.errors={};render();}}
+  else if(action==='type'){changeType(value);render();}
+  else if(action==='next-type'){state.phase='details';render();}
+  else if(action==='quote')pickQuote(button.dataset.symbol);
+  else if(action==='fetch')void fetchQuote();
+  else if(action==='review'){if(validate()){state.screen='review';render();announce('Review your holding before saving.');}}
+  else if(action==='save')void save();
+  else if(action==='back'||action==='previous-step')previousStep();
+  else if(action==='edit'){state.request++;state.busy=false;state.screen='editor';state.phase='details';render();}
+  else if(action==='cancel')confirmDiscard(()=>{state.drafts[state.kind]=initialDraft(state.kind);goHome();});
+  else if(action==='keep-editing'||action==='close-modal'){pendingAction=null;closeDialog();}
+  else if(action==='discard'){const next=pendingAction;pendingAction=null;closeDialog();state.drafts[state.kind]=initialDraft(state.kind);next?.();}
+  else if(action==='home')goHome();
+  else if(action==='home-tab'){state.homeTab=value;render();}
+  else if(action==='hide'){state.hidden=!state.hidden;render();}
+  else if(action==='settings')settingsPreview();
+  else if(action==='refresh-holdings')void refreshHoldings();
+  else if(action==='undo'){if(state.undoOriginal){const index=state.holdings.findIndex(holding=>holding.id===state.saved.id);state.holdings[index]=state.undoOriginal;}else state.holdings=state.holdings.filter(holding=>holding.id!==state.saved.id);state.undoOriginal=null;goHome();announce('The demo change was undone.');}
+  else if(action==='preferences')preferences();
+  else if(action==='save-preferences'){
+    state.preferred=Array.from(document.querySelectorAll('input[name="preferred"]:checked'),input=>input.value);
+    if(draft().id===null&&!draft().symbol.trim()&&state.preferred.length&&!state.preferred.includes(draft().exchange)){
+      draft().exchange=state.preferred[0];
+      draft().currency=EXCHANGES.find(exchange=>exchange.id===state.preferred[0]).currency||draft().currency;
+    }
+    closeDialog();render(true);document.getElementById('exchange')?.focus({preventScroll:true});
+  }
+  else if(action==='sample')fillSample();
+  else if(action==='reset'){state.request++;state.busy=false;state.holdings=seed();state.drafts={asset:initialDraft('asset'),liability:initialDraft('liability')};Object.assign(state,{screen:'home',portfolio:'Personal',kind:'asset',homeTab:'asset',phase:'type',errors:{},saved:null,message:'',addOpen:false,hidden:false,connection:'online',preferred:['us','bse'],expanded:{},sorts:{},undoOriginal:null,nextId:100,quoteFetches:0});render();announce('All fictional holdings and drafts have been reset.');}
+});
+document.addEventListener('input',event=>{
+  const input=event.target;
+  if(input.matches('[data-picker-search]')){
+    if(pickerConfig?.sanitize){
+      const caret=input.selectionStart,cleaned=pickerConfig.sanitize(input.value);
+      if(cleaned!==input.value){
+        const removed=input.value.length-cleaned.length;
+        input.value=cleaned;
+        const pos=Math.max(0,(caret??cleaned.length)-removed);
+        input.setSelectionRange(pos,pos);
+      }
+    }
+    document.getElementById('picker-list').innerHTML=renderPickerItems(input.value);
+    return;
+  }
+  const key=input.dataset.field;if(!key||input.tagName==='SELECT')return;
+  if(key==='quantity'||key==='unitPrice'||key==='amount'){
+    const caret=input.selectionStart,cleaned=sanitizePositiveDecimal(input.value);
+    if(cleaned!==input.value){
+      const removed=input.value.length-cleaned.length;
+      input.value=cleaned;
+      const pos=Math.max(0,(caret??cleaned.length)-removed);
+      input.setSelectionRange(pos,pos);
+    }
+  }
+  if((key==='name'||key==='customName')&&event.isComposing)return;
+  if(key==='name'||key==='customName'){
+    const characters=nameCharacters(input.value);
+    if(characters.length>NAME_LIMIT){input.value=characters.slice(0,NAME_LIMIT).join('');announce(`Name limited to ${NAME_LIMIT} characters.`);}
+    const counter=document.getElementById('count-'+key);
+    counter.textContent=`${nameCharacters(input.value).length}/${NAME_LIMIT}`;
+    counter.classList.toggle('at-limit',nameCharacters(input.value).length===NAME_LIMIT);
+  }
+  const previousExchange=key==='symbol'?activeExchange()?.id:null;
+  draft()[key]=input.value;draft().dirty=true;
+  if(key==='symbol'){
+    const wasBusy=state.busy,caret=input.selectionStart;
+    draft().searching=false;
+    invalidateQuote();
+    let exchangeChanged=false;
+    if(usesExchange()&&input.value.includes('.')){
+      const exchange=EXCHANGES.find(exchange=>exchange.suffix&&input.value.trim().toUpperCase().endsWith(exchange.suffix))||EXCHANGES.find(exchange=>exchange.id==='other');
+      if(exchange.id!==draft().exchange){draft().exchange=exchange.id;draft().currency=exchange.currency||draft().currency;exchangeChanged=true;}
+    }
+    if(usesExchange()&&activeExchange()?.id!==previousExchange)exchangeChanged=true;
+    if(wasBusy||exchangeChanged){
+      render();
+      const replacement=document.getElementById('field-symbol');
+      replacement.focus();replacement.setSelectionRange(caret,caret);
+      return;
+    }
+    document.getElementById('quote-results').innerHTML=quoteResults(input.value);
+    document.getElementById('quote-feedback').innerHTML='';
+    document.getElementById('field-customName')?.setAttribute('placeholder','e.g. Long-term shares');
+    document.querySelectorAll('.selected-quote').forEach(node=>node.remove());
+  }
+  if(state.errors[key]){
+    const message=draftErrors()[key];
+    if(!message){delete state.errors[key];input.removeAttribute('aria-invalid');input.closest('.prominent-wrap')?.removeAttribute('data-invalid');}
+    const error=document.getElementById('error-'+key);if(error)error.textContent=message||'';
+  }
+  updateLive();
+});
+document.addEventListener('compositionend',event=>{
+  if(event.target.matches('[data-field="name"],[data-field="customName"]'))event.target.dispatchEvent(new Event('input',{bubbles:true}));
+});
+document.addEventListener('toggle',event=>{
+  if(event.target.id!=='custom-name-details')return;
+  draft().customNameOpen=event.target.open;
+  if(event.target.open&&document.activeElement===event.target.querySelector('summary')){
+    document.getElementById('field-customName')?.focus({preventScroll:true});
+  }
+  exposeState();
+},true);
+document.addEventListener('focusout',event=>{
+  const input=event.target,key=input.dataset.field;
+  if(!key||!input.matches('input'))return;
+  const message=draftErrors()[key],error=document.getElementById('error-'+key);
+  if(message){state.errors[key]=message;input.setAttribute('aria-invalid','true');input.closest('.prominent-wrap')?.setAttribute('data-invalid','true');if(error)error.textContent=message;}
+  exposeState();
+});
+document.addEventListener('change',event=>{
+  const input=event.target;
+  if(input.id==='add-layout'){
+    state.addOpen=false;state.addLayout=input.value;
+    const url=new URL(location.href);url.searchParams.set('add',state.addLayout);history.replaceState(null,'',url);render(true);
+  }else if(input.id==='portfolio'){state.portfolio=input.value;state.addOpen=false;render();}
+  else if(input.id==='connectivity'){
+    state.connection=input.value;state.request++;state.busy=false;
+    if(market())draft().quoteMessage=state.connection==='online'?'':quoteFailure();
+    render();announce(state.connection==='online'?'Simulated connection restored.':'Offline and error states are simulated. No network request was made.');
+  }else if(input.id==='appearance'){document.body.dataset.theme=input.value;}
+  else if(input.id==='text-size'){document.getElementById('device').dataset.large=String(input.value==='large');syncHomeClearance();}
+  else if(input.dataset.previewSetting==='appearance'){document.body.dataset.theme=input.value;document.getElementById('appearance').value=input.value;}
+  else if(input.dataset.previewSetting==='text-size'){document.getElementById('device').dataset.large=String(input.value==='large');document.getElementById('text-size').value=input.value;syncHomeClearance();}
+});
+document.addEventListener('keydown',event=>{
+  if(event.defaultPrevented||event.altKey||event.ctrlKey||event.metaKey)return;
+  if(document.getElementById('modal').open){
+    if(event.key==='Escape'){event.preventDefault();pendingAction=null;closeDialog();return;}
+    if(event.key==='Enter'&&event.target.matches('[data-picker-search]')){
+      const first=document.querySelector('#picker-list .picker-option');
+      if(first){event.preventDefault();first.click();}
+      return;
+    }
+    return;
+  }
+  if(state.addOpen){
+    if(event.key==='Escape'){event.preventDefault();setAddOpen(false,true);return;}
+    if(event.key==='Tab'){
+      event.preventDefault();const controls=[...document.querySelectorAll('.add-launcher button')],index=controls.indexOf(document.activeElement);controls[(index+(event.shiftKey?controls.length-1:1))%controls.length].focus({preventScroll:true});return;
+    }
+    if(event.target.closest('.add-launcher')&&(event.key==='ArrowDown'||event.key==='ArrowUp')){
+      event.preventDefault();const controls=[...document.querySelectorAll('.add-launcher button')],index=controls.indexOf(event.target);controls[(index+(event.key==='ArrowDown'?1:controls.length-1))%controls.length].focus({preventScroll:true});return;
+    }
+  }else if(event.target.id==='add-trigger'&&(event.key==='ArrowDown'||event.key==='ArrowUp')){
+    event.preventDefault();setAddOpen(true);document.querySelector('#add-options button').focus({preventScroll:true});return;
+  }
+  if(event.target.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]'))return;
+  if(event.key==='ArrowLeft'||event.key==='ArrowRight'){
+    event.preventDefault();const keys=Object.keys(CONCEPTS),index=keys.indexOf(state.variant);switchVariant(keys[(index+(event.key==='ArrowRight'?1:keys.length-1))%keys.length]);
+  }
+});
+document.addEventListener('focusin',event=>{if(state.addOpen&&!event.target.closest('.add-launcher'))setAddOpen(false);});
+document.addEventListener('wheel',event=>{if(state.addOpen&&event.target.closest('#app'))event.preventDefault();},{passive:false});
+window.addEventListener('popstate',()=>{
+  const params=new URLSearchParams(location.search);state.variant=Object.hasOwn(CONCEPTS,params.get('variant'))?params.get('variant'):'A';state.addLayout=params.get('add')==='dialog'?'dialog':'expand';state.addOpen=false;
+  if(state.screen==='editor')state.phase=state.variant==='B'?'type':'details';
+  render();
+});
+function fitPhonePreview() {
+  const device=document.getElementById('device'),width=parseFloat(getComputedStyle(document.querySelector('.device-wrap')).width);
+  device.style.setProperty('--preview-scale',String(width/device.offsetWidth));
+}
+const previewObserver=new ResizeObserver(fitPhonePreview);
+previewObserver.observe(document.querySelector('.device-wrap'));
+fitPhonePreview();
+render();
+</script>
+</body>
+</html>

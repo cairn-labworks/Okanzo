@@ -13,10 +13,17 @@ import 'liability_form_state.dart';
 /// One-shot outcome of the liability editor. Reuses [AssetEditEventType] so
 /// both editors share the same saved/deleted/error vocabulary.
 class LiabilityEditEvent {
-  const LiabilityEditEvent(this.type, [this.message]);
+  const LiabilityEditEvent(
+    this.type, [
+    this.message,
+    this.savedLiability,
+    this.previousLiability,
+  ]);
 
   final AssetEditEventType type;
   final String? message;
+  final LiabilityEntity? savedLiability;
+  final LiabilityEntity? previousLiability;
 }
 
 class LiabilityEditViewModel extends ChangeNotifier {
@@ -37,7 +44,9 @@ class LiabilityEditViewModel extends ChangeNotifier {
   final int _liabilityId;
 
   LiabilityFormState _form;
+  LiabilityEntity? _loadedEntity;
   LiabilityEditEvent? _event;
+  bool _disposed = false;
 
   LiabilityFormState get form => _form;
 
@@ -49,6 +58,7 @@ class LiabilityEditViewModel extends ChangeNotifier {
         _liabilityId,
       );
       if (liability != null) {
+        _loadedEntity = liability;
         _form = LiabilityFormState.fromEntity(liability);
         notifyListeners();
         return;
@@ -80,19 +90,30 @@ class LiabilityEditViewModel extends ChangeNotifier {
   void onNotesChange(String value) => _update(_form.copyWith(notes: value));
 
   Future<void> save() async {
+    if (_form.isSaving) return;
     final String? error = _form.validate();
     if (error != null) {
       _emit(LiabilityEditEvent(AssetEditEventType.error, error));
       return;
     }
     _update(_form.copyWith(isSaving: true));
-    await _liabilityRepository.save(_form.toEntity());
-    _emit(const LiabilityEditEvent(AssetEditEventType.saved));
+    final LiabilityEntity toSave = _form.toEntity();
+    final int savedId = await _liabilityRepository.save(toSave);
+    if (_disposed) return;
+    _emit(
+      LiabilityEditEvent(
+        AssetEditEventType.saved,
+        null,
+        toSave.copyWith(id: savedId),
+        _loadedEntity,
+      ),
+    );
   }
 
   Future<void> delete() async {
     if (_liabilityId == 0) return;
     await _liabilityRepository.delete(_liabilityId);
+    if (_disposed) return;
     _emit(const LiabilityEditEvent(AssetEditEventType.deleted));
   }
 
@@ -103,5 +124,11 @@ class LiabilityEditViewModel extends ChangeNotifier {
   void _emit(LiabilityEditEvent event) {
     _event = event;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

@@ -85,7 +85,10 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 - A single quiet panel with **collapsible category rows** showing category totals and item counts until expanded
 - **Simple net worth** (`Settings → Currency → Simple net worth`) shortens only the home headline from 1,000 upward (`$7K`, `$165.3M`, or `₹1.65 Cr` in INR lakh/crore) while keeping detailed totals exact
 - **Multiple portfolios** (*Personal*, *Family*, *Business*), a **Default** that powers the home screen, and instant switching
-- **Custom ordering**: long-press and drag to reorder categories or items within their category
+- **Custom ordering**: long-press and drag to reorder categories; arrange holdings inside a category using its **Sort or arrange** menu
+- **Canvas holding entry**: the compact bottom-right **Add holding** button expands in place over a blurred background, without moving the portfolio list. Choose **An asset** or **A liability**. The amount-led editors use outlined fields, consistent searchable type/currency/exchange dialogs, a net-worth impact preview, and a pinned Save button. Name or Custom name identifies each holding, without a separate Notes field; previously stored notes remain preserved. Switch between asset and liability tabs without losing either draft; Back protects unsaved changes, and Save is available once the required fields are valid.
+- **Holding details and order**: tap a holding for its details, Edit, or confirmed Delete. The category's **Sort or arrange** menu offers name/value sorting and **Arrange manually**; saved custom order is preserved when trying other sorts. Sort choices are session-scoped and separate for each portfolio/category.
+- **Readable names and quotes**: newly entered names and custom names are limited to 60 user-perceived characters, with a counter. Search suggestions appear directly below the search field. Tap a selected market holding to search again; selecting a stock, fund or crypto listing fetches its price once automatically, without waiting for a quantity. An unavailable quote does not block saving offline.
 
 </td>
 <td width="50%" valign="top">
@@ -321,6 +324,18 @@ checkout, and the pipeline's actual project ID when inspecting fork CI jobs.
 
 ---
 
+## UX prototype
+
+Open [the holding experience prototype](docs/prototypes/add-holding.prototype.html)
+directly in a browser; no server or dependencies are needed. It preserves the
+approved **Canvas** design and the alternative **Guide** flow for future
+iterations, including Home, Add holding, and both asset/liability editors.
+Use `?variant=A&add=expand` for Canvas or `?variant=B` for Guide.
+
+This is a design reference, not app code: all data is fictional, quotes and FX
+are simulated, and changes stay in memory. It is not bundled into the Flutter
+application.
+
 ## Quality checks
 
 The **Pull request checks** workflow runs when pull requests targeting `main` are
@@ -348,6 +363,21 @@ The test suite covers currency formatting and rounding, net-worth and FX convers
 
 <details>
 <summary><b>Android emulator &amp; physical-device integration tests</b></summary>
+
+The Canvas journey uses synthetic holdings and captures the home screen, expanded
+Add action, details, editor, and delete confirmation on a **dedicated emulator**.
+Set `CANVAS_EVIDENCE` to an output directory, build its test APK, and run it with
+the repository-local driver:
+
+```bash
+flutter build apk --debug --target integration_test/canvas_holding_test.dart --build-number <at-least-installed>
+flutter drive -d <emulator-id> --use-application-binary build/app/outputs/flutter-apk/app-debug.apk \
+  --driver test_driver/canvas_holding.dart --keep-app-running
+```
+
+Use an equal-or-higher build number than any installed debug build, preflight
+with `adb install -r`, and restore a normal `lib/main.dart` build after testing,
+as described below. Do not run this synthetic-data scenario on a personal device.
 
 For the live Android exchange smoke test on a dedicated emulator (requires network access and Yahoo quote availability):
 

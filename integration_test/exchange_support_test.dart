@@ -11,12 +11,13 @@ import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
 import 'package:okanzo/ui/asset/stock_exchange_field.dart';
 import 'package:okanzo/ui/components/form_components.dart';
+import 'package:okanzo/ui/components/holding_editor_chrome.dart';
 import 'package:okanzo/ui/home/home_screen.dart';
 import 'package:okanzo/ui/home/home_view_model.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../test/helpers/popup_menu_helpers.dart';
+import '../test/helpers/picker_helpers.dart';
 
 class _Listing {
   const _Listing(
@@ -99,22 +100,80 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 }
 
 Future<void> _enter(WidgetTester tester, String label, String value) async {
-  final Finder field = find.widgetWithText(TextField, label);
+  if (label == 'Company or Ticker' || label == 'Coin or ticker') {
+    final Finder trigger = find.byWidgetPredicate(
+      (Widget widget) =>
+          widget.key == const ValueKey<String>('market-search-trigger') ||
+          widget.key == const ValueKey<String>('selected-market-holding'),
+    );
+    if (trigger.evaluate().isEmpty) {
+      await tester.scrollUntilVisible(
+        trigger,
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+    }
+    await _tap(tester, trigger);
+    final Finder dialogInput = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(dialogInput, value);
+    await tester.pump();
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    return;
+  }
+  final Finder field = find.descendant(
+    of: find.byWidgetPredicate(
+      (widget) =>
+          widget is OptionalCustomNameField && widget.label == label ||
+          (widget is LabeledTextField &&
+              widget.showLabel &&
+              widget.label == label),
+    ),
+    matching: find.byType(TextField),
+  );
+  if (label == 'Custom name (optional)' && field.evaluate().isEmpty) {
+    final Finder toggle = find.byKey(
+      const ValueKey<String>('custom-name-toggle'),
+    );
+    if (toggle.evaluate().isEmpty) {
+      await tester.scrollUntilVisible(
+        toggle,
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+    }
+    await _tap(tester, toggle);
+  }
+  if (field.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      field,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
   await Scrollable.ensureVisible(tester.element(field), alignment: 0.5);
   await tester.enterText(field, value);
   await tester.pumpAndSettle();
 }
 
-Future<void> _select<T>(WidgetTester tester, String label) async {
-  await _tap(tester, find.byType(PopupMenuButton<T>));
+Finder get _saveButton => find.descendant(
+  of: find.byType(HoldingEditorFooter),
+  matching: find.byType(FilledButton),
+);
+
+Future<void> _select(WidgetTester tester, Finder picker, String label) async {
+  await _tap(tester, picker);
   await _tap(tester, find.text(label).last);
 }
 
-List<String> _exchangeLabels(WidgetTester tester) =>
-    popupMenuLabels<Object>(tester);
+Future<List<String>> _exchangeLabels(WidgetTester tester) =>
+    pickerLabels(tester, find.byType(StockExchangeField));
 
 Future<void> _openPreferences(WidgetTester tester) async {
-  await _tap(tester, find.byType(PopupMenuButton<Object>));
+  await _tap(tester, find.byType(StockExchangeField));
   await _tap(tester, find.text(StockExchangeField.manageLabel).last);
   expect(find.text('Preferred exchanges'), findsOneWidget);
 }
@@ -158,7 +217,7 @@ Future<void> _setPreferences(
     ),
   );
   expect(find.byType(AlertDialog), findsNothing);
-  expect(_exchangeLabels(tester), <String>[
+  expect(await _exchangeLabels(tester), <String>[
     for (final StockExchange exchange in StockExchange.values)
       if (desired.contains(exchange)) exchange.displayName,
     StockExchangeField.manageLabel,
@@ -175,12 +234,12 @@ Future<void> _selectExchange(
   if (!preferred.contains(exchange)) {
     await _setPreferences(tester, <StockExchange>[...preferred, exchange]);
   }
-  await _select<Object>(tester, exchange.displayName);
+  await _select(tester, find.byType(StockExchangeField), exchange.displayName);
 }
 
 Future<void> _newAsset(WidgetTester tester) async {
-  await _tap(tester, find.byType(FloatingActionButton));
-  await _tap(tester, find.text('New asset'));
+  await _tap(tester, find.byKey(const ValueKey<String>('add-holding')));
+  await _tap(tester, find.text('An asset'));
   await _waitUntil(
     tester,
     () => find.byType(StockExchangeField).evaluate().isNotEmpty,
@@ -252,7 +311,10 @@ void main() {
       await app.main();
       await _waitUntil(
         tester,
-        () => find.byType(FloatingActionButton).evaluate().isNotEmpty,
+        () => find
+            .byKey(const ValueKey<String>('add-holding'))
+            .evaluate()
+            .isNotEmpty,
         'home portfolio',
       );
       if (find.text('Got it').evaluate().isNotEmpty) {
@@ -286,7 +348,7 @@ void main() {
         <StockExchange>[StockExchange.us],
       );
       await _newAsset(tester);
-      expect(_exchangeLabels(tester), <String>[
+      expect(await _exchangeLabels(tester), <String>[
         StockExchange.us.displayName,
         StockExchangeField.manageLabel,
       ]);
@@ -323,7 +385,11 @@ void main() {
       for (final _Listing listing in _listings) {
         await _newAsset(tester);
         if (listing.type != AssetType.stock) {
-          await _select<AssetType>(tester, listing.type.displayName);
+          await _select(
+            tester,
+            find.byType(DropdownSelector<AssetType>),
+            listing.type.displayName,
+          );
         }
         await _selectExchange(tester, listing.exchange);
         await _enter(tester, 'Company or Ticker', listing.ticker);
@@ -333,7 +399,7 @@ void main() {
         if (_captureScreenshots && listing.exchange == StockExchange.bse) {
           FocusManager.instance.primaryFocus?.unfocus();
           await tester.pumpAndSettle();
-          await _tap(tester, find.byType(PopupMenuButton<Object>));
+          await _tap(tester, find.byType(StockExchangeField));
           await binding.takeScreenshot('exchange-picker');
           await _tap(tester, find.text(StockExchange.bse.displayName).last);
         }
@@ -364,11 +430,15 @@ void main() {
           await tester.pumpAndSettle();
           await binding.takeScreenshot('bse-quote');
         }
-        await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+        await _tap(tester, _saveButton);
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
           'saving ${listing.symbol}',
+        );
+        await _tap(
+          tester,
+          find.byKey(const ValueKey<String>('back-to-portfolio')),
         );
         final AssetEntity asset =
             (await container.assetRepository.getForPortfolio(portfolioId))
@@ -397,6 +467,7 @@ void main() {
           await _tap(tester, find.text(listing.type.displayName));
         }
         await _tap(tester, find.text(listing.name));
+        await _tap(tester, find.text('Edit asset'));
         await _waitUntil(
           tester,
           () => find.byType(StockExchangeField).evaluate().isNotEmpty,
@@ -409,13 +480,8 @@ void main() {
           listing.exchange,
         );
         expect(
-          tester
-              .widget<TextField>(
-                find.widgetWithText(TextField, 'Company or Ticker'),
-              )
-              .controller
-              ?.text,
-          listing.symbol,
+          find.text('${listing.symbol} / ${listing.currency}'),
+          findsOneWidget,
         );
         final AssetEntity asset = saved[listing.symbol]!;
         expect(
@@ -454,12 +520,17 @@ void main() {
       await _selectExchange(tester, StockExchange.bse);
       await _tap(tester, find.text('Fetch latest price'));
       expect(find.text('Enter a ticker symbol first'), findsOneWidget);
-      await _select<AssetType>(tester, AssetType.crypto.displayName);
+      await _select(
+        tester,
+        find.byType(DropdownSelector<AssetType>),
+        AssetType.crypto.displayName,
+      );
       expect(find.byType(StockExchangeField), findsNothing);
       await tester.pageBack();
       await tester.pumpAndSettle();
 
       await _tap(tester, find.text(_listings.first.name));
+      await _tap(tester, find.text('Edit asset'));
       await _waitUntil(
         tester,
         () => find.byType(StockExchangeField).evaluate().isNotEmpty,
@@ -472,15 +543,7 @@ void main() {
             .selected,
         StockExchange.hongKong,
       );
-      expect(
-        tester
-            .widget<TextField>(
-              find.widgetWithText(TextField, 'Company or Ticker'),
-            )
-            .controller
-            ?.text,
-        '0700.HK',
-      );
+      expect(find.text('0700.HK / HKD'), findsOneWidget);
       expect(
         find.byKey(const ValueKey<String>('asset-valuation-caption')),
         findsOneWidget,
@@ -490,7 +553,9 @@ void main() {
       await (await SharedPreferences.getInstance()).reload();
       expect(container.settingsRepository.current.preferredExchanges, isEmpty);
       await _newAsset(tester);
-      expect(_exchangeLabels(tester), <String>[StockExchangeField.manageLabel]);
+      expect(await _exchangeLabels(tester), <String>[
+        StockExchangeField.manageLabel,
+      ]);
       expect(
         tester
             .widget<StockExchangeField>(find.byType(StockExchangeField))
@@ -498,7 +563,7 @@ void main() {
         isNull,
       );
       if (_captureScreenshots) {
-        await _tap(tester, find.byType(PopupMenuButton<Object>));
+        await _tap(tester, find.byType(StockExchangeField));
         await binding.takeScreenshot('empty-exchanges');
         await _tap(tester, find.text(StockExchangeField.manageLabel).last);
         await _tap(
@@ -548,7 +613,7 @@ void main() {
         <StockExchange>[StockExchange.us, StockExchange.bse],
       );
       await _newAsset(tester);
-      expect(_exchangeLabels(tester), <String>[
+      expect(await _exchangeLabels(tester), <String>[
         StockExchange.us.displayName,
         StockExchange.bse.displayName,
         StockExchangeField.manageLabel,
@@ -578,7 +643,10 @@ void main() {
       await app.main();
       await _waitUntil(
         tester,
-        () => find.byType(FloatingActionButton).evaluate().isNotEmpty,
+        () => find
+            .byKey(const ValueKey<String>('add-holding'))
+            .evaluate()
+            .isNotEmpty,
         'home portfolio',
       );
       if (find.text('Got it').evaluate().isNotEmpty) {
@@ -619,7 +687,11 @@ void main() {
       for (final (AssetType type, String symbol, String name) in holdings) {
         await _newAsset(tester);
         if (type != AssetType.stock) {
-          await _select<AssetType>(tester, type.displayName);
+          await _select(
+            tester,
+            find.byType(DropdownSelector<AssetType>),
+            type.displayName,
+          );
         }
         await _enter(
           tester,
@@ -658,11 +730,15 @@ void main() {
         expect(_editor(tester).form.currency, 'EUR');
         expect(_editor(tester).form.lastPrice, greaterThan(0));
         final double fetchedEur = _editor(tester).form.lastPrice!;
-        await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+        await _tap(tester, _saveButton);
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
           'saving $symbol in EUR',
+        );
+        await _tap(
+          tester,
+          find.byKey(const ValueKey<String>('back-to-portfolio')),
         );
         final AssetEntity asset =
             (await container.assetRepository.getForPortfolio(portfolioId))
@@ -676,6 +752,7 @@ void main() {
           await _tap(tester, find.text(type.displayName));
         }
         await _tap(tester, find.text(name));
+        await _tap(tester, find.text('Edit asset'));
         await _waitUntil(
           tester,
           () => !_editor(tester).form.loading,
@@ -689,11 +766,15 @@ void main() {
           _editor(tester).form.lastPrice,
           closeTo(expectedGbp, expectedGbp * 1e-12),
         );
-        await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+        await _tap(tester, _saveButton);
         await _waitUntil(
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
           'saving $symbol in GBP',
+        );
+        await _tap(
+          tester,
+          find.byKey(const ValueKey<String>('back-to-portfolio')),
         );
         final AssetEntity updated = (await container.assetRepository.getById(
           asset.id,

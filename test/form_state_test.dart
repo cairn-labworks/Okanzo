@@ -8,6 +8,44 @@ import 'package:okanzo/ui/liability/liability_form_state.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('editing a holding preserves its saved custom arrangement', () {
+    const AssetEntity asset = AssetEntity(
+      id: 1,
+      position: 7,
+      portfolioId: 1,
+      type: AssetType.cash,
+      name: 'Cash',
+      currency: 'USD',
+      manualValue: 10,
+      createdAt: 0,
+      updatedAt: 0,
+    );
+    const LiabilityEntity liability = LiabilityEntity(
+      id: 2,
+      position: 5,
+      portfolioId: 1,
+      type: LiabilityType.loan,
+      name: 'Loan',
+      currency: 'USD',
+      amount: 10,
+      createdAt: 0,
+      updatedAt: 0,
+    );
+    expect(
+      AssetFormState.fromEntity(asset)
+          .copyWith(manualValue: '20')
+          .toEntity()
+          .position,
+      7,
+    );
+    expect(
+      LiabilityFormState.fromEntity(liability)
+          .copyWith(amount: '20')
+          .toEntity()
+          .position,
+      5,
+    );
+  });
   group('AssetFormState exchange selection', () {
     test('exchange suffixes and currencies match Yahoo coverage', () {
       const Map<StockExchange, (String, String?)> expected =
@@ -197,18 +235,62 @@ void main() {
       },
     );
 
-    test('market assets need a symbol and a positive quantity', () {
+    test('market assets need a valid symbol and a positive quantity', () {
       const AssetFormState base = AssetFormState(
         name: 'Apple',
         type: AssetType.stock,
       );
       expect(base.validate(), 'Enter a ticker symbol');
+      expect(
+        base.copyWith(symbol: 'APPLE INC', quantity: '1').validate(),
+        'Enter a valid ticker symbol',
+      );
+      expect(
+        base.copyWith(symbol: 'AAPL..BO', quantity: '1').validate(),
+        'Enter a valid ticker symbol',
+      );
       expect(base.copyWith(symbol: 'AAPL').validate(), 'Enter a quantity');
       expect(
         base.copyWith(symbol: 'AAPL', quantity: '0').validate(),
         'Enter a quantity',
       );
-      expect(base.copyWith(symbol: 'AAPL', quantity: '1.5').validate(), isNull);
+      expect(
+        base.copyWith(symbol: 'AAPL', quantity: '-2').validate(),
+        'Enter a quantity',
+      );
+      expect(
+        base.copyWith(symbol: 'AAPL', quantity: '0.25').validate(),
+        isNull,
+      );
+      expect(
+        base.copyWith(symbol: '7203.T', quantity: '1.5').validate(),
+        isNull,
+      );
+      expect(
+        const AssetFormState(
+          type: AssetType.crypto,
+          symbol: 'BTC-USD',
+          quantity: '0.125',
+        ).validate(),
+        isNull,
+      );
+    });
+
+    test('sanitizes market search queries and validates ticker symbols', () {
+      expect(
+        sanitizeMarketQuery('Apple @#\$% Inc. & Co.'),
+        'Apple  Inc. & Co.',
+      );
+      expect(sanitizeMarketQuery('S&P 500 / BTC-USD!'), 'S&P 500 / BTC-USD');
+      expect(isValidTickerSymbol('AAPL'), isTrue);
+      expect(isValidTickerSymbol('7203.T'), isTrue);
+      expect(isValidTickerSymbol('0700.HK'), isTrue);
+      expect(isValidTickerSymbol('BRK.B'), isTrue);
+      expect(isValidTickerSymbol('BTC-USD', isCrypto: true), isTrue);
+      expect(isValidTickerSymbol('1INCH', isCrypto: true), isTrue);
+      expect(isValidTickerSymbol('Apple Inc'), isFalse);
+      expect(isValidTickerSymbol('AAPL.'), isFalse);
+      expect(isValidTickerSymbol('BTC.PA', isCrypto: true), isFalse);
     });
 
     test('quantity assets need a quantity and a unit price', () {

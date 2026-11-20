@@ -319,6 +319,8 @@ void main({bool deviceViewport = false, CaptureScreenshot? capture}) {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Stock'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Gold'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Gold'));
       await tester.pumpAndSettle();
 
@@ -326,6 +328,11 @@ void main({bool deviceViewport = false, CaptureScreenshot? capture}) {
       expect(find.text('10 × MC.PA  ·  EUR'), findsOneWidget);
       expect(find.text('50 g'), findsOneWidget);
 
+      tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position
+          .jumpTo(0);
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Hide balances'));
       await tester.pumpAndSettle();
 
@@ -517,9 +524,11 @@ void main({bool deviceViewport = false, CaptureScreenshot? capture}) {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Bitcoin'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit asset'));
+      await tester.pumpAndSettle();
       expect(find.byType(AssetEditScreen), findsOneWidget);
       expect(find.text('1.25'), findsOneWidget);
-      expect(find.text(r'$80,000'), findsOneWidget);
+      expect(find.text(r'$80,000'), findsWidgets);
       await tester.pageBack();
       await tester.pumpAndSettle();
 
@@ -530,6 +539,8 @@ void main({bool deviceViewport = false, CaptureScreenshot? capture}) {
       await tester.tap(find.text('Loan'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Margin loan'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit liability'));
       await tester.pumpAndSettle();
       expect(find.byType(LiabilityEditScreen), findsOneWidget);
       expect(find.text('4375'), findsOneWidget);

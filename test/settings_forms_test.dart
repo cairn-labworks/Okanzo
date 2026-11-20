@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -24,14 +26,21 @@ import 'package:okanzo/domain/model/theme_mode.dart';
 import 'package:okanzo/l10n/app_localizations.dart';
 import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
+import 'package:okanzo/ui/asset/stock_exchange_field.dart';
 import 'package:okanzo/ui/components/donut_chart.dart';
+import 'package:okanzo/ui/asset/stock_search_field.dart';
 import 'package:okanzo/ui/components/form_components.dart';
+import 'package:okanzo/ui/components/holding_editor_chrome.dart';
+import 'package:okanzo/ui/components/holding_create_screen.dart';
+import 'package:okanzo/ui/components/holding_saved_summary_screen.dart';
 import 'package:okanzo/ui/components/drag_reorder_column.dart';
 import 'package:okanzo/ui/components/type_icons.dart';
 import 'package:okanzo/ui/components/ui_components.dart';
 import 'package:okanzo/ui/components/whats_new_dialog.dart';
 import 'package:okanzo/ui/home/home_screen.dart';
 import 'package:okanzo/ui/home/category_groups.dart';
+import 'package:okanzo/ui/home/holding_group_list.dart';
+import 'package:okanzo/ui/home/add_holding_button.dart';
 import 'package:okanzo/ui/home/net_worth_card.dart';
 import 'package:okanzo/ui/liability/liability_edit_screen.dart';
 import 'package:okanzo/ui/lock/lock_screen.dart';
@@ -57,6 +66,8 @@ class _Assets extends Fake implements AssetRepository {
   int? deleted;
   List<int>? lastOrder;
   List<AssetEntity> items = const <AssetEntity>[];
+  int quoteFetches = 0;
+  Future<Result<StockQuote>>? pendingQuote;
 
   @override
   Stream<List<AssetEntity>> observeForPortfolio(int portfolioId) =>
@@ -86,7 +97,12 @@ class _Assets extends Fake implements AssetRepository {
     String symbol, {
     required String currency,
     bool isCrypto = false,
-  }) async => Result<StockQuote>.offline();
+  }) async {
+    quoteFetches++;
+    return pendingQuote == null
+        ? Result<StockQuote>.offline()
+        : await pendingQuote!;
+  }
 }
 
 class _Liabilities extends Fake implements LiabilityRepository {
@@ -141,10 +157,11 @@ class _Portfolios extends Fake implements PortfolioRepository {
 
 class _Rates extends Fake implements FxRepository {
   int refreshes = 0;
+  CurrencyConverter rates = const CurrencyConverter.empty();
 
   @override
   Stream<CurrencyConverter> get converter =>
-      Stream<CurrencyConverter>.value(const CurrencyConverter.empty());
+      Stream<CurrencyConverter>.value(rates);
 
   @override
   Future<Result<void>> ensureFreshRates([int maxAgeMillis = 0]) async =>
@@ -277,21 +294,46 @@ Widget _app(
 );
 
 Finder _field(String label) => find.byWidgetPredicate(
-  (Widget widget) => widget is LabeledTextField && widget.label == label,
+  (Widget widget) =>
+      widget is OptionalCustomNameField && widget.label == label ||
+      (widget is LabeledTextField && widget.showLabel && widget.label == label),
 );
+
+Finder _marketTrigger() => find.byWidgetPredicate(
+  (Widget widget) =>
+      widget.key == const ValueKey<String>('market-search-trigger') ||
+      widget.key == const ValueKey<String>('selected-market-holding'),
+);
+
+Finder get _dialogSearchInput => find.descendant(
+  of: find.byType(AlertDialog),
+  matching: find.byType(TextField),
+);
+
+Future<void> _openMarketSearch(WidgetTester tester) async {
+  await _tap(tester, _marketTrigger());
+}
+
+Future<void> _enterManualTicker(WidgetTester tester, String value) async {
+  await _openMarketSearch(tester);
+  await tester.enterText(_dialogSearchInput, value);
+  await tester.pump();
+  await _tap(tester, find.byKey(const ValueKey<String>('use-manual-ticker')));
+}
 
 Finder _textField(String label) =>
     find.descendant(of: _field(label), matching: find.byType(TextField));
+Finder get _customNameToggle =>
+    find.byKey(const ValueKey<String>('custom-name-toggle'));
+Finder get _saveButton => find.descendant(
+  of: find.byType(HoldingEditorFooter),
+  matching: find.byType(FilledButton),
+);
 
 EditableText _editableField(WidgetTester tester, String label) =>
     tester.widget<EditableText>(
       find.descendant(of: _field(label), matching: find.byType(EditableText)),
     );
-
-Finder get _notesInput => find.descendant(
-  of: find.byType(OptionalNotesField),
-  matching: find.byType(TextField),
-);
 
 Future<void> _tap(WidgetTester tester, Finder target) async {
   if (target.evaluate().isEmpty) {
@@ -301,19 +343,18 @@ Future<void> _tap(WidgetTester tester, Finder target) async {
       scrollable: find.byType(Scrollable).first,
     );
   }
-  await tester.ensureVisible(target);
+  if (find
+      .ancestor(of: target, matching: find.byType(Scrollable))
+      .evaluate()
+      .isNotEmpty) {
+    await Scrollable.ensureVisible(tester.element(target), alignment: 0.3);
+  } else {
+    await tester.ensureVisible(target);
+  }
   await tester.pumpAndSettle();
   await tester.tap(target);
   await tester.pumpAndSettle();
 }
-
-Future<void> _toggleNotes(WidgetTester tester) => _tap(
-  tester,
-  find.descendant(
-    of: find.byType(OptionalNotesField),
-    matching: find.byType(ListTile),
-  ),
-);
 
 void main() {
   late _Container container;
@@ -369,6 +410,651 @@ void main() {
         updatedAt: 0,
       ),
     ];
+  }
+
+  testWidgets('a completed save closes an open discard prompt and its editor', (
+    tester,
+  ) async {
+    final Completer<Result<StockQuote>> quote = Completer<Result<StockQuote>>();
+    container.assetRepository.pendingQuote = quote.future;
+    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+    await _enterManualTicker(tester, 'AAPL');
+    await tester.enterText(_textField('Quantity'), '2');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tester.tap(_saveButton);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Discard changes?'), findsOneWidget);
+    quote.complete(Result<StockQuote>.offline());
+    await tester.pumpAndSettle();
+    expect(container.assetRepository.saved?.symbol, 'AAPL');
+    expect(find.text('Discard changes?'), findsNothing);
+    expect(find.byType(AssetEditScreen), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'Canvas add morph keeps the list still and navigation behind blur',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await container.settingsRepository.setLastSeenVersion(
+        AppReleaseNotes.currentVersion,
+      );
+      seedHoldings();
+      await open(tester, const AppShell());
+      await _tap(tester, find.text('Cash'));
+      final ScrollableState list = tester.state<ScrollableState>(
+        find.byType(Scrollable).first,
+      );
+      list.position.jumpTo(list.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      final Rect before = tester.getRect(find.text('Savings'));
+      final Rect button = tester.getRect(
+        find.byKey(const ValueKey<String>('add-holding')),
+      );
+      expect(before.bottom, lessThan(button.top));
+      final Color color = Theme.of(
+        tester.element(find.byType(AddHoldingButton)),
+      ).colorScheme.primary;
+      await tester.tap(find.byKey(const ValueKey<String>('add-holding')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 180));
+      expect(tester.getRect(find.text('Savings')), before);
+      await tester.pumpAndSettle();
+      final Material expanded = tester.widget<Material>(
+        find.byKey(const ValueKey<String>('expanded-add-holding')),
+      );
+      expect(expanded.color, color);
+      expect(find.byType(BackdropFilter), findsOneWidget);
+      expect(find.text('An asset').hitTestable(), findsOneWidget);
+      expect(find.text('A liability').hitTestable(), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(BackdropFilter), findsNothing);
+      expect(tester.getRect(find.text('Savings')), before);
+      await tester.tap(find.byKey(const ValueKey<String>('add-holding')));
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(844, 390);
+      await tester.pumpAndSettle();
+      final Rect rotated = tester.getRect(
+        find.byKey(const ValueKey<String>('expanded-add-holding')),
+      );
+      expect(rotated.top, greaterThanOrEqualTo(0));
+      expect(rotated.bottom, lessThanOrEqualTo(390));
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Canvas holding opens details before editing and confirms deletion',
+    (tester) async {
+      seedHoldings();
+      int? editor;
+      await open(
+        tester,
+        HomeScreen(
+          onOpenAssetEditor: (_, id) => editor = id,
+          onOpenLiabilityEditor: (_, _) {},
+          onManagePortfolios: () {},
+          onOpenSettings: () {},
+        ),
+      );
+      await _tap(tester, find.text('Cash'));
+      await _tap(tester, find.text('Savings'));
+      expect(editor, isNull);
+      expect(find.text('ASSET / CASH'), findsOneWidget);
+      expect(find.text('Portfolio'), findsOneWidget);
+      expect(find.text('Delete asset'), findsOneWidget);
+      await _tap(tester, find.text('Edit asset'));
+      expect(editor, 1);
+      await _tap(tester, find.text('Savings'));
+      await _tap(tester, find.text('Delete asset'));
+      expect(container.assetRepository.deleted, isNull);
+      expect(find.text('DELETE ASSET'), findsOneWidget);
+      await _tap(tester, find.text('Cancel'));
+      expect(container.assetRepository.deleted, isNull);
+      await _tap(tester, find.text('Savings'));
+      await _tap(tester, find.text('Delete asset'));
+      await _tap(tester, find.widgetWithText(OutlinedButton, 'Delete'));
+      expect(container.assetRepository.deleted, 1);
+    },
+  );
+
+  test(
+    'Canvas sort compares converted values and never overwrites custom order',
+    () {
+      final List<int> original = <int>[1, 2, 3];
+      HoldingGroupList<int> list(HoldingSort sort) => HoldingGroupList<int>(
+        items: original,
+        name: (id) => <String>['Zulu', 'Alpha', 'Pending'][id - 1],
+        value: (id) => <double>[100, 200, 0][id - 1],
+        priced: (id) => id != 3,
+        sort: sort,
+        onSort: (_) {},
+        onReordered: (_) async {},
+        itemBuilder: (_) => const SizedBox(),
+      );
+      expect(list(HoldingSort.nameAscending).sorted, <int>[2, 3, 1]);
+      expect(list(HoldingSort.valueDescending).sorted, <int>[2, 1, 3]);
+      expect(list(HoldingSort.valueAscending).sorted, <int>[1, 2, 3]);
+      expect(list(HoldingSort.custom).sorted, <int>[1, 2, 3]);
+      expect(original, <int>[1, 2, 3]);
+    },
+  );
+
+  testWidgets('Canvas names count graphemes and Back protects a dirty draft', (
+    tester,
+  ) async {
+    await open(
+      tester,
+      const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
+    );
+    final FilledButton emptySave = tester.widget(_saveButton);
+    expect(emptySave.onPressed, isNull);
+    final String family = '👨‍👩‍👧';
+    await tester.enterText(_textField('Name'), family * 61);
+    expect(_editableField(tester, 'Name').controller.text, family * 60);
+    await tester.enterText(_textField('Outstanding amount'), '0');
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(_saveButton).onPressed, isNotNull);
+    await _tap(tester, find.byTooltip('Back'));
+    expect(find.text('Discard changes?'), findsOneWidget);
+    await _tap(tester, find.text('Keep editing'));
+    expect(_editableField(tester, 'Name').controller.text, family * 60);
+    await _tap(tester, find.byTooltip('Back'));
+    await _tap(tester, find.text('Discard'));
+    expect(container.liabilityRepository.saved, isNull);
+    expect(find.byType(LiabilityEditScreen), findsNothing);
+  });
+
+  testWidgets(
+    'Canvas selection fetches once and can reopen search without losing quantity',
+    (tester) async {
+      container.stockSearchService.matches = const <StockSearchResult>[
+        StockSearchResult(
+          symbol: 'MSFT',
+          name: 'Microsoft',
+          exchange: 'NASDAQ',
+        ),
+      ];
+      await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+      await _openMarketSearch(tester);
+      await tester.enterText(_dialogSearchInput, 'MSFT');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+      await _tap(tester, find.text('Microsoft'));
+      expect(container.assetRepository.quoteFetches, 1);
+      expect(
+        find.byKey(const ValueKey<String>('selected-market-holding')),
+        findsOneWidget,
+      );
+      await tester.enterText(_textField('Quantity'), '2');
+      await _openMarketSearch(tester);
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(_dialogSearchInput).controller?.text,
+        'MSFT',
+      );
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(ListTile, 'Microsoft'),
+        ),
+        findsOneWidget,
+      );
+      await _tap(tester, find.widgetWithText(TextButton, 'Close'));
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      expect(_editableField(tester, 'Quantity').controller.text, '2');
+      expect(_textField('Custom name (optional)'), findsNothing);
+      await _tap(tester, _customNameToggle);
+      expect(
+        tester
+            .widget<TextField>(_textField('Custom name (optional)'))
+            .decoration
+            ?.hintText,
+        'Microsoft',
+      );
+      expect(
+        _editableField(tester, 'Custom name (optional)').focusNode.hasFocus,
+        isTrue,
+      );
+      await tester.enterText(_textField('Custom name (optional)'), 'x' * 61);
+      expect(
+        _editableField(tester, 'Custom name (optional)').controller.text,
+        'x' * 60,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(HoldingEditorFooter),
+          matching: find.byType(HoldingPortfolioLabel),
+        ),
+        findsNothing,
+      );
+      await _tap(tester, _saveButton);
+      expect(container.assetRepository.quoteFetches, 1);
+      expect(container.assetRepository.saved?.quantity, 2);
+      expect(container.assetRepository.saved?.customName, 'x' * 60);
+    },
+  );
+
+  for (final (AssetType type, String symbol) in <(AssetType, String)>[
+    (AssetType.stock, 'AAPL'),
+    (AssetType.mutualFund, 'VOO'),
+    (AssetType.crypto, 'BTC-USD'),
+  ]) {
+    testWidgets(
+      '${type.name} suggestions follow search and selection immediately fetches price',
+      (WidgetTester tester) async {
+        final String company = 'Selected ${type.displayName}';
+        final Completer<Result<StockQuote>> quote =
+            Completer<Result<StockQuote>>();
+        container.assetRepository.pendingQuote = quote.future;
+        container.stockSearchService.matches = <StockSearchResult>[
+          StockSearchResult(symbol: symbol, name: company, exchange: 'NASDAQ'),
+        ];
+        await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+        if (type != AssetType.stock) {
+          await _tap(tester, find.byType(DropdownSelector<AssetType>));
+          await _tap(tester, find.widgetWithText(ListTile, type.displayName));
+        }
+        await _openMarketSearch(tester);
+        final Finder dialog = find.byType(AlertDialog);
+        final String expectedTitle = switch (type) {
+          AssetType.crypto => 'Choose coin or ticker',
+          AssetType.mutualFund => 'Choose fund or ticker',
+          _ => 'Choose company or ticker',
+        };
+        expect(
+          find.descendant(of: dialog, matching: find.text(expectedTitle)),
+          findsOneWidget,
+        );
+        await tester.enterText(_dialogSearchInput, symbol);
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pumpAndSettle();
+        final Finder suggestion = find.descendant(
+          of: dialog,
+          matching: find.widgetWithText(ListTile, company),
+        );
+        expect(
+          tester.getRect(suggestion).top,
+          greaterThan(tester.getRect(_dialogSearchInput).bottom),
+        );
+        await tester.ensureVisible(suggestion);
+        await tester.pumpAndSettle();
+        await tester.tap(suggestion);
+        await tester.pump();
+        expect(container.assetRepository.quoteFetches, 1);
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(_editableField(tester, 'Quantity').controller.text, isEmpty);
+        expect(
+          tester
+              .widget<TextButton>(
+                find.widgetWithText(TextButton, 'Fetch latest price'),
+              )
+              .onPressed,
+          isNull,
+        );
+        quote.complete(
+          Result<StockQuote>.success(
+            StockQuote(
+              symbol: symbol,
+              price: 125.75,
+              currency: 'USD',
+              name: company,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        tester
+            .state<ScrollableState>(find.byType(Scrollable).first)
+            .position
+            .jumpTo(0);
+        await tester.pumpAndSettle();
+        expect(
+          find.text('0 × ${CurrencyUtil.format(125.75, 'USD')}'),
+          findsOneWidget,
+        );
+        await _tap(tester, _textField('Quantity'));
+        await tester.enterText(_textField('Quantity'), '2');
+        await _tap(tester, _saveButton);
+        expect(container.assetRepository.saved?.type, type);
+        expect(container.assetRepository.saved?.symbol, symbol);
+        expect(container.assetRepository.saved?.lastPrice, 125.75);
+        expect(container.assetRepository.quoteFetches, 1);
+      },
+    );
+  }
+
+  for (final double textScale in <double>[1, 1.5]) {
+    testWidgets(
+      'selected stock leaves space above Quantity at $textScale text scale',
+      (WidgetTester tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(360, 792);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+        const String company = 'International Business Machines Corporation';
+        container.stockSearchService.matches = const <StockSearchResult>[
+          StockSearchResult(symbol: 'IBM', name: company, exchange: 'NYSE'),
+        ];
+        await tester.pumpWidget(
+          _app(
+            container,
+            const AssetEditScreen(portfolioId: 1, assetId: 0),
+            textScale: textScale,
+            appTheme: AppTheme.midnight,
+            brightness: Brightness.dark,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        await _openMarketSearch(tester);
+        await tester.enterText(_dialogSearchInput, 'IBM');
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pumpAndSettle();
+        await _tap(
+          tester,
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.text(company),
+          ),
+        );
+        final Finder selection = find.byKey(
+          const ValueKey<String>('selected-market-holding'),
+        );
+        await Scrollable.ensureVisible(
+          tester.element(_field('Quantity')),
+          alignment: 1,
+        );
+        await tester.pumpAndSettle();
+        final Rect card = tester.getRect(selection);
+        expect(
+          tester
+              .getRect(
+                find.descendant(of: selection, matching: find.text(company)),
+              )
+              .bottom,
+          lessThanOrEqualTo(card.bottom),
+        );
+        expect(
+          tester.getRect(_field('Quantity')).top - card.bottom,
+          greaterThanOrEqualTo(12),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final bool liability in <bool>[false, true]) {
+    testWidgets(
+      '${liability ? 'liability' : 'asset'} amount hint matches the cursor height',
+      (WidgetTester tester) async {
+        await open(
+          tester,
+          liability
+              ? const LiabilityEditScreen(portfolioId: 1, liabilityId: 0)
+              : const AssetEditScreen(portfolioId: 1, assetId: 0),
+        );
+        if (!liability) {
+          await _tap(tester, find.byType(DropdownSelector<AssetType>));
+          await _tap(tester, find.widgetWithText(ListTile, 'Cash'));
+        }
+        final Finder field = _field(liability ? 'Outstanding amount' : 'Value');
+        await _tap(
+          tester,
+          find.descendant(of: field, matching: find.byType(TextField)),
+        );
+        final EditableTextState input = tester.state<EditableTextState>(
+          find.descendant(of: field, matching: find.byType(EditableText)),
+        );
+        final Rect hint = tester.getRect(
+          find.descendant(of: field, matching: find.text('0.00')),
+        );
+        final Rect cursor = input.renderEditable.getLocalRectForCaret(
+          const TextPosition(offset: 0),
+        );
+        expect(hint.height, closeTo(cursor.height, 2));
+      },
+    );
+  }
+
+  for (final AssetType selectedType in <AssetType>[
+    AssetType.crypto,
+    AssetType.mutualFund,
+  ]) {
+    testWidgets(
+      'selected ${selectedType.displayName} stays on one line beside Currency',
+      (WidgetTester tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(360, 792);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+        await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+        await _tap(tester, find.byType(DropdownSelector<AssetType>));
+        await _tap(
+          tester,
+          find.widgetWithText(ListTile, selectedType.displayName),
+        );
+        FocusManager.instance.primaryFocus?.unfocus();
+        tester
+            .state<ScrollableState>(find.byType(Scrollable).first)
+            .position
+            .jumpTo(0);
+        await tester.pumpAndSettle();
+        final Rect type = tester.getRect(
+          find.descendant(
+            of: find.byType(DropdownSelector<AssetType>),
+            matching: find.text(selectedType.displayName),
+          ),
+        );
+        final Rect currency = tester.getRect(
+          find.descendant(
+            of: find.byType(CurrencySelector),
+            matching: find.text('USD'),
+          ),
+        );
+        expect(type.height, currency.height);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final bool liability in <bool>[false, true]) {
+    testWidgets(
+      '${liability ? 'liability' : 'asset'} Type uses a searchable currency-style picker',
+      (WidgetTester tester) async {
+        await open(
+          tester,
+          liability
+              ? const LiabilityEditScreen(portfolioId: 1, liabilityId: 0)
+              : const AssetEditScreen(portfolioId: 1, assetId: 0),
+        );
+        final Finder selector = liability
+            ? find.byType(DropdownSelector<LiabilityType>)
+            : find.byType(DropdownSelector<AssetType>);
+        final String initial = liability ? 'Loan' : 'Stock';
+        final String choice = liability ? 'Mortgage' : 'Cash';
+        final String subtitleQuery = liability
+            ? 'property borrowing'
+            : 'money on hand';
+        await _tap(tester, selector);
+        final Finder dialog = find.byType(AlertDialog);
+        final ColorScheme colors = Theme.of(tester.element(dialog)).colorScheme;
+        expect(
+          tester.widget<AlertDialog>(dialog).backgroundColor,
+          colors.surface,
+        );
+        expect(
+          find.descendant(
+            of: dialog,
+            matching: find.text(liability ? 'WHAT YOU OWE' : 'WHAT YOU OWN'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: dialog, matching: find.text('Choose a type')),
+          findsOneWidget,
+        );
+        final Finder search = find.descendant(
+          of: dialog,
+          matching: find.byType(TextField),
+        );
+        expect(
+          tester.widget<TextField>(search).decoration?.border,
+          isA<OutlineInputBorder>(),
+        );
+        final Finder selectedTileFinder = find.descendant(
+          of: dialog,
+          matching: find.widgetWithText(ListTile, initial),
+        );
+        final ListTile selectedTile = tester.widget<ListTile>(
+          selectedTileFinder,
+        );
+        expect(selectedTile.selected, isTrue);
+        expect(selectedTile.selectedTileColor, colors.primaryContainer);
+        expect(selectedTile.trailing, isNotNull);
+        final Finder listView = find.descendant(
+          of: dialog,
+          matching: find.byType(ListView),
+        );
+        final Finder listMaterial = find
+            .ancestor(of: listView, matching: find.byType(Material))
+            .first;
+        expect(
+          tester.widget<Material>(listMaterial).clipBehavior,
+          Clip.hardEdge,
+        );
+        final RenderBox inkCanvas =
+            Material.of(tester.element(selectedTileFinder)) as RenderBox;
+        final Rect inkRect =
+            inkCanvas.localToGlobal(Offset.zero) & inkCanvas.size;
+        expect(
+          inkRect.top,
+          greaterThanOrEqualTo(tester.getRect(search).bottom),
+        );
+        expect(
+          inkRect.bottom,
+          lessThanOrEqualTo(
+            tester.getRect(find.widgetWithText(TextButton, 'Close')).top,
+          ),
+        );
+        await tester.drag(listView, const Offset(0, -90));
+        await tester.pumpAndSettle();
+        expect(
+          tester.getRect(listMaterial).top,
+          greaterThanOrEqualTo(tester.getRect(search).bottom),
+        );
+        await tester.enterText(search, 'zzz-no-match');
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: dialog,
+            matching: find.text('No matching options.'),
+          ),
+          findsOneWidget,
+        );
+        await tester.enterText(search, subtitleQuery);
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: dialog,
+            matching: find.widgetWithText(ListTile, choice),
+          ),
+          findsOneWidget,
+        );
+        await tester.enterText(search, ' ${choice.toUpperCase()} ');
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(of: dialog, matching: find.byType(ListTile)),
+          findsOneWidget,
+        );
+        await _tap(tester, find.widgetWithText(TextButton, 'Close'));
+        expect(
+          liability
+              ? tester
+                    .widget<DropdownSelector<LiabilityType>>(selector)
+                    .selected
+                    .displayName
+              : tester
+                    .widget<DropdownSelector<AssetType>>(selector)
+                    .selected
+                    .displayName,
+          initial,
+        );
+        await _tap(tester, selector);
+        await tester.enterText(search, choice);
+        await tester.pumpAndSettle();
+        await _tap(
+          tester,
+          find.descendant(
+            of: dialog,
+            matching: find.widgetWithText(ListTile, choice),
+          ),
+        );
+        expect(dialog, findsNothing);
+        expect(
+          liability
+              ? tester
+                    .widget<DropdownSelector<LiabilityType>>(selector)
+                    .selected
+                    .displayName
+              : tester
+                    .widget<DropdownSelector<AssetType>>(selector)
+                    .selected
+                    .displayName,
+          choice,
+        );
+        await _tap(tester, find.byType(CurrencySelector));
+        final Finder currencyDialog = find.byType(AlertDialog);
+        expect(
+          find.descendant(
+            of: currencyDialog,
+            matching: find.text('HOLDING CURRENCY'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: currencyDialog,
+            matching: find.text('Choose currency'),
+          ),
+          findsOneWidget,
+        );
+        final Finder currencyList = find.descendant(
+          of: currencyDialog,
+          matching: find.byType(ListView),
+        );
+        final Finder currencyMaterial = find
+            .ancestor(of: currencyList, matching: find.byType(Material))
+            .first;
+        final Finder currencySearch = find.descendant(
+          of: currencyDialog,
+          matching: find.byType(TextField),
+        );
+        await tester.drag(currencyList, const Offset(0, -120));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<Material>(currencyMaterial).clipBehavior,
+          Clip.hardEdge,
+        );
+        expect(
+          tester.getRect(currencyMaterial).top,
+          greaterThanOrEqualTo(tester.getRect(currencySearch).bottom),
+        );
+        await _tap(tester, find.widgetWithText(TextButton, 'Close'));
+      },
+    );
   }
 
   for (final (AppTheme, Brightness) appearance in <(AppTheme, Brightness)>[
@@ -608,12 +1294,12 @@ void main() {
         find.byKey(const ValueKey<String>('home-liabilities-tab')),
       );
       expect(find.text('No liabilities'), findsOneWidget);
-      await _tap(tester, find.text('Add'));
-      await _tap(tester, find.text('New asset'));
+      await _tap(tester, find.byKey(const ValueKey<String>('add-holding')));
+      await _tap(tester, find.text('An asset'));
       expect(editors, <String>['asset']);
       expect(find.text('No assets yet'), findsOneWidget);
-      await _tap(tester, find.text('Add'));
-      await _tap(tester, find.text('New liability'));
+      await _tap(tester, find.byKey(const ValueKey<String>('add-holding')));
+      await _tap(tester, find.text('A liability'));
       expect(editors, <String>['asset', 'liability']);
       expect(find.text('No liabilities'), findsOneWidget);
     },
@@ -650,8 +1336,8 @@ void main() {
             .join(','),
       );
       await _tap(tester, find.text('Cash'));
-      final items = tester.widget<DragReorderColumn<AssetLine>>(
-        find.byType(DragReorderColumn<AssetLine>),
+      final items = tester.widget<HoldingGroupList<AssetLine>>(
+        find.byType(HoldingGroupList<AssetLine>),
       );
       items.onReordered(items.items);
       await tester.pumpAndSettle();
@@ -668,8 +1354,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(prefs.getString('cat_order_liability_1'), 'LOAN');
       await _tap(tester, find.text('Loan'));
-      final loans = tester.widget<DragReorderColumn<LiabilityLine>>(
-        find.byType(DragReorderColumn<LiabilityLine>),
+      final loans = tester.widget<HoldingGroupList<LiabilityLine>>(
+        find.byType(HoldingGroupList<LiabilityLine>),
       );
       loans.onReordered(loans.items);
       await tester.pumpAndSettle();
@@ -679,7 +1365,7 @@ void main() {
   );
 
   testWidgets(
-    'long-pressing an expanded holding reorders that holding, not its category',
+    'holding rows stay clean and explicit arrangement persists item order',
     (WidgetTester tester) async {
       container.assetRepository.items = const <AssetEntity>[
         AssetEntity(
@@ -713,15 +1399,11 @@ void main() {
         ),
       );
       await _tap(tester, find.text('Cash'));
-      final destination = tester.getCenter(find.text('First cash'));
-      final gesture = await tester.startGesture(
-        tester.getCenter(find.text('Second cash')),
-      );
-      await tester.pump(const Duration(milliseconds: 600));
-      await gesture.moveTo(destination);
-      await tester.pump(const Duration(milliseconds: 500));
-      await gesture.up();
-      await tester.pumpAndSettle();
+      expect(find.byTooltip('Move up'), findsNothing);
+      expect(find.byIcon(Icons.drag_indicator), findsNothing);
+      await _tap(tester, find.byTooltip('Sort or arrange'));
+      await _tap(tester, find.text('Arrange manually'));
+      await _tap(tester, find.byTooltip('Move up').last);
       expect(container.assetRepository.lastOrder, <int>[2, 1]);
       expect(tester.takeException(), isNull);
     },
@@ -952,7 +1634,7 @@ void main() {
   });
 
   testWidgets(
-    'Midnight asset layout uses compact chips, paired fields and inline Save',
+    'Canvas asset layout keeps selected market holding editable and Save pinned',
     (WidgetTester tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(390, 844);
@@ -970,6 +1652,7 @@ void main() {
         createdAt: 0,
         updatedAt: 0,
       );
+
       await tester.pumpWidget(
         _app(
           container,
@@ -985,31 +1668,48 @@ void main() {
       expect(find.byType(DropdownMenu<Object>), findsNothing);
       expect(find.byType(DropdownMenu<AssetType>), findsNothing);
       final Text amount = tester.widget<Text>(
-        find.text(CurrencyUtil.format(3864, 'USD')),
+        find.descendant(
+          of: find.byType(HoldingEditorFooter),
+          matching: find.text(CurrencyUtil.format(3864, 'USD')),
+        ),
       );
-      expect(amount.style?.fontSize, 38);
-      expect(amount.style?.fontWeight, FontWeight.w500);
+      expect(amount.style?.fontSize, 26);
       expect(
         tester.getRect(find.byType(PageHeading)).top,
         greaterThan(tester.getRect(find.byTooltip('Back')).bottom),
       );
       expect(
-        tester.getRect(_field('Company or Ticker')).top,
-        tester.getRect(_field('Quantity')).top,
+        find.byKey(const ValueKey<String>('selected-market-holding')),
+        findsOneWidget,
       );
       expect(
-        tester.getRect(_field('Company or Ticker')).left,
-        lessThan(tester.getRect(_field('Quantity')).left),
+        tester
+            .getRect(
+              find.byKey(const ValueKey<String>('selected-market-holding')),
+            )
+            .top,
+        lessThan(tester.getRect(_field('Quantity')).top),
       );
+      expect(
+        tester
+            .getRect(
+              find.byKey(const ValueKey<String>('selected-market-holding')),
+            )
+            .left,
+        tester.getRect(_field('Quantity')).left,
+      );
+      await _openMarketSearch(tester);
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await _tap(tester, find.widgetWithText(TextButton, 'Close'));
       final Scaffold scaffold = tester.widget<Scaffold>(
         find.descendant(
           of: find.byType(AssetEditScreen),
           matching: find.byType(Scaffold),
         ),
       );
-      expect(scaffold.bottomNavigationBar, isNull);
-      expect(find.text('Save asset'), findsNothing);
-      final Finder save = find.widgetWithText(FilledButton, 'Save');
+      expect(scaffold.bottomNavigationBar, isNotNull);
+      expect(find.text('Save asset'), findsOneWidget);
+      final Finder save = _saveButton;
       final Finder cancel = find.widgetWithText(OutlinedButton, 'Cancel');
       await tester.scrollUntilVisible(
         save,
@@ -1017,16 +1717,239 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
-      expect(cancel, findsOneWidget);
-      expect(tester.getRect(cancel).top, tester.getRect(save).top);
-      expect(tester.getRect(cancel).right, lessThan(tester.getRect(save).left));
-      expect(
-        tester.getRect(save).top,
-        greaterThanOrEqualTo(
-          tester.getRect(find.byType(OptionalNotesField)).bottom,
-        ),
-      );
+      expect(cancel, findsNothing);
+      expect(save.hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('holding kind tabs preserve both drafts and guard Back', (
+    tester,
+  ) async {
+    Future<void> switchKind(String label) async {
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      tester
+          .state<ScrollableState>(find.byType(Scrollable).first)
+          .position
+          .jumpTo(0);
+      await tester.pumpAndSettle();
+      await _tap(tester, find.text(label));
+    }
+
+    await open(tester, const HoldingCreateScreen(portfolioId: 1, asset: true));
+    await _enterManualTicker(tester, 'AAPL');
+    await _tap(tester, _textField('Quantity'));
+    await tester.enterText(_textField('Quantity'), '2');
+    await switchKind('Liability / I owe');
+    await tester.enterText(_textField('Outstanding amount'), '250.75');
+    await _tap(tester, _textField('Name'));
+    await tester.enterText(_textField('Name'), 'Example loan');
+    await switchKind('Asset / I own');
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey<String>('selected-market-holding')),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('AAPL'), findsOneWidget);
+    expect(_editableField(tester, 'Quantity').controller.text, '2');
+    await switchKind('Liability / I owe');
+    expect(
+      _editableField(tester, 'Outstanding amount').controller.text,
+      '250.75',
+    );
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsOneWidget);
+    await tester.tap(find.text('Keep editing'));
+    await tester.pumpAndSettle();
+    expect(find.byType(HoldingCreateScreen), findsOneWidget);
+    expect(container.assetRepository.saved, isNull);
+    expect(container.liabilityRepository.saved, isNull);
+  });
+
+  testWidgets(
+    'asset footer shows 0-initialized aligned estimate, contextual hints, validation, and omits net worth preview',
+    (WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      await container.settingsRepository.setPreferredExchanges(<StockExchange>[
+        StockExchange.us,
+        StockExchange.bse,
+      ]);
+      seedHoldings();
+
+      await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+
+      // Removed Current net worth / After this holding section & top Price pending
+      expect(find.text('Current net worth'), findsNothing);
+      expect(find.text('After this holding'), findsNothing);
+      expect(find.text('Price pending'), findsNothing);
+
+      // Pinned footer starts at $0 with aligned left stack and right amount
+      final Finder footer = find.byType(HoldingEditorFooter);
+      final Finder footerAmount = find.byKey(
+        const ValueKey<String>('asset-estimated-value'),
+      );
+      final Finder pendingCaption = find.byKey(
+        const ValueKey<String>('asset-valuation-pending-caption'),
+      );
+      expect(
+        find.descendant(of: footer, matching: find.text('Estimated value')),
+        findsOneWidget,
+      );
+      expect(tester.widget<Text>(footerAmount).data, '\$0');
+      expect(
+        tester.widget<Text>(pendingCaption).data,
+        '0 × \$0 · price not fetched yet',
+      );
+      final Rect saveRect = tester.getRect(_saveButton);
+      final Rect labelRect = tester.getRect(
+        find.descendant(of: footer, matching: find.text('Estimated value')),
+      );
+      final Rect captionRect = tester.getRect(pendingCaption);
+      final Rect amountRect = tester.getRect(footerAmount);
+      expect(labelRect.left, closeTo(saveRect.left, 1));
+      expect(amountRect.right, closeTo(saveRect.right, 1));
+      final double copyCenterY = (labelRect.top + captionRect.bottom) / 2;
+      expect(amountRect.center.dy, closeTo(copyCenterY, 2));
+
+      // Contextual helper examples change with Exchange and Type
+      expect(find.text('e.g. Stock, Cash, Gold, Real estate'), findsOneWidget);
+      expect(find.text('e.g. INR, USD, EUR, GBP'), findsOneWidget);
+      expect(find.text('e.g. Apple (AAPL) · NYSE / Nasdaq'), findsOneWidget);
+      expect(find.text('Search Apple, or enter AAPL'), findsOneWidget);
+
+      await _tap(tester, find.byType(StockExchangeField));
+      await _tap(tester, find.text('BSE (India)').last);
+      expect(
+        find.text('Adds .BO automatically (e.g. RELIANCE.BO)'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Search Reliance, or enter RELIANCE.BO'),
+        findsOneWidget,
+      );
+
+      // Market search sanitizes invalid chars & blocks invalid manual tickers
+      await _openMarketSearch(tester);
+      await tester.enterText(_dialogSearchInput, 'NoSuch Co!@#');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(_dialogSearchInput).controller?.text,
+        'NoSuch Co',
+      );
+      expect(
+        find.byKey(const ValueKey<String>('use-manual-ticker')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('invalid-ticker-notice')),
+        findsOneWidget,
+      );
+      await tester.enterText(_dialogSearchInput, '7203.T');
+      await tester.pump();
+      expect(
+        find.byKey(const ValueKey<String>('use-manual-ticker')),
+        findsOneWidget,
+      );
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('use-manual-ticker')),
+      );
+
+      // Quantity strips negatives/letters/extra dots, rejects 0, accepts 0.25
+      await tester.enterText(_textField('Quantity'), '-12..34abc');
+      await tester.pump();
+      expect(_editableField(tester, 'Quantity').controller.text, '12.34');
+      await tester.enterText(_textField('Quantity'), '0');
+      await tester.pump();
+      expect(
+        find.text('Enter a positive number (decimals allowed, e.g. 0.25).'),
+        findsOneWidget,
+      );
+      expect(tester.widget<FilledButton>(_saveButton).onPressed, isNull);
+      await tester.enterText(_textField('Quantity'), '0.25');
+      await tester.pump();
+      expect(tester.widget<FilledButton>(_saveButton).onPressed, isNotNull);
+
+      // Liability editor also omits Current net worth / After this holding
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await open(
+        tester,
+        const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
+      );
+      expect(find.text('Current net worth'), findsNothing);
+      expect(find.text('After this holding'), findsNothing);
+      expect(find.text('e.g. Loan, Mortgage, Credit card'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'post-save confirmation summary shows added/updated state, supports Undo and Add another holding',
+    (WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      seedHoldings();
+
+      // 1. Add a Cash asset -> shows Asset added. + Undo addition deletes newly saved id
+      await open(
+        tester,
+        const HoldingCreateScreen(portfolioId: 1, asset: true),
+      );
+      await _tap(tester, find.byType(DropdownSelector<AssetType>));
+      await _tap(tester, find.text('Cash').last);
+      await tester.enterText(_textField('Value'), '500');
+      await tester.enterText(_textField('Name'), 'Emergency buffer');
+      await _tap(tester, _saveButton);
+
+      expect(find.byType(HoldingSavedSummaryScreen), findsOneWidget);
+      expect(find.text('Asset added.'), findsOneWidget);
+      expect(find.text('Emergency buffer is now in Personal.'), findsOneWidget);
+      expect(find.text('\$500'), findsOneWidget);
+      expect(find.text('Undo this addition'), findsOneWidget);
+
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('undo-saved-holding')),
+      );
+      expect(find.byType(HoldingSavedSummaryScreen), findsNothing);
+      expect(container.assetRepository.deleted, 1);
+
+      // 2. Edit an existing asset -> shows Asset updated. + Undo update restores previousAsset, or Add another holding opens HoldingCreateScreen
+      container.assetRepository.existing = const AssetEntity(
+        id: 9,
+        portfolioId: 1,
+        type: AssetType.cash,
+        name: 'Vault cash',
+        currency: 'USD',
+        manualValue: 300,
+        createdAt: 0,
+        updatedAt: 0,
+      );
+      await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 9));
+      await tester.enterText(_textField('Value'), '750');
+      await _tap(tester, _saveButton);
+
+      expect(find.byType(HoldingSavedSummaryScreen), findsOneWidget);
+      expect(find.text('Asset updated.'), findsOneWidget);
+      expect(find.text('\$750'), findsOneWidget);
+      expect(find.text('Undo this update'), findsOneWidget);
+
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('add-another-holding')),
+      );
+      expect(find.text('What would you like to add?'), findsOneWidget);
+      await _tap(tester, find.text('A liability'));
+      expect(find.byType(HoldingCreateScreen), findsOneWidget);
+      expect(find.text('Add liability'), findsOneWidget);
     },
   );
 
@@ -1378,13 +2301,29 @@ void main() {
         );
         expect(find.text('Search Yahoo Finance'), findsNothing);
         expect(find.text('Uses fetched name if left blank'), findsNothing);
+        expect(_textField('Custom name (optional)'), findsNothing);
+        expect(
+          find.descendant(
+            of: _field('Custom name (optional)'),
+            matching: find.byIcon(Icons.edit_outlined),
+          ),
+          findsOneWidget,
+        );
+        await _tap(tester, _customNameToggle);
+        expect(
+          find.descendant(
+            of: _field('Custom name (optional)'),
+            matching: find.byIcon(Icons.remove),
+          ),
+          findsOneWidget,
+        );
         final TextField customNameField = tester.widget<TextField>(
           find.descendant(
             of: _field('Custom name (optional)'),
             matching: find.byType(TextField),
           ),
         );
-        expect(customNameField.decoration?.hintText, isNull);
+        expect(customNameField.decoration?.hintText, type.nameExample);
         expect(customNameField.decoration?.helperText, isNull);
         expect(customNameField.style?.fontSize, 16);
       },
@@ -1395,18 +2334,31 @@ void main() {
     WidgetTester tester,
   ) async {
     await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
-    final TextField tickerInput = tester.widget<TextField>(
-      find.descendant(
-        of: _field('Company or Ticker'),
-        matching: find.byType(TextField),
-      ),
+    final ColorScheme assetColors = Theme.of(
+      tester.element(find.byType(AssetEditScreen)),
+    ).colorScheme;
+    final Material triggerBox = tester.widget<Material>(
+      find.byKey(const ValueKey<String>('market-search-trigger')),
+    );
+    expect(
+      (triggerBox.shape! as RoundedRectangleBorder).side.color,
+      canvasBoxBorderColor(assetColors),
     );
     final TextField quantityInput = tester.widget<TextField>(
       find.descendant(of: _field('Quantity'), matching: find.byType(TextField)),
     );
-    expect(tickerInput.decoration?.hintText, 'Search');
-    expect(tickerInput.style?.fontSize, 16);
+    expect(
+      (quantityInput.decoration?.enabledBorder as OutlineInputBorder?)
+          ?.borderSide
+          .color,
+      canvasBoxBorderColor(assetColors),
+    );
     expect(quantityInput.style?.fontSize, 16);
+    await _openMarketSearch(tester);
+    final TextField dialogInput = tester.widget<TextField>(_dialogSearchInput);
+    expect(dialogInput.decoration?.hintText, 'e.g. Apple or AAPL');
+    expect(dialogInput.style?.fontSize, 16);
+    await _tap(tester, find.widgetWithText(TextButton, 'Close'));
     final ThemeData assetTheme = Theme.of(
       tester.element(find.byType(AssetEditScreen)),
     );
@@ -1481,13 +2433,20 @@ void main() {
           ),
         ];
         await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
-        await tester.enterText(_textField('Company or Ticker'), 'AAPL');
+        await _openMarketSearch(tester);
+        await tester.enterText(_dialogSearchInput, 'AAPL');
         if (selectListing) {
           await tester.pump(const Duration(milliseconds: 350));
           await tester.pumpAndSettle();
-          await _tap(tester, find.text('Apple Inc.'));
+          await _tap(
+            tester,
+            find.descendant(
+              of: find.byType(AlertDialog),
+              matching: find.text('Apple Inc.'),
+            ),
+          );
         } else {
-          await tester.testTextInput.receiveAction(TextInputAction.next);
+          await tester.testTextInput.receiveAction(TextInputAction.search);
           await tester.pumpAndSettle();
         }
         expect(_editableField(tester, 'Quantity').focusNode.hasFocus, isTrue);
@@ -1497,9 +2456,17 @@ void main() {
           TextInputAction.done,
         );
         await tester.testTextInput.receiveAction(TextInputAction.done);
+        FocusManager.instance.primaryFocus?.unfocus();
         await tester.pumpAndSettle();
         expect(tester.testTextInput.isVisible, isFalse);
         expect(container.assetRepository.saved, isNull);
+        await tester.scrollUntilVisible(
+          _field('Custom name (optional)'),
+          100,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(_textField('Custom name (optional)'), findsNothing);
+        await _tap(tester, _customNameToggle);
         expect(
           _editableField(tester, 'Custom name (optional)').controller.text,
           isEmpty,
@@ -1564,11 +2531,16 @@ void main() {
           scrollable: find.byType(Scrollable).first,
         );
         await tester.pumpAndSettle();
+        expect(_textField('Custom name (optional)'), findsNothing);
+        await _tap(tester, _customNameToggle);
 
         TextStyle renderedStyle(String text) => tester
             .widget<RichText>(
               find.descendant(
-                of: find.text(text),
+                of: find.descendant(
+                  of: _field('Custom name (optional)'),
+                  matching: find.text(text),
+                ),
                 matching: find.byType(RichText),
               ),
             )
@@ -1591,7 +2563,7 @@ void main() {
           matching: find.byType(TextField),
         );
         await _tap(tester, input);
-        expect(renderedStyle('Custom name (optional)').color, colors.primary);
+        expect(renderedStyle('Custom name (optional)').color, colors.onSurface);
         expect(renderedStyle('Example company').color, colors.onSurfaceVariant);
         await tester.enterText(input, 'My shares');
         await tester.pumpAndSettle();
@@ -1600,29 +2572,49 @@ void main() {
         );
         expect(entered.style.color, colors.onSurface);
         expect(entered.controller.text, 'My shares');
-        await _toggleNotes(tester);
-        final Text notesLabel = tester.widget<Text>(
-          find.descendant(
-            of: find.byType(ListTile),
-            matching: find.text('Notes (optional)'),
-          ),
-        );
-        expect(notesLabel.style?.color, colors.onSurface);
-        expect(notesLabel.style?.fontWeight, FontWeight.w500);
-        final RichText notesHint = tester.widget<RichText>(
-          find.descendant(
-            of: find.descendant(
-              of: _notesInput,
-              matching: find.text('Notes (optional)'),
-            ),
-            matching: find.byType(RichText),
-          ),
-        );
-        expect(notesHint.text.style?.color, colors.onSurfaceVariant);
+        expect(find.text('Notes (optional)'), findsNothing);
         expect(tester.takeException(), isNull);
       },
     );
   }
+
+  testWidgets(
+    'editing a market asset with customName opens Custom name automatically and omits footer portfolio summary',
+    (WidgetTester tester) async {
+      container.assetRepository.existing = const AssetEntity(
+        id: 7,
+        portfolioId: 1,
+        type: AssetType.stock,
+        name: 'Apple Inc.',
+        customName: 'Retirement shares',
+        currency: 'USD',
+        quantity: 4,
+        symbol: 'AAPL',
+        lastPrice: 200,
+        createdAt: 0,
+        updatedAt: 0,
+      );
+      await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 7));
+      expect(
+        find.descendant(
+          of: find.byType(HoldingEditorFooter),
+          matching: find.byType(HoldingPortfolioLabel),
+        ),
+        findsNothing,
+      );
+      await tester.scrollUntilVisible(
+        _field('Custom name (optional)'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(_textField('Custom name (optional)'), findsOneWidget);
+      expect(
+        _editableField(tester, 'Custom name (optional)').controller.text,
+        'Retirement shares',
+      );
+    },
+  );
 
   for (final (bool prominent, double textScale) layout in <(bool, double)>[
     (false, 1),
@@ -1752,7 +2744,7 @@ void main() {
 
   for (final bool liability in <bool>[false, true]) {
     testWidgets(
-      '${liability ? 'liability' : 'asset'} editor text stays close to the underline',
+      '${liability ? 'liability' : 'asset'} Canvas fields keep labels above outlined inputs',
       (WidgetTester tester) async {
         final Locale locale = Locale(liability ? 'ar' : 'en');
         final AppLocalizations strings = AppLocalizations(locale);
@@ -1771,28 +2763,52 @@ void main() {
         await tester.tap(find.text('Open'));
         await tester.pumpAndSettle();
 
-        void expectTextNearUnderline(Finder field) {
+        void expectFieldLayout(Finder field) {
           final Rect input = tester.getRect(
             find.descendant(of: field, matching: find.byType(EditableText)),
           );
           final Rect decoration = tester.getRect(
             find.descendant(of: field, matching: find.byType(InputDecorator)),
           );
-          expect(decoration.bottom - input.bottom, inInclusiveRange(4, 8));
+          final LabeledTextField? labeled =
+              tester.widget(field) is LabeledTextField
+              ? tester.widget<LabeledTextField>(field)
+              : null;
+          if (labeled?.canvas ?? false) {
+            final TextField textField = tester.widget<TextField>(
+              find.descendant(of: field, matching: find.byType(TextField)),
+            );
+            expect(
+              textField.decoration?.enabledBorder,
+              isA<OutlineInputBorder>(),
+            );
+            expect(decoration.bottom, greaterThan(input.bottom));
+            expect(
+              tester.getRect(find.text(labeled!.label)).bottom,
+              lessThan(input.top),
+            );
+          } else if (labeled?.maxLength == null) {
+            expect(decoration.bottom - input.bottom, inInclusiveRange(4, 8));
+          } else {
+            expect(decoration.bottom, greaterThan(input.bottom));
+            expect(
+              find.text('${labeled!.controller.text.characters.length}/60'),
+              findsOneWidget,
+            );
+          }
           expect(decoration.height, greaterThanOrEqualTo(48));
         }
 
-        final String label = strings.text(
-          liability ? 'Name' : 'Company or Ticker',
-        );
+        final String label = strings.text(liability ? 'Name' : 'Quantity');
         final Finder field = _field(label);
-        expectTextNearUnderline(field);
+        await _tap(tester, _textField(label));
+        expectFieldLayout(field);
         await tester.enterText(
           find.descendant(of: field, matching: find.byType(TextField)),
-          liability ? 'Home loan' : 'AAPL',
+          liability ? 'Home loan' : '12',
         );
         await tester.pumpAndSettle();
-        expectTextNearUnderline(field);
+        expectFieldLayout(field);
         final Rect floatingLabel = tester.getRect(find.text(label));
         final Rect input = tester.getRect(
           find.descendant(of: field, matching: find.byType(EditableText)),
@@ -1800,12 +2816,9 @@ void main() {
         expect(floatingLabel.bottom, lessThanOrEqualTo(input.top));
         FocusManager.instance.primaryFocus?.unfocus();
         await tester.pumpAndSettle();
-        expectTextNearUnderline(field);
+        expectFieldLayout(field);
 
-        await _toggleNotes(tester);
-        await tester.enterText(_notesInput, 'First line\nSecond line');
-        await tester.pumpAndSettle();
-        expectTextNearUnderline(find.byType(OptionalNotesField));
+        expect(find.text('Notes (optional)'), findsNothing);
         expect(tester.takeException(), isNull);
       },
     );
@@ -1835,7 +2848,7 @@ void main() {
         tester.widget<CurrencySelector>(find.byType(CurrencySelector)).currency,
         'USD',
       );
-      expect(_notesInput, findsNothing);
+      expect(find.text('Notes (optional)'), findsNothing);
       switch (type.valuationMode) {
         case ValuationMode.market:
           expect(_field('Name'), findsNothing);
@@ -1843,12 +2856,20 @@ void main() {
           final String tickerLabel = type == AssetType.crypto
               ? 'Coin or ticker'
               : 'Company or Ticker';
+          final Finder marketField = find.byType(StockSearchField);
+          expect(
+            find.descendant(of: marketField, matching: find.text(tickerLabel)),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const ValueKey<String>('selected-market-holding')),
+            findsOneWidget,
+          );
           await tester.scrollUntilVisible(
             _field('Quantity'),
             100,
             scrollable: find.byType(Scrollable).first,
           );
-          expect(_field(tickerLabel), findsOneWidget);
           expect(_field('Quantity'), findsOneWidget);
           await tester.scrollUntilVisible(
             _field('Custom name (optional)'),
@@ -1859,7 +2880,15 @@ void main() {
           expect(_field('Custom name (optional)'), findsOneWidget);
           expect(
             tester.getRect(_field('Custom name (optional)')).top,
-            greaterThan(tester.getRect(_field(tickerLabel)).bottom),
+            greaterThan(
+              tester
+                  .getRect(
+                    find.byKey(
+                      const ValueKey<String>('selected-market-holding'),
+                    ),
+                  )
+                  .bottom,
+            ),
           );
           expect(
             tester.getRect(_field('Custom name (optional)')).top,
@@ -1868,6 +2897,11 @@ void main() {
         case ValuationMode.quantity:
           expect(_field('Name'), findsOneWidget);
           expect(_field('Custom name (optional)'), findsNothing);
+          await tester.scrollUntilVisible(
+            _field('Quantity'),
+            100,
+            scrollable: find.byType(Scrollable).first,
+          );
           expect(_field('Quantity'), findsOneWidget);
           expect(_field('Price per g'), findsOneWidget);
           expect(find.text('Estimated value'), findsOneWidget);
@@ -1875,7 +2909,20 @@ void main() {
           expect(_field('Name'), findsOneWidget);
           expect(_field('Custom name (optional)'), findsNothing);
           expect(_field('Value'), findsOneWidget);
-          expect(find.text('Estimated value'), findsNothing);
+          expect(
+            find.descendant(
+              of: find.byType(ListView),
+              matching: find.text('Estimated value'),
+            ),
+            findsNothing,
+          );
+          expect(
+            find.descendant(
+              of: find.byType(HoldingEditorFooter),
+              matching: find.text('Estimated value'),
+            ),
+            findsOneWidget,
+          );
           expect(_field('Quantity'), findsNothing);
           expect(
             tester
@@ -1890,7 +2937,7 @@ void main() {
             isFalse,
           );
       }
-      await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+      await _tap(tester, _saveButton);
       expect(container.assetRepository.saved?.type, type);
       expect(container.assetRepository.saved?.currency, 'USD');
       expect(find.byType(AssetEditScreen), findsNothing);
@@ -1905,6 +2952,14 @@ void main() {
       (AssetType type) => type.valuationMode == ValuationMode.flat,
     )) {
       await _tap(tester, find.byType(DropdownSelector<AssetType>));
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(TextField),
+        ),
+        type.displayName,
+      );
+      await tester.pumpAndSettle();
       await _tap(tester, find.text(type.displayName).last);
       final EditableTextState value = tester.state<EditableTextState>(
         find.descendant(
@@ -1980,24 +3035,25 @@ void main() {
     );
   });
 
-  testWidgets('asset notes and inputs survive collapsing and type changes', (
+  testWidgets('asset type and currency changes preserve hidden stored notes', (
     WidgetTester tester,
   ) async {
-    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
-    await _toggleNotes(tester);
-    await tester.enterText(_notesInput, 'Keep this note');
-    await _toggleNotes(tester);
-    await tester.scrollUntilVisible(
-      find.byType(DropdownSelector<AssetType>),
-      -180,
-      scrollable: find.byType(Scrollable).first,
+    container.assetRepository.existing = const AssetEntity(
+      id: 1,
+      portfolioId: 1,
+      type: AssetType.gold,
+      name: 'Gold',
+      currency: 'USD',
+      quantity: 2,
+      pricePerUnit: 10,
+      notes: 'Keep this note',
+      createdAt: 0,
+      updatedAt: 0,
     );
-    tester
-        .widget<DropdownSelector<AssetType>>(
-          find.byType(DropdownSelector<AssetType>),
-        )
-        .onSelected(AssetType.cash);
-    await tester.pumpAndSettle();
+    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 1));
+    expect(find.text('Notes (optional)'), findsNothing);
+    await _tap(tester, find.byType(DropdownSelector<AssetType>));
+    await _tap(tester, find.text('Cash').last);
     await tester.enterText(
       find.descendant(of: _field('Name'), matching: find.byType(TextField)),
       'Savings',
@@ -2006,62 +3062,58 @@ void main() {
       find.descendant(of: _field('Value'), matching: find.byType(TextField)),
       '123',
     );
-    await _toggleNotes(tester);
-    expect(
-      tester.widget<TextField>(_notesInput).controller?.text,
-      'Keep this note',
-    );
-    await _toggleNotes(tester);
     await _tap(tester, find.byType(CurrencySelector));
     await tester.tap(find.text('EUR — Euro'));
     await tester.pumpAndSettle();
-    await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+    await _tap(tester, _saveButton);
     expect(container.assetRepository.saved?.name, 'Savings');
     expect(container.assetRepository.saved?.manualValue, 123);
     expect(container.assetRepository.saved?.notes, 'Keep this note');
     expect(container.assetRepository.saved?.currency, 'EUR');
   });
 
-  testWidgets(
-    'existing asset notes open automatically and estimates stay live',
-    (WidgetTester tester) async {
-      container.assetRepository.existing = const AssetEntity(
-        id: 1,
-        portfolioId: 1,
-        type: AssetType.gold,
-        name: 'Gold',
-        currency: 'USD',
-        quantity: 2,
-        pricePerUnit: 10,
-        notes: 'Existing asset note',
-        createdAt: 0,
-        updatedAt: 0,
-      );
-      await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 1));
-      expect(_notesInput, findsOneWidget);
-      expect(find.text('\$20'), findsOneWidget);
-      await tester.enterText(
-        find.descendant(
-          of: _field('Price per g'),
-          matching: find.byType(TextField),
-        ),
-        '12',
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('\$24'), findsOneWidget);
-      expect(
-        tester.widget<TextField>(_notesInput).controller?.text,
-        'Existing asset note',
-      );
-      await tester.tap(find.byTooltip('Delete'));
-      await tester.pumpAndSettle();
-      expect(container.assetRepository.deleted, 1);
-      expect(find.byType(AssetEditScreen), findsNothing);
-    },
-  );
+  testWidgets('existing asset notes stay hidden and estimates stay live', (
+    WidgetTester tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    container.assetRepository.existing = const AssetEntity(
+      id: 1,
+      portfolioId: 1,
+      type: AssetType.gold,
+      name: 'Gold',
+      currency: 'USD',
+      quantity: 2,
+      pricePerUnit: 10,
+      notes: 'Existing asset note',
+      createdAt: 0,
+      updatedAt: 0,
+    );
+    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 1));
+    expect(find.text('Notes (optional)'), findsNothing);
+    expect(find.text('\$20'), findsWidgets);
+    await _tap(tester, _textField('Price per g'));
+    await tester.enterText(
+      find.descendant(
+        of: _field('Price per g'),
+        matching: find.byType(TextField),
+      ),
+      '12',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('\$24'), findsWidgets);
+    await tester.tap(find.byTooltip('Delete'));
+    await tester.pumpAndSettle();
+    expect(container.assetRepository.deleted, isNull);
+    await _tap(tester, find.widgetWithText(OutlinedButton, 'Delete'));
+    expect(container.assetRepository.deleted, 1);
+    expect(find.byType(AssetEditScreen), findsNothing);
+  });
 
   for (final LiabilityType type in LiabilityType.values) {
-    testWidgets('${type.name} retains editable notes, amount and deletion', (
+    testWidgets('${type.name} preserves hidden notes, amount and deletion', (
       WidgetTester tester,
     ) async {
       container.liabilityRepository.existing = LiabilityEntity(
@@ -2092,36 +3144,39 @@ void main() {
             .hasFocus,
         isFalse,
       );
-      expect(_notesInput, findsOneWidget);
-      expect(
-        tester.widget<TextField>(_notesInput).controller?.text,
-        'Existing note',
-      );
-      await _toggleNotes(tester);
-      expect(find.text('Save liability'), findsNothing);
-      await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+      expect(find.text('Notes (optional)'), findsNothing);
+      expect(find.text('Save liability'), findsOneWidget);
+      await _tap(tester, _saveButton);
       expect(container.liabilityRepository.saved?.type, type);
       expect(container.liabilityRepository.saved?.amount, 500);
       expect(container.liabilityRepository.saved?.notes, 'Existing note');
+      expect(find.byType(HoldingSavedSummaryScreen), findsOneWidget);
+      expect(find.text('Liability updated.'), findsOneWidget);
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('back-to-portfolio')),
+      );
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Delete'));
       await tester.pumpAndSettle();
+      expect(container.liabilityRepository.deleted, isNull);
+      await _tap(tester, find.widgetWithText(OutlinedButton, 'Delete'));
       expect(container.liabilityRepository.deleted, 1);
       expect(find.byType(LiabilityEditScreen), findsNothing);
     });
   }
 
-  testWidgets('new liability notes are optional and currency stays editable', (
+  testWidgets('new liability omits Notes and currency stays editable', (
     WidgetTester tester,
   ) async {
     await open(
       tester,
       const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
     );
-    expect(_notesInput, findsNothing);
-    expect(find.widgetWithText(OutlinedButton, 'Cancel'), findsOneWidget);
-    await _tap(tester, find.widgetWithText(OutlinedButton, 'Cancel'));
+    expect(find.text('Notes (optional)'), findsNothing);
+    expect(find.widgetWithText(OutlinedButton, 'Cancel'), findsNothing);
+    await _tap(tester, find.byTooltip('Back'));
     expect(find.byType(LiabilityEditScreen), findsNothing);
     expect(container.liabilityRepository.saved, isNull);
 
@@ -2129,9 +3184,7 @@ void main() {
       tester,
       const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
     );
-    await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
-    await tester.pumpAndSettle();
-    expect(find.text('Give this liability a name'), findsOneWidget);
+    expect(tester.widget<FilledButton>(_saveButton).onPressed, isNull);
     expect(container.liabilityRepository.saved, isNull);
     await tester.enterText(
       find.descendant(of: _field('Name'), matching: find.byType(TextField)),
@@ -2147,7 +3200,7 @@ void main() {
     await _tap(tester, find.byType(CurrencySelector));
     await tester.tap(find.text('EUR — Euro'));
     await tester.pumpAndSettle();
-    await _tap(tester, find.widgetWithText(FilledButton, 'Save'));
+    await _tap(tester, _saveButton);
     expect(container.liabilityRepository.saved?.amount, 42);
     expect(container.liabilityRepository.saved?.currency, 'EUR');
     expect(container.liabilityRepository.saved?.notes, isNull);
@@ -2184,8 +3237,7 @@ void main() {
           await _tap(tester, find.byTooltip(strings.text('Back')));
         }
       } else {
-        await _toggleNotes(tester);
-        expect(_notesInput, findsOneWidget);
+        expect(find.text('Notes (optional)'), findsNothing);
       }
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
@@ -2634,21 +3686,41 @@ void main() {
         stockExchangeIcon(StockExchange.us),
       ]);
 
-      final Finder assetTypeMenuFinder = find.byType(
-        PopupMenuButton<AssetType>,
+      Future<void> expectTypeIcons<T>(
+        List<T> options,
+        String Function(T) label,
+        IconData Function(T) icon,
+      ) async {
+        await _tap(tester, find.byType(DropdownSelector<T>));
+        for (final T option in options) {
+          final Finder tile = find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.widgetWithText(ListTile, label(option)),
+          );
+          await tester.scrollUntilVisible(
+            tile,
+            100,
+            scrollable: find.descendant(
+              of: find.descendant(
+                of: find.byType(AlertDialog),
+                matching: find.byType(ListView),
+              ),
+              matching: find.byType(Scrollable),
+            ),
+          );
+          expect(
+            (tester.widget<ListTile>(tile).leading! as Icon).icon,
+            icon(option),
+          );
+        }
+        await _tap(tester, find.widgetWithText(TextButton, 'Close'));
+      }
+
+      await expectTypeIcons<AssetType>(
+        AssetType.values,
+        (AssetType type) => type.displayName,
+        assetTypeIcon,
       );
-      final PopupMenuButton<AssetType> assetTypeMenu = tester.widget(
-        assetTypeMenuFinder,
-      );
-      final List<IconData> assetMenuIcons = assetTypeMenu
-          .itemBuilder(tester.element(assetTypeMenuFinder))
-          .whereType<PopupMenuItem<AssetType>>()
-          .map(
-            (PopupMenuItem<AssetType> item) =>
-                (item.child! as Row).children.whereType<Icon>().single.icon!,
-          )
-          .toList();
-      expect(assetMenuIcons, AssetType.values.map(assetTypeIcon).toList());
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
 
@@ -2666,23 +3738,10 @@ void main() {
         currencyIcon('USD'),
       ]);
 
-      final Finder liabilityTypeMenuFinder = find.byType(
-        PopupMenuButton<LiabilityType>,
-      );
-      final PopupMenuButton<LiabilityType> liabilityTypeMenu = tester.widget(
-        liabilityTypeMenuFinder,
-      );
-      final List<IconData> liabilityMenuIcons = liabilityTypeMenu
-          .itemBuilder(tester.element(liabilityTypeMenuFinder))
-          .whereType<PopupMenuItem<LiabilityType>>()
-          .map(
-            (PopupMenuItem<LiabilityType> item) =>
-                (item.child! as Row).children.whereType<Icon>().single.icon!,
-          )
-          .toList();
-      expect(
-        liabilityMenuIcons,
-        LiabilityType.values.map(liabilityTypeIcon).toList(),
+      await expectTypeIcons<LiabilityType>(
+        LiabilityType.values,
+        (LiabilityType type) => type.displayName,
+        liabilityTypeIcon,
       );
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();

@@ -42,6 +42,34 @@ enum AssetType {
 
   bool get isMarketLinked => valuationMode == ValuationMode.market;
 
+  /// Short category hint shown beneath the label in selection pickers.
+  String get pickerHint => switch (this) {
+    AssetType.stock => 'Company shares',
+    AssetType.mutualFund => 'Funds and indexes',
+    AssetType.crypto => 'Coins and tokens',
+    AssetType.gold => 'Weight in grams',
+    AssetType.cash => 'Money on hand',
+    AssetType.bankDeposit => 'Savings and deposits',
+    AssetType.realEstate => 'Property value',
+    AssetType.vehicle => 'Current resale value',
+    AssetType.bond => 'Current holding value',
+    AssetType.other => 'Something else you own',
+  };
+
+  /// Contextual example name placeholder for this asset category.
+  String get nameExample => switch (this) {
+    AssetType.stock => 'e.g. Long-term shares',
+    AssetType.mutualFund => 'e.g. Retirement index fund',
+    AssetType.crypto => 'e.g. Cold wallet BTC',
+    AssetType.gold => 'e.g. Family gold',
+    AssetType.cash => 'e.g. Emergency fund',
+    AssetType.bankDeposit => 'e.g. High-yield savings',
+    AssetType.realEstate => 'e.g. Primary residence',
+    AssetType.vehicle => 'e.g. Family car',
+    AssetType.bond => 'e.g. Treasury bond',
+    AssetType.other => 'e.g. Watch collection',
+  };
+
   /// Unknown names fall back to [AssetType.other], as in the Android app.
   static AssetType fromName(String? name) {
     for (final type in values) {

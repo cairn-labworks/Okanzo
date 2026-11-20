@@ -14,7 +14,9 @@ class StockExchangeField extends StatefulWidget {
     required this.preferredExchanges,
     required this.onSelected,
     required this.onSavePreferences,
+    this.isMutualFund = false,
     this.compact = false,
+    this.canvas = false,
     super.key,
   });
 
@@ -22,7 +24,9 @@ class StockExchangeField extends StatefulWidget {
   final List<StockExchange> preferredExchanges;
   final ValueChanged<StockExchange> onSelected;
   final Future<void> Function(List<StockExchange>) onSavePreferences;
+  final bool isMutualFund;
   final bool compact;
+  final bool canvas;
 
   static const String manageLabel = 'Select preferred exchanges...';
 
@@ -56,41 +60,51 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
     final IconData selectedIcon = widget.selected == null
         ? Icons.candlestick_chart
         : stockExchangeIcon(widget.selected!);
-    if (widget.compact) {
-      final String label = widget.selected == StockExchange.us
+    if (widget.compact || widget.canvas) {
+      final StockExchange? selectedExchange = widget.selected;
+      final String label = selectedExchange == StockExchange.us
           ? 'US exchange'.tr(context)
-          : widget.selected?.displayName.tr(context) ?? 'Exchange'.tr(context);
-      final String? suffix = widget.selected?.suffix;
+          : selectedExchange?.displayName.tr(context) ?? 'Exchange'.tr(context);
+      final String? suffix = selectedExchange?.suffix;
       final String help = suffix == null || suffix.isEmpty
           ? 'Enter a Yahoo Finance ticker with or without an exchange suffix.'
                 .tr(context)
           : 'Okanzo adds {suffix} automatically. You can also enter a full Yahoo Finance ticker.'
                 .tr(context)
                 .replaceAll('{suffix}', suffix);
-      return PopupMenuButton<Object>(
-        tooltip: '${'Exchange'.tr(context)}\n$help',
-        onSelected: _select,
-        itemBuilder: (BuildContext itemContext) => <PopupMenuEntry<Object>>[
-          for (final StockExchange exchange in widget.preferredExchanges)
-            PopupMenuItem<Object>(
-              value: exchange,
-              child: buildPopupMenuOption(
-                itemContext,
-                label: exchange.displayName.tr(itemContext),
-                icon: stockExchangeIcon(exchange),
-                selected: exchange == widget.selected,
-              ),
-            ),
-          PopupMenuItem<Object>(
-            value: _ExchangeAction.preferences,
-            child: buildPopupMenuOption(
-              itemContext,
-              label: StockExchangeField.manageLabel.tr(itemContext),
-              icon: Icons.tune,
-            ),
-          ),
-        ],
-        child: PickerChip(label: label, icon: selectedIcon),
+      final String exampleHint;
+      if (selectedExchange == null) {
+        exampleHint = 'e.g. US (NYSE / Nasdaq), BSE (India), Euronext'.tr(
+          context,
+        );
+      } else {
+        final (String exName, String exTicker) = selectedExchange
+            .exampleHolding(fund: widget.isMutualFund);
+        if (selectedExchange.suffix.isNotEmpty) {
+          exampleHint = 'Adds {suffix} automatically (e.g. {example})'
+              .tr(context)
+              .replaceAll('{suffix}', selectedExchange.suffix)
+              .replaceAll('{example}', selectedExchange.qualify(exTicker));
+        } else if (selectedExchange == StockExchange.other) {
+          exampleHint = 'Full Yahoo ticker with suffix (e.g. {example})'
+              .tr(context)
+              .replaceAll('{example}', exTicker);
+        } else {
+          exampleHint = 'e.g. {name} ({ticker}) · NYSE / Nasdaq'
+              .tr(context)
+              .replaceAll('{name}', exName)
+              .replaceAll('{ticker}', exTicker);
+        }
+      }
+      return Tooltip(
+        message: '${'Exchange'.tr(context)}: $label\n$help',
+        child: PickerChip(
+          label: label,
+          icon: selectedIcon,
+          fieldLabel: widget.canvas ? 'Exchange'.tr(context) : null,
+          supportingText: widget.canvas ? exampleHint : null,
+          onPressed: _openPicker,
+        ),
       );
     }
     return DropdownMenu<Object>(
@@ -117,6 +131,32 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
       ],
       onSelected: _select,
     );
+  }
+
+  Future<void> _openPicker() async {
+    final Object? picked = await showSelectionPickerDialog<Object>(
+      context,
+      eyebrow: 'Market listing'.tr(context),
+      title: 'Exchange'.tr(context),
+      searchPlaceholder: 'e.g. US, BSE, Euronext, Tokyo'.tr(context),
+      selected: widget.selected,
+      options: <Object>[
+        ...widget.preferredExchanges,
+        _ExchangeAction.preferences,
+      ],
+      optionLabel: (Object option) => option is StockExchange
+          ? option.displayName.tr(context)
+          : StockExchangeField.manageLabel.tr(context),
+      optionSubtitle: (Object option) =>
+          option is StockExchange && option.suffix.isNotEmpty
+          ? 'Adds {suffix} automatically'
+                .tr(context)
+                .replaceAll('{suffix}', option.suffix)
+          : null,
+      optionIcon: (Object option) =>
+          option is StockExchange ? stockExchangeIcon(option) : Icons.tune,
+    );
+    if (mounted) await _select(picked);
   }
 
   Future<void> _select(Object? value) async {
@@ -194,38 +234,48 @@ class _PreferredExchangesDialogState extends State<_PreferredExchangesDialog> {
             Flexible(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 420),
-                child: ListView(
-                  shrinkWrap: true,
-                  children: <Widget>[
-                    for (final StockExchange exchange in StockExchange.values)
-                      CheckboxListTile(
-                        key: ValueKey<StockExchange>(exchange),
-                        contentPadding: EdgeInsets.zero,
-                        minLeadingWidth: 20,
-                        horizontalTitleGap: 10,
-                        secondary: Icon(
-                          stockExchangeIcon(exchange),
-                          size: 20,
-                          color: _selected.contains(exchange)
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        title: Text(
-                          exchange.displayName.tr(context),
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        value: _selected.contains(exchange),
-                        onChanged: _saving
-                            ? null
-                            : (bool? checked) => setState(() {
-                                if (checked == true) {
-                                  _selected.add(exchange);
-                                } else {
-                                  _selected.remove(exchange);
-                                }
-                              }),
-                      ),
-                  ],
+                child: ClipRect(
+                  child: Material(
+                    type: MaterialType.transparency,
+                    clipBehavior: Clip.hardEdge,
+                    child: ListView(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      children: <Widget>[
+                        for (final StockExchange exchange
+                            in StockExchange.values)
+                          CheckboxListTile(
+                            key: ValueKey<StockExchange>(exchange),
+                            contentPadding: EdgeInsets.zero,
+                            minLeadingWidth: 20,
+                            horizontalTitleGap: 10,
+                            secondary: Icon(
+                              stockExchangeIcon(exchange),
+                              size: 20,
+                              color: _selected.contains(exchange)
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                            ),
+                            title: Text(
+                              exchange.displayName.tr(context),
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            value: _selected.contains(exchange),
+                            onChanged: _saving
+                                ? null
+                                : (bool? checked) => setState(() {
+                                    if (checked == true) {
+                                      _selected.add(exchange);
+                                    } else {
+                                      _selected.remove(exchange);
+                                    }
+                                  }),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

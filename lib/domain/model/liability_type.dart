@@ -12,6 +12,26 @@ enum LiabilityType {
   final String storageName;
   final String displayName;
 
+  /// Short category hint shown beneath the label in selection pickers.
+  String get pickerHint => switch (this) {
+    LiabilityType.loan => 'Personal or other borrowing',
+    LiabilityType.mortgage => 'Property borrowing',
+    LiabilityType.creditCard => 'Outstanding card balance',
+    LiabilityType.pendingPayment => 'A payment still owed',
+    LiabilityType.tax => 'Outstanding taxes',
+    LiabilityType.other => 'Another financial obligation',
+  };
+
+  /// Contextual example name placeholder for this liability category.
+  String get nameExample => switch (this) {
+    LiabilityType.loan => 'e.g. Personal loan',
+    LiabilityType.mortgage => 'e.g. Home loan',
+    LiabilityType.creditCard => 'e.g. Travel card',
+    LiabilityType.pendingPayment => 'e.g. Contractor invoice',
+    LiabilityType.tax => 'e.g. Income tax',
+    LiabilityType.other => 'e.g. Family borrowing',
+  };
+
   static LiabilityType fromName(String? name) {
     for (final type in values) {
       if (type.storageName == name) return type;

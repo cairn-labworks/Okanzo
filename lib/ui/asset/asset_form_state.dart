@@ -7,6 +7,7 @@ import '../../domain/model/stock_exchange.dart';
 class AssetFormState {
   const AssetFormState({
     this.id = 0,
+    this.position = 0,
     this.portfolioId = 0,
     this.type = AssetType.stock,
     this.name = '',
@@ -26,6 +27,7 @@ class AssetFormState {
   });
 
   final int id;
+  final int position;
   final int portfolioId;
   final AssetType type;
   final String name;
@@ -111,20 +113,27 @@ class AssetFormState {
     switch (type.valuationMode) {
       case ValuationMode.market:
         if (quoteSymbol.isEmpty) return 'Enter a ticker symbol';
-        if ((double.tryParse(quantity) ?? 0.0) <= 0.0) {
+        if (!isValidTickerSymbol(
+          quoteSymbol,
+          isCrypto: type == AssetType.crypto,
+        )) {
+          return 'Enter a valid ticker symbol';
+        }
+        if (!_isPositiveNumber(quantity)) {
           return 'Enter a quantity';
         }
         return null;
       case ValuationMode.quantity:
-        if ((double.tryParse(quantity) ?? 0.0) <= 0.0) {
+        if (!_isPositiveNumber(quantity)) {
           return 'Enter a quantity';
         }
-        if ((double.tryParse(pricePerUnit) ?? 0.0) <= 0.0) {
+        if (!_isPositiveNumber(pricePerUnit)) {
           return 'Enter a price per unit';
         }
         return null;
       case ValuationMode.flat:
-        return double.tryParse(manualValue) == null ? 'Enter a value' : null;
+        final double? parsed = double.tryParse(manualValue);
+        return parsed == null || !parsed.isFinite ? 'Enter a value' : null;
     }
   }
 
@@ -140,6 +149,7 @@ class AssetFormState {
         : trimmedName;
     return AssetEntity(
       id: id,
+      position: position,
       portfolioId: portfolioId,
       type: type,
       name: persistedName,
@@ -161,6 +171,7 @@ class AssetFormState {
 
   static AssetFormState fromEntity(AssetEntity asset) => AssetFormState(
     id: asset.id,
+    position: asset.position,
     portfolioId: asset.portfolioId,
     type: asset.type,
     name: asset.name,
@@ -203,6 +214,7 @@ class AssetFormState {
   }) {
     return AssetFormState(
       id: id ?? this.id,
+      position: position,
       portfolioId: portfolioId ?? this.portfolioId,
       type: type ?? this.type,
       name: name ?? this.name,
@@ -244,3 +256,33 @@ String filterDecimal(String input) {
 /// Renders a stored double back into the text field, dropping a trailing `.0`.
 String formatInput(double value) =>
     value % 1.0 == 0.0 ? value.truncate().toString() : value.toString();
+
+bool _isPositiveNumber(String raw) {
+  final double? parsed = double.tryParse(raw.trim());
+  return parsed != null && parsed.isFinite && parsed > 0.0;
+}
+
+final RegExp _disallowedMarketQueryChars = RegExp(
+  r'[^\p{L}\p{N}\s.&/\-]',
+  unicode: true,
+);
+final RegExp _stockTickerPattern = RegExp(
+  r'^[A-Z0-9]{1,12}([.-][A-Z0-9]{1,6}){0,2}$',
+);
+final RegExp _cryptoTickerPattern = RegExp(
+  r'^[A-Z0-9]{1,12}(-[A-Z0-9]{2,6})?$',
+);
+
+/// Strips non-company/non-ticker punctuation from market search queries while
+/// keeping letters, digits, spaces, and standard listing separators (`. - & /`).
+String sanitizeMarketQuery(String input) =>
+    input.replaceAll(_disallowedMarketQueryChars, '');
+
+/// Checks whether [value] is a syntactically valid Yahoo Finance ticker symbol.
+bool isValidTickerSymbol(String value, {bool isCrypto = false}) {
+  final String cleaned = value.trim().toUpperCase();
+  if (cleaned.isEmpty || cleaned.length > 24) return false;
+  return isCrypto
+      ? _cryptoTickerPattern.hasMatch(cleaned)
+      : _stockTickerPattern.hasMatch(cleaned);
+}
