@@ -223,10 +223,14 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                         first: DropdownSelector<LiabilityType>(
                           canvas: true,
                           label: 'Type'.tr(context),
+                          dialogEyebrow: 'What you owe'.tr(context),
+                          dialogTitle: 'Choose a type'.tr(context),
                           selected: form.type,
                           options: LiabilityType.values,
                           optionLabel: (LiabilityType type) =>
                               type.displayName.tr(context),
+                          optionSubtitle: (LiabilityType type) =>
+                              type.pickerHint.tr(context),
                           optionIcon: liabilityTypeIcon,
                           onSelected: (LiabilityType type) {
                             viewModel.onTypeChange(type);

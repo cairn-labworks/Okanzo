@@ -12,6 +12,16 @@ enum LiabilityType {
   final String storageName;
   final String displayName;
 
+  /// Short category hint shown beneath the label in selection pickers.
+  String get pickerHint => switch (this) {
+    LiabilityType.loan => 'Personal or other borrowing',
+    LiabilityType.mortgage => 'Property borrowing',
+    LiabilityType.creditCard => 'Outstanding card balance',
+    LiabilityType.pendingPayment => 'A payment still owed',
+    LiabilityType.tax => 'Outstanding taxes',
+    LiabilityType.other => 'Another financial obligation',
+  };
+
   static LiabilityType fromName(String? name) {
     for (final type in values) {
       if (type.storageName == name) return type;

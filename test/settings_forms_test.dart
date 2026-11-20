@@ -799,22 +799,61 @@ void main() {
             : find.byType(DropdownSelector<AssetType>);
         final String initial = liability ? 'Loan' : 'Stock';
         final String choice = liability ? 'Mortgage' : 'Cash';
+        final String subtitleQuery = liability
+            ? 'property borrowing'
+            : 'money on hand';
         await _tap(tester, selector);
         final Finder dialog = find.byType(AlertDialog);
+        final ColorScheme colors = Theme.of(tester.element(dialog)).colorScheme;
+        expect(
+          tester.widget<AlertDialog>(dialog).backgroundColor,
+          colors.surface,
+        );
+        expect(
+          find.descendant(
+            of: dialog,
+            matching: find.text(liability ? 'WHAT YOU OWE' : 'WHAT YOU OWN'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: dialog, matching: find.text('Choose a type')),
+          findsOneWidget,
+        );
         final Finder search = find.descendant(
           of: dialog,
           matching: find.byType(TextField),
         );
         expect(
-          tester
-              .widget<ListTile>(
-                find.descendant(
-                  of: dialog,
-                  matching: find.widgetWithText(ListTile, initial),
-                ),
-              )
-              .trailing,
-          isNotNull,
+          tester.widget<TextField>(search).decoration?.border,
+          isA<OutlineInputBorder>(),
+        );
+        final ListTile selectedTile = tester.widget<ListTile>(
+          find.descendant(
+            of: dialog,
+            matching: find.widgetWithText(ListTile, initial),
+          ),
+        );
+        expect(selectedTile.selected, isTrue);
+        expect(selectedTile.selectedTileColor, colors.primaryContainer);
+        expect(selectedTile.trailing, isNotNull);
+        await tester.enterText(search, 'zzz-no-match');
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: dialog,
+            matching: find.text('No matching options.'),
+          ),
+          findsOneWidget,
+        );
+        await tester.enterText(search, subtitleQuery);
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: dialog,
+            matching: find.widgetWithText(ListTile, choice),
+          ),
+          findsOneWidget,
         );
         await tester.enterText(search, ' ${choice.toUpperCase()} ');
         await tester.pumpAndSettle();
@@ -858,6 +897,22 @@ void main() {
                     .displayName,
           choice,
         );
+        await _tap(tester, find.byType(CurrencySelector));
+        expect(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.text('HOLDING CURRENCY'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.text('Choose currency'),
+          ),
+          findsOneWidget,
+        );
+        await _tap(tester, find.widgetWithText(TextButton, 'Close'));
       },
     );
   }

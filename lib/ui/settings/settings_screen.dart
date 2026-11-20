@@ -470,6 +470,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final String? code = await showCurrencyPickerDialog(
       context,
       selected: selected,
+      eyebrow: 'Base currency'.tr(context),
     );
     if (code != null) _viewModel?.setBaseCurrency(code);
   }

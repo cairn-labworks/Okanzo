@@ -42,6 +42,20 @@ enum AssetType {
 
   bool get isMarketLinked => valuationMode == ValuationMode.market;
 
+  /// Short category hint shown beneath the label in selection pickers.
+  String get pickerHint => switch (this) {
+    AssetType.stock => 'Company shares',
+    AssetType.mutualFund => 'Funds and indexes',
+    AssetType.crypto => 'Coins and tokens',
+    AssetType.gold => 'Weight in grams',
+    AssetType.cash => 'Money on hand',
+    AssetType.bankDeposit => 'Savings and deposits',
+    AssetType.realEstate => 'Property value',
+    AssetType.vehicle => 'Current resale value',
+    AssetType.bond => 'Current holding value',
+    AssetType.other => 'Something else you own',
+  };
+
   /// Unknown names fall back to [AssetType.other], as in the Android app.
   static AssetType fromName(String? name) {
     for (final type in values) {

@@ -287,10 +287,14 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                         first: DropdownSelector<AssetType>(
                           canvas: true,
                           label: 'Type'.tr(context),
+                          dialogEyebrow: 'What you own'.tr(context),
+                          dialogTitle: 'Choose a type'.tr(context),
                           selected: form.type,
                           options: AssetType.values,
                           optionLabel: (AssetType type) =>
                               type.displayName.tr(context),
+                          optionSubtitle: (AssetType type) =>
+                              type.pickerHint.tr(context),
                           optionIcon: assetTypeIcon,
                           onSelected: (AssetType type) {
                             viewModel.onTypeChange(type);

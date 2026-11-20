@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -245,6 +247,9 @@ class DropdownSelector<T> extends StatelessWidget {
     required this.options,
     required this.optionLabel,
     required this.onSelected,
+    this.dialogEyebrow,
+    this.dialogTitle,
+    this.optionSubtitle,
     this.optionIcon,
     this.compact = false,
     this.canvas = false,
@@ -252,9 +257,12 @@ class DropdownSelector<T> extends StatelessWidget {
   });
 
   final String label;
+  final String? dialogEyebrow;
+  final String? dialogTitle;
   final T selected;
   final List<T> options;
   final String Function(T) optionLabel;
+  final String? Function(T)? optionSubtitle;
   final IconData Function(T)? optionIcon;
   final ValueChanged<T> onSelected;
   final bool compact;
@@ -272,10 +280,12 @@ class DropdownSelector<T> extends StatelessWidget {
           onPressed: () async {
             final T? picked = await showSelectionPickerDialog<T>(
               context,
-              title: label,
+              eyebrow: dialogEyebrow,
+              title: dialogTitle ?? label,
               selected: selected,
               options: options,
               optionLabel: optionLabel,
+              optionSubtitle: optionSubtitle,
               optionIcon: optionIcon,
             );
             if (picked != null && context.mounted) onSelected(picked);
@@ -568,8 +578,10 @@ class CurrencySelector extends StatelessWidget {
 Future<String?> showCurrencyPickerDialog(
   BuildContext context, {
   required String selected,
+  String? eyebrow,
 }) => showSelectionPickerDialog<String>(
   context,
+  eyebrow: eyebrow ?? 'Holding currency'.tr(context),
   title: 'Choose currency'.tr(context),
   selected: selected,
   options: <String>[
@@ -588,16 +600,25 @@ Future<T?> showSelectionPickerDialog<T>(
   required T? selected,
   required List<T> options,
   required String Function(T) optionLabel,
+  String? eyebrow,
+  String? Function(T)? optionSubtitle,
   IconData Function(T)? optionIcon,
 }) {
+  final bool dark = Theme.of(context).brightness == Brightness.dark;
   return showDialog<T>(
     context: context,
-    builder: (BuildContext context) => _SelectionPickerDialog<T>(
-      title: title,
-      selected: selected,
-      options: options,
-      optionLabel: optionLabel,
-      optionIcon: optionIcon,
+    barrierColor: dark ? const Color(0xAA10231B) : const Color(0x7310231B),
+    builder: (BuildContext context) => BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+      child: _SelectionPickerDialog<T>(
+        eyebrow: eyebrow,
+        title: title,
+        selected: selected,
+        options: options,
+        optionLabel: optionLabel,
+        optionSubtitle: optionSubtitle,
+        optionIcon: optionIcon,
+      ),
     ),
   );
 }
@@ -608,13 +629,17 @@ class _SelectionPickerDialog<T> extends StatefulWidget {
     required this.selected,
     required this.options,
     required this.optionLabel,
+    this.eyebrow,
+    this.optionSubtitle,
     this.optionIcon,
   });
 
+  final String? eyebrow;
   final String title;
   final T? selected;
   final List<T> options;
   final String Function(T) optionLabel;
+  final String? Function(T)? optionSubtitle;
   final IconData Function(T)? optionIcon;
 
   @override
@@ -624,80 +649,248 @@ class _SelectionPickerDialog<T> extends StatefulWidget {
 
 class _SelectionPickerDialogState<T> extends State<_SelectionPickerDialog<T>> {
   final TextEditingController _query = TextEditingController();
+  final ScrollController _scroll = ScrollController();
 
   @override
   void dispose() {
     _query.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
   List<T> get _results {
     final String query = _query.text.trim().toUpperCase();
+    if (query.isEmpty) return widget.options;
     return widget.options
-        .where(
-          (T option) =>
-              widget.optionLabel(option).toUpperCase().contains(query),
-        )
+        .where((T option) {
+          if (widget.optionLabel(option).toUpperCase().contains(query)) {
+            return true;
+          }
+          final String? subtitle = widget.optionSubtitle?.call(option);
+          return subtitle != null && subtitle.toUpperCase().contains(query);
+        })
         .toList(growable: false);
   }
 
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
     final List<T> results = _results;
+    final String searchLabel = 'Search'.tr(context);
+    final OutlineInputBorder searchBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: colors.outlineVariant),
+    );
     return AlertDialog(
-      title: Text(widget.title),
+      backgroundColor: colors.surface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 6, 24, 12),
+      actionsAlignment: MainAxisAlignment.center,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (widget.eyebrow != null) ...<Widget>[
+            Text(
+              widget.eyebrow!.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.35,
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 5),
+          ],
+          Text(
+            widget.title,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontSize: 22,
+              fontWeight: FontWeight.w500,
+              letterSpacing: -0.6,
+              height: 1.25,
+              color: colors.onSurface,
+            ),
+          ),
+        ],
+      ),
       content: SizedBox(
-        width: 400,
+        width: 375,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+            Text(
+              searchLabel,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Semantics(
+              label: searchLabel,
               child: TextField(
                 controller: _query,
                 onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(labelText: 'Search'.tr(context)),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: colors.onSurface,
+                ),
+                decoration: InputDecoration(
+                  labelText: null,
+                  hintText: searchLabel,
+                  hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                  filled: true,
+                  fillColor: theme.brightness == Brightness.dark
+                      ? colors.surfaceContainerLow
+                      : colors.surfaceContainerLowest,
+                  border: searchBorder,
+                  enabledBorder: searchBorder,
+                  focusedBorder: searchBorder.copyWith(
+                    borderSide: BorderSide(color: colors.primary, width: 1.5),
+                  ),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 13,
+                  ),
+                ),
               ),
             ),
+            const SizedBox(height: 10),
             Flexible(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 400),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: results.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    final T option = results[index];
-                    final bool isSelected = option == widget.selected;
-                    final ColorScheme colors = Theme.of(context).colorScheme;
-                    return ListTile(
-                      minLeadingWidth: 20,
-                      horizontalTitleGap: 10,
-                      leading: widget.optionIcon == null
-                          ? null
-                          : Icon(
-                              widget.optionIcon!(option),
-                              size: 20,
-                              color: isSelected
-                                  ? colors.primary
-                                  : colors.onSurfaceVariant,
-                            ),
-                      title: Text(widget.optionLabel(option)),
-                      trailing: isSelected
-                          ? Text('✓', style: TextStyle(color: colors.primary))
-                          : null,
-                      onTap: () => Navigator.of(context).pop(option),
-                    );
-                  },
+                constraints: BoxConstraints(
+                  maxHeight: widget.optionSubtitle != null ? 318 : 342,
                 ),
+                child: results.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 16,
+                        ),
+                        child: Text(
+                          'No matching options.'.tr(context),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      )
+                    : Scrollbar(
+                        controller: _scroll,
+                        child: ListView.builder(
+                          controller: _scroll,
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: results.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final T option = results[index];
+                            final bool isSelected = option == widget.selected;
+                            final bool nextIsSelected =
+                                index + 1 < results.length &&
+                                results[index + 1] == widget.selected;
+                            final bool showDivider =
+                                !isSelected &&
+                                !nextIsSelected &&
+                                index < results.length - 1;
+                            final String? subtitle = widget.optionSubtitle
+                                ?.call(option);
+                            final bool hasSubtitle =
+                                subtitle != null && subtitle.isNotEmpty;
+                            final Widget tile = ListTile(
+                              minTileHeight: hasSubtitle ? 62 : 56,
+                              minLeadingWidth: 22,
+                              horizontalTitleGap: 12,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: hasSubtitle ? 3 : 0,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              selected: isSelected,
+                              selectedTileColor: colors.primaryContainer,
+                              leading: widget.optionIcon == null
+                                  ? null
+                                  : Icon(
+                                      widget.optionIcon!(option),
+                                      size: 20,
+                                      color: colors.primary,
+                                    ),
+                              title: Text(
+                                widget.optionLabel(option),
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                              subtitle: !hasSubtitle
+                                  ? null
+                                  : Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        subtitle,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: colors.onSurfaceVariant,
+                                            ),
+                                      ),
+                                    ),
+                              trailing: isSelected
+                                  ? Icon(
+                                      Icons.check_rounded,
+                                      size: 18,
+                                      color: colors.primary,
+                                    )
+                                  : null,
+                              onTap: () => Navigator.of(context).pop(option),
+                            );
+                            if (!showDivider) return tile;
+                            return DecoratedBox(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: colors.outlineVariant,
+                                  ),
+                                ),
+                              ),
+                              child: tile,
+                            );
+                          },
+                        ),
+                      ),
               ),
             ),
           ],
         ),
       ),
       actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('Close'.tr(context)),
+        SizedBox(
+          width: double.infinity,
+          child: TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              foregroundColor: colors.onSurfaceVariant,
+              minimumSize: const Size.fromHeight(48),
+              textStyle: theme.textTheme.bodyMedium?.copyWith(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            child: Text('Close'.tr(context)),
+          ),
         ),
       ],
     );

@@ -877,6 +877,17 @@ void main() {
     await tester.pumpAndSettle();
     final Finder dialog = find.byType(AlertDialog);
     expect(
+      find.descendant(of: dialog, matching: find.text('MARKET LISTING')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: dialog,
+        matching: find.text('Adds .BO automatically'),
+      ),
+      findsOneWidget,
+    );
+    expect(
       tester
           .widget<ListTile>(
             find.descendant(
@@ -889,6 +900,15 @@ void main() {
           )
           .trailing,
       isNotNull,
+    );
+    await tester.enterText(
+      find.descendant(of: dialog, matching: find.byType(TextField)),
+      ' .bo ',
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: dialog, matching: find.byType(ListTile)),
+      findsOneWidget,
     );
     await tester.enterText(
       find.descendant(of: dialog, matching: find.byType(TextField)),

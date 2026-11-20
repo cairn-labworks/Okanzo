@@ -108,6 +108,7 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
   Future<void> _openPicker() async {
     final Object? picked = await showSelectionPickerDialog<Object>(
       context,
+      eyebrow: 'Market listing'.tr(context),
       title: 'Exchange'.tr(context),
       selected: widget.selected,
       options: <Object>[
@@ -117,6 +118,12 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
       optionLabel: (Object option) => option is StockExchange
           ? option.displayName.tr(context)
           : StockExchangeField.manageLabel.tr(context),
+      optionSubtitle: (Object option) =>
+          option is StockExchange && option.suffix.isNotEmpty
+          ? 'Adds {suffix} automatically'
+                .tr(context)
+                .replaceAll('{suffix}', option.suffix)
+          : null,
       optionIcon: (Object option) =>
           option is StockExchange ? stockExchangeIcon(option) : Icons.tune,
     );

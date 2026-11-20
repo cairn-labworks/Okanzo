@@ -147,17 +147,21 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 .move-up svg{transform:rotate(-90deg)}
 .move-down svg{transform:rotate(90deg)}
 .picker{display:flex;align-items:center;gap:9px;width:100%;min-height:54px;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);text-align:left}
-.picker .picker-value{flex:1;min-width:0;font-size:.8em;overflow-wrap:anywhere}
+.picker .picker-value{flex:1;min-width:0;font-size:.8em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .picker>svg:last-child{width:14px;transform:rotate(90deg)}
 .picker>svg:first-child{width:19px;color:var(--accent)}
 .currency-glyph{display:grid;place-items:center;min-width:24px;min-height:24px;color:var(--accent);font-weight:600;font-size:1.05em}
+.picker-search{margin:8px 0 10px}
+.picker-list{max-height:min(320px,46dvh);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.picker-empty{font-size:.75em;color:var(--muted);padding:16px 4px;margin:0}
 .picker-option{display:flex;align-items:center;gap:12px;padding:12px 8px;min-height:58px;width:100%;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);text-align:left}
+.picker-option:last-child{border-bottom:0}
 .picker-option[aria-pressed=true]{background:var(--tint);border-radius:9px}
 .picker-option .grow{flex:1;min-width:0}
 .picker-option strong{display:block;font-size:.84em;font-weight:500}
 .picker-option small{display:block;font-size:.69em;color:var(--muted)}
 .picker-option>svg:first-child{color:var(--accent)}
-.picker-option>svg:last-child{width:17px}
+.picker-option>svg:last-child{width:17px;color:var(--accent)}
 .field-meta{display:flex;justify-content:space-between;gap:12px;font-size:.62em;color:var(--muted);margin-top:5px}
 .field-meta .at-limit{color:var(--warm)}
 .save-hint{font-size:.61em;color:var(--muted);margin:8px 0 0;line-height:1.5}
@@ -221,17 +225,25 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 .fields-grid>*{min-width:0}
 .field{display:block;margin:0 0 18px;position:relative}
 .field>span:first-child{display:block;font-size:.68em;color:var(--muted);font-weight:500;margin-bottom:7px}
-.field input,.field select,.field textarea{width:100%;min-width:0;min-height:50px;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:.87em;outline-offset:2px}
-.field input::placeholder,.field textarea::placeholder{color:var(--muted);opacity:.7}
+.field input,.field select,.field textarea{width:100%;min-width:0;min-height:50px;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:.87em;line-height:1.35;outline-offset:2px}
+.field input::placeholder,.field textarea::placeholder{font:inherit;letter-spacing:inherit;line-height:inherit;color:var(--muted);opacity:1}
 .field textarea{resize:vertical;min-height:90px}
 .field input[aria-invalid=true]{border-color:var(--danger);background:var(--danger-bg)}
-.field input.prominent{font-size:1.9em;letter-spacing:-.8px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:5px 0 14px;min-height:65px;color:var(--accent)}
+.prominent-wrap{display:flex;align-items:baseline;gap:6px;border-bottom:1px solid var(--line);padding:4px 0 14px;min-height:62px}
+.prominent-wrap:focus-within{border-bottom-color:var(--accent);box-shadow:0 1px 0 0 var(--accent)}
+.prominent-wrap[data-invalid=true]{border-bottom-color:var(--danger);box-shadow:0 1px 0 0 var(--danger)}
+.prominent-prefix{font-size:2em;line-height:1.3;letter-spacing:-.8px;color:var(--muted);flex-shrink:0;user-select:none}
+.field input.prominent{font-size:2em;line-height:1.3;letter-spacing:-.8px;border:0;border-radius:0;background:transparent;padding:0;min-height:0;color:var(--accent)}
+.field input.prominent[aria-invalid=true]{background:transparent}
+.field input.prominent:focus-visible{outline:none}
 .field .hint{display:block;font-size:.61em;color:var(--muted);line-height:1.6;margin-top:7px}
+.field .hint:empty,.error:empty{display:none}
 .error{display:block;font-size:.66em;color:var(--danger);margin-top:5px;line-height:1.5}
 .section-heading{font-size:.73em;font-weight:600;display:flex;align-items:center;justify-content:space-between;margin:20px 0 14px}
 .section-heading small{font-weight:400;color:var(--muted)}
-.notes{border-top:1px solid var(--line);margin:7px 0 18px}
-.notes summary{font-size:.75em;padding:16px 0;color:var(--muted)}
+.search-stack{margin:0 0 14px}
+.search-stack>.field{margin-bottom:0}
+.search-stack>#quote-results:not(:empty){margin-top:8px}
 .inline-button{background:transparent;color:var(--accent);display:inline-flex;align-items:center;gap:7px;padding:4px 0;min-height:40px;font-size:.72em;font-weight:550;text-align:left}
 .inline-button svg{width:16px;height:16px}
 .banner{background:var(--soft);border:1px solid var(--line);border-radius:11px;padding:12px 13px;font-size:.7em;line-height:1.6;display:flex;gap:9px;align-items:flex-start;margin:14px 0}
@@ -239,14 +251,14 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 .banner.warning{background:var(--warm-bg);color:var(--warm);border-color:transparent}
 .banner.error-banner{background:var(--danger-bg);color:var(--danger);border-color:transparent}
 .banner strong{display:block;font-weight:600}
-.result-list{display:grid;gap:6px;margin:-4px 0 15px}
+.result-list{display:grid;gap:6px;margin:0}
 .result{background:var(--soft);border:1px solid var(--line);border-radius:11px;display:flex;gap:10px;text-align:left;padding:12px;align-items:center;width:100%;color:var(--ink);min-height:63px}
 .result .grow{flex:1;min-width:0}
 .result strong{display:block;font-size:.76em;font-weight:550}
 .result small{display:block;color:var(--muted);font-size:.62em;margin-top:3px}
 .result>svg{width:17px}
 .ticker-mark{width:33px;height:33px;flex-shrink:0;border-radius:9px;display:grid;place-items:center;color:var(--accent);background:var(--tint);font-size:11px;font-weight:650}
-.selected-quote{background:var(--soft);border:1px solid var(--line);border-radius:13px;padding:14px;display:flex;gap:12px;align-items:center;margin-bottom:20px}
+.selected-quote{background:var(--soft);border:1px solid var(--line);border-radius:13px;padding:14px;display:flex;gap:12px;align-items:center;margin-bottom:18px}
 .selected-quote strong{font-size:.8em;font-weight:550;display:block;overflow-wrap:anywhere}
 .selected-quote small{font-size:.65em;color:var(--muted)}
 .app-footer{border-top:1px solid var(--line);padding:13px 23px 18px;flex-shrink:0;background:var(--bg)}
@@ -336,6 +348,9 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 <symbol id="i-offline" viewBox="0 0 24 24"><path d="m3 3 18 18M2 8a17 17 0 0 1 4-2M9 5a17 17 0 0 1 13 3M5 12a11 11 0 0 1 5-2M14 10a11 11 0 0 1 5 2M8 16a6 6 0 0 1 8 0M12 20h.01"/></symbol>
 <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></symbol>
 <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M19 12a7 7 0 0 0-12-5l-3 3M5 12a7 7 0 0 0 12 5l3-3"/></symbol>
+<symbol id="i-candle" viewBox="0 0 24 24"><path d="M8 4v3M8 15v5M6 7h4v8H6zM16 5v4M16 17v3M14 9h4v8h-4z"/></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+<symbol id="i-tune" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M13 5v4M4 17h3M11 17h9M7 15v4"/></symbol>
 <symbol id="i-signal" viewBox="0 0 24 24"><path d="M4 19v-3M9 19v-7M14 19V8M19 19V4"/></symbol>
 <symbol id="i-battery" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M23 10v4M5 10h11v4H5z"/></symbol>
 </defs></svg>
@@ -384,7 +399,7 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
       <button class="text-link" data-action="sample">Fill this draft with example data</button><br>
       <button class="text-link" data-action="reset">Reset all demo data</button>
     </section>
-    <details class="design-notes"><summary>Why these Canvas choices?</summary><p><strong>One exit:</strong> Back leaves the form; a changed draft gets a discard confirmation. A second Cancel action is useful in a dialog without clear navigation, but redundant in this screen. <a href="https://www.nngroup.com/articles/ten-usability-heuristics/#toc-3-user-control-and-freedom-3" target="_blank" rel="noreferrer">The principle is a clear exit</a>, not a mandatory extra button.</p><p><strong>60 characters:</strong> a proposed product limit for custom names and required holding names. It allows descriptive labels while keeping lists readable. The counter counts user-perceived characters; fetched company names are not truncated.</p><p><strong>Ready to save:</strong> required fields must be valid; a quote is optional so offline entry still works. Selecting a market holding fetches once automatically. Bonds keep the app's current manual-value model, not an invented ticker lookup.</p><p><strong>Holdings first:</strong> names, tickers, and values are the reading experience. The small group menu holds name/value sorting and an explicit Arrange manually view; reorder arrows never occupy the normal list. Switching sorts does not erase your custom arrangement. Values are compared in the base currency; unpriced holdings stay last.</p></details>
+    <details class="design-notes"><summary>Why these Canvas choices?</summary><p><strong>One exit:</strong> Back leaves the form; a changed draft gets a discard confirmation. A second Cancel action is useful in a dialog without clear navigation, but redundant in this screen. <a href="https://www.nngroup.com/articles/ten-usability-heuristics/#toc-3-user-control-and-freedom-3" target="_blank" rel="noreferrer">The principle is a clear exit</a>, not a mandatory extra button.</p><p><strong>Focused fields &amp; pickers:</strong> Type, Currency, and Exchange share the same searchable dialog and single-line picker chips. Market suggestions sit directly beneath search, amount hints match the input scale, and Name or Custom name identifies each holding without a redundant Notes input (while preserving any previously stored notes).</p><p><strong>60 characters:</strong> a proposed product limit for custom names and required holding names. It allows descriptive labels while keeping lists readable. The counter counts user-perceived characters; fetched company names are not truncated.</p><p><strong>Ready to save:</strong> required fields must be valid; a quote is optional so offline entry still works. Selecting a market holding fetches once automatically, without waiting for a quantity. Bonds keep the app's current manual-value model, not an invented ticker lookup.</p><p><strong>Holdings first:</strong> names, tickers, and values are the reading experience. The small group menu holds name/value sorting and an explicit Arrange manually view; reorder arrows never occupy the normal list. Switching sorts does not erase your custom arrangement. Values are compared in the base currency; unpriced holdings stay last.</p></details>
     <details class="state-details"><summary>Under the surface / live state</summary><pre id="state-output"></pre></details>
   </aside>
 </main>
@@ -465,7 +480,7 @@ const seed = () => [
   {id:1,portfolio:'Personal',kind:'asset',type:'stock',name:'Apple Inc.',quoteName:'Apple Inc.',symbol:'AAPL',exchange:'us',quantity:'100',price:17869.9,amount:1786990,currency:'INR',priced:true,order:0},
   {id:7,portfolio:'Personal',kind:'asset',type:'stock',name:'Microsoft Corporation',quoteName:'Microsoft Corporation',symbol:'MSFT',exchange:'us',quantity:'50',price:31220.38,amount:1561019,currency:'INR',priced:true,order:1},
   {id:2,portfolio:'Personal',kind:'asset',type:'gold',name:'Family gold',quantity:'100',unitPrice:'9847.09',amount:984709,currency:'INR',priced:true,order:0},
-  {id:3,portfolio:'Personal',kind:'asset',type:'cash',name:'Emergency fund',amount:350000,currency:'INR',priced:true,order:0},
+  {id:3,portfolio:'Personal',kind:'asset',type:'cash',name:'Emergency fund',amount:350000,currency:'INR',notes:'Liquid reserve',priced:true,order:0},
   {id:8,portfolio:'Personal',kind:'asset',type:'cash',name:'Travel fund',amount:240825,currency:'INR',priced:true,order:1},
   {id:4,portfolio:'Personal',kind:'liability',type:'mortgage',name:'Home loan',amount:3800000,currency:'INR',priced:true,order:0},
   {id:9,portfolio:'Personal',kind:'liability',type:'mortgage',name:'Apartment loan',amount:205000,currency:'INR',priced:true,order:1},
@@ -483,6 +498,7 @@ const state = {
   expanded:{},sorts:{},undoOriginal:null,nextId:100,quoteFetches:0
 };
 let pendingAction = null;
+let pickerConfig = null;
 const draft = () => state.drafts[state.kind];
 const types = () => state.kind==='asset'?ASSETS:LIABILITIES;
 const currentType = () => types().find(type=>type.id===draft().type);
@@ -617,18 +633,24 @@ function kindTabs() {
   return `<div class="asset-kind" aria-label="Holding kind"><button data-action="kind" data-value="asset" aria-pressed="${state.kind==='asset'}">Asset / I own</button><button data-action="kind" data-value="liability" aria-pressed="${state.kind==='liability'}">Liability / I owe</button></div>`;
 }
 function typeSelect() {
-  return `<div class="field"><span id="type-label">Type</span><button class="picker" id="holding-type" data-action="type-picker" aria-haspopup="dialog" aria-labelledby="type-label type-value">${icon(currentType().icon)}<span class="picker-value" id="type-value">${currentType().label}</span>${icon('next')}</button></div>`;
+  return `<div class="field"><span id="type-label">Type</span><button class="picker" id="holding-type" type="button" data-action="type-picker" aria-haspopup="dialog" aria-labelledby="type-label type-value">${icon(currentType().icon)}<span class="picker-value" id="type-value">${currentType().label}</span>${icon('next')}</button></div>`;
 }
 function currencySelect() {
-  return `<div class="field"><span id="currency-label">Currency</span><button class="picker" id="currency" data-action="currency-picker" aria-haspopup="dialog" aria-labelledby="currency-label currency-value"><span class="currency-glyph" aria-hidden="true">${currencyGlyph(draft().currency)}</span><span class="picker-value" id="currency-value">${draft().currency}</span>${icon('next')}</button></div>`;
+  return `<div class="field"><span id="currency-label">Currency</span><button class="picker" id="currency" type="button" data-action="currency-picker" aria-haspopup="dialog" aria-labelledby="currency-label currency-value"><span class="currency-glyph" aria-hidden="true">${currencyGlyph(draft().currency)}</span><span class="picker-value" id="currency-value">${draft().currency}</span>${icon('next')}</button></div>`;
 }
 function field(key,label,placeholder='',options={}) {
   const error=state.errors[key],hint=options.hint||'',limited=key==='name'||key==='customName';
-  return `<label class="field"><span>${label}</span><input id="field-${key}" data-field="${key}" value="${escapeHTML(draft()[key])}" placeholder="${escapeHTML(placeholder)}" ${options.number?'inputmode="decimal"':''} ${options.prominent?'class="prominent"':''} autocomplete="off" ${error?'aria-invalid="true"':''} aria-describedby="hint-${key} error-${key}${limited?' count-'+key:''}"><small class="hint" id="hint-${key}">${hint}</small>${limited?`<span class="field-meta"><span>Up to ${NAME_LIMIT} characters</span><span id="count-${key}">${nameCharacters(draft()[key]).length}/${NAME_LIMIT}</span></span>`:''}<small class="error" id="error-${key}">${error||''}</small></label>`;
+  const input=`<input id="field-${key}" data-field="${key}" value="${escapeHTML(draft()[key])}" placeholder="${escapeHTML(placeholder)}" ${options.number?'inputmode="decimal"':''} ${options.prominent?'class="prominent"':''} autocomplete="off" ${error?'aria-invalid="true"':''} aria-describedby="hint-${key} error-${key}${limited?' count-'+key:''}">`;
+  return `<label class="field"><span>${label}</span>${options.prominent?`<span class="prominent-wrap"${error?' data-invalid="true"':''}><span class="prominent-prefix" aria-hidden="true">${currencyGlyph(draft().currency)}</span>${input}</span>`:input}<small class="hint" id="hint-${key}">${hint}</small>${limited?`<span class="field-meta"><span>Up to ${NAME_LIMIT} characters</span><span id="count-${key}">${nameCharacters(draft()[key]).length}/${NAME_LIMIT}</span></span>`:''}<small class="error" id="error-${key}">${error||''}</small></label>`;
 }
+const activeExchange = () => {
+  const d=draft();
+  return (d.id!==null||d.symbol.trim()!==''||state.preferred.includes(d.exchange))?EXCHANGES.find(exchange=>exchange.id===d.exchange):null;
+};
+const exchangeIcon = id => id==='other'?'globe':'candle';
 function exchangeSelect() {
-  const option=exchange=>`<option value="${exchange.id}"${draft().exchange===exchange.id?' selected':''}>${exchange.label}</option>`;
-  return `<label class="field"><span>Exchange</span><select id="exchange" data-field="exchange">${state.preferred.length?`<optgroup label="Preferred">${EXCHANGES.filter(exchange=>state.preferred.includes(exchange.id)).map(option).join('')}</optgroup>`:''}<optgroup label="All exchanges">${EXCHANGES.filter(exchange=>!state.preferred.includes(exchange.id)).map(option).join('')}</optgroup></select></label><button class="inline-button" data-action="preferences">Manage preferred exchanges</button>`;
+  const current=activeExchange(),label=current?(current.id==='us'?'US exchange':current.label):'Exchange';
+  return `<div class="field"><span id="exchange-label">Exchange</span><button class="picker" id="exchange" type="button" data-action="exchange-picker" aria-haspopup="dialog" aria-labelledby="exchange-label exchange-value">${icon(current?exchangeIcon(current.id):'candle')}<span class="picker-value" id="exchange-value">${escapeHTML(label)}</span>${icon('next')}</button></div>`;
 }
 function valueSummary() {
   return `<div class="amount-summary"><span class="label">${state.kind==='liability'?'Outstanding amount':'Estimated value'}</span><strong class="estimated${!isPriced()?' pending':''}" data-live="amount">${isPriced()?money(amount(),draft().currency):'Waiting for a price'}</strong><span class="calculation" data-live="calculation">${calculation()}</span></div>`;
@@ -639,9 +661,6 @@ function calculation() {
   if(state.kind==='asset'&&currentType().mode==='quantity') return `${escapeHTML(d.quantity||'0')} g x ${money(Number(d.unitPrice)||0,d.currency)} per gram`;
   return state.kind==='liability'?'Only the amount you still owe, not the original loan.':'The current value of this holding.';
 }
-function notes() {
-  return `<details class="notes"${draft().notes?' open':''}><summary>Notes &amp; a little context <span class="muted">(optional)</span></summary><label class="field"><span>Notes</span><textarea id="field-notes" data-field="notes" placeholder="Anything you would like to remember">${escapeHTML(draft().notes)}</textarea></label></details>`;
-}
 function quoteMatches(query) {
   if(state.connection!=='online') return [];
   const q=query.trim().toLowerCase();
@@ -649,34 +668,32 @@ function quoteMatches(query) {
 }
 function quoteResults(query) {
   const matches=quoteMatches(query);
-  if(state.connection!=='online') return `<div class="banner warning">${icon('offline')}<span>Search is unavailable. Enter the full ticker manually; you can refresh the price later.</span></div>`;
+  if(state.connection!=='online') return `<div class="banner warning">${icon('offline')}<span>No internet connection. Enter a ticker manually to save offline.</span></div>`;
   if(query.trim().length<2) return '';
-  if(!matches.length) return `<div class="banner">${icon('search')}<span>No example match. You can still enter a full ticker manually. This demo searches a small, fixed catalogue.</span></div>`;
-  return `<div class="result-list">${matches.slice(0,6).map(quote=>`<button class="result" type="button" data-action="quote" data-symbol="${quote.symbol}"><span class="ticker-mark">${quote.symbol.slice(0,2)}</span><span class="grow"><strong>${quote.name}</strong><small>${quote.symbol} / ${quote.type==='crypto'?quote.currency:EXCHANGES.find(exchange=>exchange.id===quote.exchange).label}</small></span>${icon('next')}</button>`).join('')}</div>`;
+  if(!matches.length) return `<div class="banner">${icon('search')}<span>No example match. Enter a full ticker manually; this demo searches a small, fixed catalogue.</span></div>`;
+  return `<div class="result-list">${matches.slice(0,6).map(quote=>`<button class="result" type="button" data-action="quote" data-symbol="${quote.symbol}"><span class="ticker-mark">${quote.symbol.slice(0,2)}</span><span class="grow"><strong>${quote.name}</strong><small>${quote.symbol}${quote.type==='crypto'?'':` · ${EXCHANGES.find(exchange=>exchange.id===quote.exchange).label}`}</small></span>${icon('next')}</button>`).join('')}</div>`;
 }
 function marketFields() {
   const d=draft(),searching=!d.quoteName||d.searching;
-  return `${usesExchange()?exchangeSelect():''}
-    ${d.quoteName?`<button class="selected-quote" data-action="change-market" aria-label="Change ${escapeHTML(d.quoteName)} selection"><span class="ticker-mark">${escapeHTML(quoteSymbol().slice(0,2))}</span><span class="grow"><strong>${escapeHTML(d.quoteName)}</strong><small>${escapeHTML(quoteSymbol())} / ${escapeHTML(d.currency)}</small></span><span class="quote-change">${icon('search')}Change</span></button>`:''}
-    ${searching?field('symbol',d.type==='crypto'?'Coin or trading pair':'Company, fund, or ticker',d.type==='crypto'?'BTC or BTC-USD':'Search Apple, or type AAPL',{hint:'Selecting a result fetches its example price automatically. Manual tickers work too.'}):''}
-    <div id="quote-results">${searching?quoteResults(d.symbol):''}</div>
+  return `${searching?`<div class="search-stack">${field('symbol',d.type==='crypto'?'Coin or ticker':'Company or ticker','Search')}<div id="quote-results">${quoteResults(d.symbol)}</div></div>`:`<button class="selected-quote" type="button" data-action="change-market" aria-label="Change ${escapeHTML(d.quoteName)} selection"><span class="ticker-mark">${escapeHTML(quoteSymbol().slice(0,2))}</span><span class="grow"><strong>${escapeHTML(d.quoteName)}</strong><small>${escapeHTML(quoteSymbol())} / ${escapeHTML(d.currency)}</small></span><span class="quote-change">${icon('search')}Change</span></button>`}
     ${field('quantity','Quantity',d.type==='crypto'?'e.g. 0.25':'e.g. 10',{number:true})}
-    <button class="inline-button" data-action="fetch"${state.busy||!d.symbol.trim()?' disabled':''}>${icon('refresh')}${state.busy?'Getting example price...':d.quoteAttempted?'Refresh example price':'Fetch example price'}</button>
+    <button class="inline-button" type="button" data-action="fetch"${state.busy||!d.symbol.trim()?' disabled':''}>${icon('refresh')}${state.busy?'Getting example price...':d.quoteAttempted?'Refresh example price':'Fetch example price'}</button>
     <div id="quote-feedback">${d.quoteMessage?`<div class="banner${d.price===null?' warning':''}" role="status">${icon('info')}<span>${escapeHTML(d.quoteMessage)}</span></div>`:''}</div>
-    ${field('customName','Custom name (optional)','e.g. Long-term shares',{hint:'Leave blank to use the fetched name, or the ticker if unavailable.'})}`;
+    ${field('customName','Custom name (optional)',d.quoteName||'e.g. Long-term shares')}`;
 }
 function detailFields({canvas=false}={}) {
-  const d=draft(),type=currentType(),flat=state.kind==='liability'||type.mode==='flat';
+  const type=currentType(),flat=state.kind==='liability'||type.mode==='flat';
   let html='';
-  if(canvas&&flat) html+=field('amount',state.kind==='liability'?'Outstanding amount / '+d.currency:'Current value / '+d.currency,'0.00',{number:true,prominent:true,hint:state.kind==='liability'?'The amount you still owe. Zero is allowed.':'Your estimate of its value today. Zero is allowed.'});
+  if(canvas&&flat) html+=field('amount',state.kind==='liability'?'Outstanding amount':'Value','0.00',{number:true,prominent:true,hint:state.kind==='liability'?'The amount you still owe. Zero is allowed.':'Your estimate of its value today. Zero is allowed.'});
   if(!flat||!canvas) html+=valueSummary();
   if(canvas) html+=`<div class="fields-grid">${typeSelect()}${currencySelect()}</div>`;
   else html+=currencySelect();
-  if(!market()) html+=field('name',state.kind==='liability'?'Name this liability':'Name this asset',state.kind==='liability'?'e.g. Home loan':type.id==='gold'?'e.g. Family gold':'e.g. Emergency fund');
-  if(!canvas&&flat) html+=field('amount',state.kind==='liability'?'Outstanding amount':'Current value','0.00',{number:true,hint:state.kind==='liability'?'The remaining balance, not the monthly payment. Zero is allowed.':'Enter a total in your selected currency. Zero is allowed.'});
+  if(usesExchange()) html+=exchangeSelect();
+  if(!market()) html+=field('name',state.kind==='liability'?'Name':'Name',state.kind==='liability'?'e.g. Home loan':type.id==='gold'?'e.g. Family gold':'e.g. Emergency fund');
+  if(!canvas&&flat) html+=field('amount',state.kind==='liability'?'Outstanding amount':'Value','0.00',{number:true,hint:state.kind==='liability'?'The remaining balance, not the monthly payment. Zero is allowed.':'Enter a total in your selected currency. Zero is allowed.'});
   if(market()) html+=marketFields();
   else if(type.mode==='quantity') html+=`<div class="fields-grid">${field('quantity','Weight / grams','e.g. 10',{number:true})}${field('unitPrice','Price per gram','e.g. 7200',{number:true})}</div>`;
-  return html+notes();
+  return html;
 }
 function netAfterDraft() {
   const original=state.holdings.find(holding=>holding.id===draft().id);
@@ -776,18 +793,59 @@ function switchVariant(value) {
   announce(value+'. '+CONCEPTS[value].name+'. Your draft is preserved.');
 }
 function showDialog(content) {
-  setAddOpen(false);
-  const modal=document.getElementById('modal');modal.innerHTML=content;if(!modal.open) modal.showModal();modal.querySelector('button:not(:disabled),input:not(:disabled)')?.focus();
+  setAddOpen(false);pickerConfig=null;
+  const modal=document.getElementById('modal');modal.innerHTML=content;if(!modal.open) modal.showModal();modal.querySelector('input:not(:disabled),button:not(:disabled)')?.focus();
 }
-function closeDialog(){document.getElementById('modal').close();}
+function closeDialog(){const focusTarget=pickerConfig?.closeFocus;pickerConfig=null;document.getElementById('modal').close();if(focusTarget)document.getElementById(focusTarget)?.focus({preventScroll:true});}
+function renderPickerItems(query='') {
+  if(!pickerConfig)return '';
+  const q=query.trim().toUpperCase(),matches=pickerConfig.items.filter(item=>item.search.toUpperCase().includes(q));
+  if(!matches.length)return '<p class="picker-empty">No matching options.</p>';
+  return matches.map(item=>`<button class="picker-option" type="button" data-action="${item.action}" data-value="${escapeHTML(item.value)}" aria-pressed="${item.selected}">${item.leading}<span class="grow"><strong>${escapeHTML(item.title)}</strong>${item.subtitle?`<small>${escapeHTML(item.subtitle)}</small>`:''}</span>${item.selected?icon('check'):''}</button>`).join('');
+}
+function selectionPicker({eyebrow,title,items,closeFocus}) {
+  showDialog(`<p class="app-eyebrow">${escapeHTML(eyebrow)}</p><h2 id="dialog-title">${escapeHTML(title)}</h2><label class="field picker-search"><span>Search</span><input id="picker-query" data-picker-search placeholder="Search" autocomplete="off"></label><div class="picker-list" id="picker-list"></div><button class="quiet" type="button" data-action="close-modal">Close</button>`);
+  pickerConfig={items,closeFocus};
+  document.getElementById('picker-list').innerHTML=renderPickerItems();
+  document.getElementById('picker-query')?.focus();
+}
 function settingsPreview() {
   showDialog(`<p class="app-eyebrow">Appearance preview</p><h2 id="dialog-title">Settings</h2><p class="app-copy">These controls affect this HTML preview only. Other app settings are outside this holding-entry exploration.</p><label class="field"><span>Appearance</span><select data-preview-setting="appearance"><option value="light"${document.body.dataset.theme==='light'?' selected':''}>Classic</option><option value="dark"${document.body.dataset.theme==='dark'?' selected':''}>Midnight</option></select></label><label class="field"><span>Text size</span><select data-preview-setting="text-size"><option value="normal"${document.getElementById('device').dataset.large==='false'?' selected':''}>Default</option><option value="large"${document.getElementById('device').dataset.large==='true'?' selected':''}>Large preview</option></select></label><button class="primary" data-action="close-modal">Done</button>`);
 }
 function typePicker() {
-  showDialog(`<p class="app-eyebrow">${state.kind==='asset'?'What you own':'What you owe'}</p><h2 id="dialog-title">Choose a type</h2>${types().map(type=>`<button class="picker-option" data-action="pick-type" data-value="${type.id}" aria-pressed="${draft().type===type.id}">${icon(type.icon)}<span class="grow"><strong>${type.label}</strong><small>${type.hint}</small></span>${draft().type===type.id?icon('check'):''}</button>`).join('')}<button class="quiet" data-action="close-modal">Keep current type</button>`);
+  selectionPicker({
+    eyebrow:state.kind==='asset'?'What you own':'What you owe',
+    title:'Choose a type',
+    closeFocus:'holding-type',
+    items:types().map(type=>({action:'pick-type',value:type.id,selected:draft().type===type.id,leading:icon(type.icon),title:type.label,subtitle:type.hint,search:`${type.label} ${type.hint}`}))
+  });
 }
 function currencyPicker() {
-  showDialog(`<p class="app-eyebrow">Holding currency</p><h2 id="dialog-title">Choose a currency</h2>${Object.entries(CURRENCIES).map(([code,label])=>`<button class="picker-option" data-action="pick-currency" data-value="${code}" aria-pressed="${draft().currency===code}"><span class="currency-glyph" aria-hidden="true">${currencyGlyph(code)}</span><span class="grow"><strong>${code}</strong><small>${label}</small></span>${draft().currency===code?icon('check'):''}</button>`).join('')}<button class="quiet" data-action="close-modal">Keep current currency</button>`);
+  selectionPicker({
+    eyebrow:'Holding currency',
+    title:'Choose currency',
+    closeFocus:'currency',
+    items:Object.entries(CURRENCIES).map(([code,label])=>({action:'pick-currency',value:code,selected:draft().currency===code,leading:`<span class="currency-glyph" aria-hidden="true">${currencyGlyph(code)}</span>`,title:`${code} — ${label}`,subtitle:'',search:`${code} — ${label}`}))
+  });
+}
+function exchangePicker() {
+  const current=activeExchange(),listed=EXCHANGES.filter(exchange=>state.preferred.includes(exchange.id)||exchange.id===current?.id);
+  selectionPicker({
+    eyebrow:'Market listing',
+    title:'Exchange',
+    closeFocus:'exchange',
+    items:[
+      ...listed.map(exchange=>({action:'pick-exchange',value:exchange.id,selected:current?.id===exchange.id,leading:icon(exchangeIcon(exchange.id)),title:exchange.label,subtitle:exchange.suffix?`Adds ${exchange.suffix} automatically`:'',search:exchange.label})),
+      {action:'preferences',value:'preferences',selected:false,leading:icon('tune'),title:'Manage preferred exchanges',subtitle:'',search:'Manage preferred exchanges'}
+    ]
+  });
+}
+function setExchange(value) {
+  if(activeExchange()?.id===value)return;
+  const previousSymbol=quoteSymbol();invalidateQuote();draft().exchange=value;
+  draft().symbol=value==='other'?previousSymbol:previousSymbol.replace(/\.[^.]+$/,'');
+  draft().currency=EXCHANGES.find(exchange=>exchange.id===value).currency||draft().currency;
+  draft().dirty=true;
 }
 function setCurrency(value) {
   if(value===draft().currency)return;
@@ -918,7 +976,7 @@ async function save() {
   const d=draft(),priced=isPriced(),holding={
     id:original?original.id:state.nextId++,portfolio:state.portfolio,kind:state.kind,type:d.type,
     name:market()?(d.customName.trim()||d.quoteName||quoteSymbol()):d.name.trim(),
-    amount:amount(),currency:d.currency,priced,symbol:market()?quoteSymbol():null,notes:d.notes.trim(),
+    amount:amount(),currency:d.currency,priced,symbol:market()?quoteSymbol():null,notes:original?(original.notes||''):d.notes.trim(),
     quantity:d.quantity,unitPrice:d.unitPrice,price:d.price,quoteName:d.quoteName,customName:d.customName,exchange:d.exchange,isNew:original?!!original.isNew:true,notice:priced?'':d.quoteMessage,
     order:original&&original.type===d.type?original.order:Math.max(-1,...groupHoldings(state.kind,d.type).map(holding=>holding.order))+1
   };
@@ -958,7 +1016,7 @@ function fillSample() {
   if(market()){
     const quote=QUOTES.find(quote=>quote.type===d.type);d.symbol=quote.symbol;d.quoteName=quote.name;d.currency=quote.currency;if(quote.exchange)d.exchange=quote.exchange;d.quantity=d.type==='crypto'?'0.25':'10';d.price=null;d.quoteAttempted=false;d.searching=false;
   }else{d.name=state.kind==='liability'?'Education loan':d.type==='gold'?'Family gold':'Emergency fund';d.amount=state.kind==='liability'?'25000':'10000';if(currentType().mode==='quantity'){d.quantity='10';d.unitPrice='7200';}}
-  d.notes='Fictional example for this design exploration.';d.dirty=true;state.phase='details';state.screen='editor';state.errors={};render();if(market())void fetchQuote();
+  d.dirty=true;state.phase='details';state.screen='editor';state.errors={};render();if(market())void fetchQuote();
 }
 document.addEventListener('click',event=>{
   if(state.addOpen&&!event.target.closest('.add-launcher'))setAddOpen(false,document.getElementById('add-options').contains(document.activeElement));
@@ -987,8 +1045,10 @@ document.addEventListener('click',event=>{
   }
   else if(action==='type-picker')typePicker();
   else if(action==='currency-picker')currencyPicker();
-  else if(action==='pick-type'){changeType(value);closeDialog();render(true);document.getElementById('holding-type')?.focus({preventScroll:true});}
-  else if(action==='pick-currency'){setCurrency(value);closeDialog();render(true);document.getElementById('currency')?.focus({preventScroll:true});}
+  else if(action==='exchange-picker')exchangePicker();
+  else if(action==='pick-type'){pickerConfig=null;changeType(value);closeDialog();render(true);document.getElementById('holding-type')?.focus({preventScroll:true});}
+  else if(action==='pick-currency'){pickerConfig=null;setCurrency(value);closeDialog();render(true);document.getElementById('currency')?.focus({preventScroll:true});}
+  else if(action==='pick-exchange'){pickerConfig=null;setExchange(value);closeDialog();render(true);document.getElementById('exchange')?.focus({preventScroll:true});}
   else if(action==='change-market'){draft().searching=true;render(true);const input=document.getElementById('field-symbol');input.focus();input.select();}
   else if(action==='scenario'){const next=()=>begin(button.dataset.kind,button.dataset.type,true);if(state.screen==='editor'||state.screen==='review')confirmDiscard(next);else next();}
   else if(action==='kind'){if(value!==state.kind&&draft().id===null){state.request++;state.busy=false;state.kind=value;state.phase=state.variant==='B'?'type':'details';state.errors={};render();}}
@@ -1010,12 +1070,20 @@ document.addEventListener('click',event=>{
   else if(action==='refresh-holdings')void refreshHoldings();
   else if(action==='undo'){if(state.undoOriginal){const index=state.holdings.findIndex(holding=>holding.id===state.saved.id);state.holdings[index]=state.undoOriginal;}else state.holdings=state.holdings.filter(holding=>holding.id!==state.saved.id);state.undoOriginal=null;goHome();announce('The demo change was undone.');}
   else if(action==='preferences')preferences();
-  else if(action==='save-preferences'){state.preferred=Array.from(document.querySelectorAll('input[name="preferred"]:checked'),input=>input.value);closeDialog();render();}
+  else if(action==='save-preferences'){
+    state.preferred=Array.from(document.querySelectorAll('input[name="preferred"]:checked'),input=>input.value);
+    if(draft().id===null&&!draft().symbol.trim()&&state.preferred.length&&!state.preferred.includes(draft().exchange)){
+      draft().exchange=state.preferred[0];
+      draft().currency=EXCHANGES.find(exchange=>exchange.id===state.preferred[0]).currency||draft().currency;
+    }
+    closeDialog();render(true);document.getElementById('exchange')?.focus({preventScroll:true});
+  }
   else if(action==='sample')fillSample();
   else if(action==='reset'){state.request++;state.busy=false;state.holdings=seed();state.drafts={asset:initialDraft('asset'),liability:initialDraft('liability')};Object.assign(state,{screen:'home',portfolio:'Personal',kind:'asset',homeTab:'asset',phase:'type',errors:{},saved:null,message:'',addOpen:false,hidden:false,connection:'online',preferred:['us','bse'],expanded:{},sorts:{},undoOriginal:null,nextId:100,quoteFetches:0});render();announce('All fictional holdings and drafts have been reset.');}
 });
 document.addEventListener('input',event=>{
   const input=event.target;
+  if(input.matches('[data-picker-search]')){document.getElementById('picker-list').innerHTML=renderPickerItems(input.value);return;}
   const key=input.dataset.field;if(!key||input.tagName==='SELECT')return;
   if((key==='name'||key==='customName')&&event.isComposing)return;
   if(key==='name'||key==='customName'){
@@ -1025,15 +1093,18 @@ document.addEventListener('input',event=>{
     counter.textContent=`${nameCharacters(input.value).length}/${NAME_LIMIT}`;
     counter.classList.toggle('at-limit',nameCharacters(input.value).length===NAME_LIMIT);
   }
+  const previousExchange=key==='symbol'?activeExchange()?.id:null;
   draft()[key]=input.value;draft().dirty=true;
   if(key==='symbol'){
     const wasBusy=state.busy,caret=input.selectionStart;
+    draft().searching=false;
     invalidateQuote();
     let exchangeChanged=false;
     if(usesExchange()&&input.value.includes('.')){
       const exchange=EXCHANGES.find(exchange=>exchange.suffix&&input.value.trim().toUpperCase().endsWith(exchange.suffix))||EXCHANGES.find(exchange=>exchange.id==='other');
       if(exchange.id!==draft().exchange){draft().exchange=exchange.id;draft().currency=exchange.currency||draft().currency;exchangeChanged=true;}
     }
+    if(usesExchange()&&activeExchange()?.id!==previousExchange)exchangeChanged=true;
     if(wasBusy||exchangeChanged){
       render();
       const replacement=document.getElementById('field-symbol');
@@ -1042,11 +1113,12 @@ document.addEventListener('input',event=>{
     }
     document.getElementById('quote-results').innerHTML=quoteResults(input.value);
     document.getElementById('quote-feedback').innerHTML='';
+    document.getElementById('field-customName')?.setAttribute('placeholder','e.g. Long-term shares');
     document.querySelectorAll('.selected-quote').forEach(node=>node.remove());
   }
   if(state.errors[key]){
     const message=draftErrors()[key];
-    if(!message){delete state.errors[key];input.removeAttribute('aria-invalid');}
+    if(!message){delete state.errors[key];input.removeAttribute('aria-invalid');input.closest('.prominent-wrap')?.removeAttribute('data-invalid');}
     const error=document.getElementById('error-'+key);if(error)error.textContent=message||'';
   }
   updateLive();
@@ -1058,19 +1130,12 @@ document.addEventListener('focusout',event=>{
   const input=event.target,key=input.dataset.field;
   if(!key||!input.matches('input'))return;
   const message=draftErrors()[key],error=document.getElementById('error-'+key);
-  if(message){state.errors[key]=message;input.setAttribute('aria-invalid','true');if(error)error.textContent=message;}
+  if(message){state.errors[key]=message;input.setAttribute('aria-invalid','true');input.closest('.prominent-wrap')?.setAttribute('data-invalid','true');if(error)error.textContent=message;}
   exposeState();
 });
 document.addEventListener('change',event=>{
-  const input=event.target,key=input.dataset.field;
-  if(key&&input.tagName==='SELECT'){
-    if(key==='type')changeType(input.value);
-    else if(key==='exchange'){const previousSymbol=quoteSymbol();invalidateQuote();draft().exchange=input.value;draft().symbol=input.value==='other'?previousSymbol:previousSymbol.replace(/\.[^.]+$/,'');draft().currency=EXCHANGES.find(exchange=>exchange.id===input.value).currency||draft().currency;}
-    else if(key==='currency'){
-      setCurrency(input.value);
-    }
-    draft().dirty=true;render();
-  }else if(input.id==='add-layout'){
+  const input=event.target;
+  if(input.id==='add-layout'){
     state.addOpen=false;state.addLayout=input.value;
     const url=new URL(location.href);url.searchParams.set('add',state.addLayout);history.replaceState(null,'',url);render(true);
   }else if(input.id==='portfolio'){state.portfolio=input.value;state.addOpen=false;render();}
