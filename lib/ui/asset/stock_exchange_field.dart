@@ -14,6 +14,7 @@ class StockExchangeField extends StatefulWidget {
     required this.preferredExchanges,
     required this.onSelected,
     required this.onSavePreferences,
+    this.isMutualFund = false,
     this.compact = false,
     this.canvas = false,
     super.key,
@@ -23,6 +24,7 @@ class StockExchangeField extends StatefulWidget {
   final List<StockExchange> preferredExchanges;
   final ValueChanged<StockExchange> onSelected;
   final Future<void> Function(List<StockExchange>) onSavePreferences;
+  final bool isMutualFund;
   final bool compact;
   final bool canvas;
 
@@ -59,22 +61,48 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
         ? Icons.candlestick_chart
         : stockExchangeIcon(widget.selected!);
     if (widget.compact || widget.canvas) {
-      final String label = widget.selected == StockExchange.us
+      final StockExchange? selectedExchange = widget.selected;
+      final String label = selectedExchange == StockExchange.us
           ? 'US exchange'.tr(context)
-          : widget.selected?.displayName.tr(context) ?? 'Exchange'.tr(context);
-      final String? suffix = widget.selected?.suffix;
+          : selectedExchange?.displayName.tr(context) ?? 'Exchange'.tr(context);
+      final String? suffix = selectedExchange?.suffix;
       final String help = suffix == null || suffix.isEmpty
           ? 'Enter a Yahoo Finance ticker with or without an exchange suffix.'
                 .tr(context)
           : 'Okanzo adds {suffix} automatically. You can also enter a full Yahoo Finance ticker.'
                 .tr(context)
                 .replaceAll('{suffix}', suffix);
+      final String exampleHint;
+      if (selectedExchange == null) {
+        exampleHint = 'e.g. US (NYSE / Nasdaq), BSE (India), Euronext'.tr(
+          context,
+        );
+      } else {
+        final (String exName, String exTicker) = selectedExchange
+            .exampleHolding(fund: widget.isMutualFund);
+        if (selectedExchange.suffix.isNotEmpty) {
+          exampleHint = 'Adds {suffix} automatically (e.g. {example})'
+              .tr(context)
+              .replaceAll('{suffix}', selectedExchange.suffix)
+              .replaceAll('{example}', selectedExchange.qualify(exTicker));
+        } else if (selectedExchange == StockExchange.other) {
+          exampleHint = 'Full Yahoo ticker with suffix (e.g. {example})'
+              .tr(context)
+              .replaceAll('{example}', exTicker);
+        } else {
+          exampleHint = 'e.g. {name} ({ticker}) · NYSE / Nasdaq'
+              .tr(context)
+              .replaceAll('{name}', exName)
+              .replaceAll('{ticker}', exTicker);
+        }
+      }
       return Tooltip(
         message: '${'Exchange'.tr(context)}: $label\n$help',
         child: PickerChip(
           label: label,
           icon: selectedIcon,
           fieldLabel: widget.canvas ? 'Exchange'.tr(context) : null,
+          supportingText: widget.canvas ? exampleHint : null,
           onPressed: _openPicker,
         ),
       );
@@ -110,6 +138,7 @@ class _StockExchangeFieldState extends State<StockExchangeField> {
       context,
       eyebrow: 'Market listing'.tr(context),
       title: 'Exchange'.tr(context),
+      searchPlaceholder: 'e.g. US, BSE, Euronext, Tokyo'.tr(context),
       selected: widget.selected,
       options: <Object>[
         ...widget.preferredExchanges,

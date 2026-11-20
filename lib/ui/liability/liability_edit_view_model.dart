@@ -13,10 +13,17 @@ import 'liability_form_state.dart';
 /// One-shot outcome of the liability editor. Reuses [AssetEditEventType] so
 /// both editors share the same saved/deleted/error vocabulary.
 class LiabilityEditEvent {
-  const LiabilityEditEvent(this.type, [this.message]);
+  const LiabilityEditEvent(
+    this.type, [
+    this.message,
+    this.savedLiability,
+    this.previousLiability,
+  ]);
 
   final AssetEditEventType type;
   final String? message;
+  final LiabilityEntity? savedLiability;
+  final LiabilityEntity? previousLiability;
 }
 
 class LiabilityEditViewModel extends ChangeNotifier {
@@ -37,6 +44,7 @@ class LiabilityEditViewModel extends ChangeNotifier {
   final int _liabilityId;
 
   LiabilityFormState _form;
+  LiabilityEntity? _loadedEntity;
   LiabilityEditEvent? _event;
   bool _disposed = false;
 
@@ -50,6 +58,7 @@ class LiabilityEditViewModel extends ChangeNotifier {
         _liabilityId,
       );
       if (liability != null) {
+        _loadedEntity = liability;
         _form = LiabilityFormState.fromEntity(liability);
         notifyListeners();
         return;
@@ -88,9 +97,17 @@ class LiabilityEditViewModel extends ChangeNotifier {
       return;
     }
     _update(_form.copyWith(isSaving: true));
-    await _liabilityRepository.save(_form.toEntity());
+    final LiabilityEntity toSave = _form.toEntity();
+    final int savedId = await _liabilityRepository.save(toSave);
     if (_disposed) return;
-    _emit(const LiabilityEditEvent(AssetEditEventType.saved));
+    _emit(
+      LiabilityEditEvent(
+        AssetEditEventType.saved,
+        null,
+        toSave.copyWith(id: savedId),
+        _loadedEntity,
+      ),
+    );
   }
 
   Future<void> delete() async {

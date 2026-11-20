@@ -160,6 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final HoldingDetailsAction? action = await showHoldingDetails(
       context,
       asset: asset,
+      portfolioName: _viewModel!.state.activePortfolio?.name,
       hideBalances: _viewModel!.state.hideBalances,
     );
     if (!mounted) return;
@@ -178,6 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final HoldingDetailsAction? action = await showHoldingDetails(
       context,
       liability: liability,
+      portfolioName: _viewModel!.state.activePortfolio?.name,
       hideBalances: _viewModel!.state.hideBalances,
     );
     if (!mounted) return;

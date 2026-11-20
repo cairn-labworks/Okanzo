@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../data/local/entity/asset_entity.dart';
-import '../../data/local/entity/liability_entity.dart';
 import '../../data/local/entity/portfolio_entity.dart';
-import '../../data/repository/currency_converter.dart';
-import '../../data/repository/net_worth_calculator.dart';
-import '../../domain/model/net_worth_summary.dart';
 import '../../di/app_container.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
@@ -112,6 +107,7 @@ class HoldingPortfolioLabel extends StatefulWidget {
     required this.portfolioId,
     this.template = '{portfolio}',
     this.uppercase = false,
+    this.alignmentEnd = false,
     this.style,
     super.key,
   });
@@ -119,6 +115,7 @@ class HoldingPortfolioLabel extends StatefulWidget {
   final int portfolioId;
   final String template;
   final bool uppercase;
+  final bool alignmentEnd;
   final TextStyle? style;
 
   @override
@@ -153,6 +150,7 @@ class _HoldingPortfolioLabelState extends State<HoldingPortfolioLabel> {
                         .toUpperCase()
                   : widget.template.replaceAll('{portfolio}', portfolio.name),
               style: widget.style,
+              textAlign: widget.alignmentEnd ? TextAlign.end : null,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             );
@@ -170,6 +168,7 @@ class HoldingEditorFooter extends StatelessWidget {
     required this.saving,
     required this.onSave,
     this.priced = true,
+    this.calculation,
     super.key,
   });
 
@@ -180,51 +179,115 @@ class HoldingEditorFooter extends StatelessWidget {
   final bool ready;
   final bool saving;
   final bool priced;
+  final String? calculation;
   final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+    final String? effectiveCalculation = asset
+        ? (calculation ??
+              (priced
+                  ? 'Current value in {currency}'
+                        .tr(context)
+                        .replaceAll('{currency}', currency)
+                  : '0 × ${CurrencyUtil.format(0, currency)} · ${'price not fetched yet'.tr(context)}'))
+        : null;
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
+          color: theme.scaffoldBackgroundColor,
+          border: Border(top: BorderSide(color: colors.outlineVariant)),
         ),
         child: SafeArea(
           top: false,
-          minimum: const EdgeInsets.fromLTRB(24, 12, 24, 14),
+          minimum: const EdgeInsets.fromLTRB(24, 14, 24, 14),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: HoldingPortfolioLabel(
-                      portfolioId: portfolioId,
-                      template:
-                          '{portfolio} / ${(asset ? 'Assets' : 'Liabilities').tr(context)}',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+              if (asset) ...<Widget>[
+                Container(
+                  padding: const EdgeInsets.only(top: 2, bottom: 13),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: colors.outlineVariant),
                     ),
                   ),
-                  Flexible(
-                    fit: FlexFit.tight,
-                    child: Text(
-                      priced
-                          ? CurrencyUtil.format(amount, currency)
-                          : 'Price pending'.tr(context),
-                      textAlign: TextAlign.end,
-                      style: theme.textTheme.labelSmall,
-                    ),
+                  child: LayoutBuilder(
+                    builder:
+                        (
+                          BuildContext context,
+                          BoxConstraints constraints,
+                        ) => Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: <Widget>[
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Text(
+                                    'Estimated value'.tr(context),
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colors.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.25,
+                                    ),
+                                  ),
+                                  if (effectiveCalculation != null &&
+                                      effectiveCalculation
+                                          .isNotEmpty) ...<Widget>[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      effectiveCalculation,
+                                      key: ValueKey<String>(
+                                        priced
+                                            ? 'asset-valuation-caption'
+                                            : 'asset-valuation-pending-caption',
+                                      ),
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            fontSize: 11.5,
+                                            height: 1.35,
+                                            color: colors.onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: constraints.maxWidth * 0.52,
+                              ),
+                              child: Text(
+                                CurrencyUtil.format(amount, currency),
+                                key: const ValueKey<String>(
+                                  'asset-estimated-value',
+                                ),
+                                textAlign: TextAlign.end,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  fontSize: 26,
+                                  height: 1.1,
+                                  letterSpacing: -0.65,
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.primary,
+                                  fontFeatures: const <FontFeature>[
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 10),
+                ),
+                const SizedBox(height: 12),
+              ],
               FilledButton(
                 onPressed: !ready || saving ? null : onSave,
                 style: FilledButton.styleFrom(
@@ -254,7 +317,7 @@ class HoldingEditorFooter extends StatelessWidget {
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontSize: 10,
                   height: 1.5,
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: colors.onSurfaceVariant,
                 ),
               ),
             ],
@@ -263,192 +326,4 @@ class HoldingEditorFooter extends StatelessWidget {
       ),
     );
   }
-}
-
-class HoldingNetWorthPreview extends StatefulWidget {
-  const HoldingNetWorthPreview({
-    required this.portfolioId,
-    required this.holdingId,
-    required this.asset,
-    required this.value,
-    required this.currency,
-    this.priced = true,
-    super.key,
-  });
-
-  final int portfolioId;
-  final int holdingId;
-  final bool asset;
-  final double value;
-  final String currency;
-  final bool priced;
-
-  @override
-  State<HoldingNetWorthPreview> createState() => _HoldingNetWorthPreviewState();
-}
-
-class _HoldingNetWorthPreviewState extends State<HoldingNetWorthPreview> {
-  Stream<List<AssetEntity>>? _assets;
-  Stream<List<LiabilityEntity>>? _liabilities;
-  Stream<CurrencyConverter>? _converter;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final AppContainer container = AppScope.of(context);
-    _assets ??= container.assetRepository.observeForPortfolio(
-      widget.portfolioId,
-    );
-    _liabilities ??= container.liabilityRepository.observeForPortfolio(
-      widget.portfolioId,
-    );
-    _converter ??= container.fxRepository.converter;
-  }
-
-  @override
-  Widget build(BuildContext context) => StreamBuilder<List<AssetEntity>>(
-    stream: _assets,
-    builder: (context, assets) => StreamBuilder<List<LiabilityEntity>>(
-      stream: _liabilities,
-      builder: (context, liabilities) => StreamBuilder<CurrencyConverter>(
-        stream: _converter,
-        builder: (context, converter) {
-          if (assets.hasError || liabilities.hasError || converter.hasError) {
-            return Text('Could not load portfolio totals.'.tr(context));
-          }
-          if (!assets.hasData || !liabilities.hasData || !converter.hasData) {
-            return const SizedBox.shrink();
-          }
-          final String base = AppScope.of(context)
-              .settingsRepository
-              .current
-              .baseCurrency;
-          final CurrencyConverter rates = converter.data!;
-          final NetWorthSummary summary = const NetWorthCalculator().calculate(
-            assets: assets.data!,
-            liabilities: liabilities.data!,
-            baseCurrency: base,
-            converter: rates,
-          );
-          final double current = summary.netWorth;
-          final double previous = widget.asset
-              ? assets.data!
-                    .where((asset) => asset.id == widget.holdingId)
-                    .fold(
-                      0.0,
-                      (sum, asset) =>
-                          sum +
-                          rates.convert(asset.value, asset.currency, base),
-                    )
-              : liabilities.data!
-                    .where((liability) => liability.id == widget.holdingId)
-                    .fold(
-                      0.0,
-                      (sum, liability) =>
-                          sum +
-                          rates.convert(
-                            liability.value,
-                            liability.currency,
-                            base,
-                          ),
-                    );
-          final double next =
-              current +
-              (widget.asset ? 1 : -1) *
-                  (rates.convert(widget.value, widget.currency, base) -
-                      previous);
-          final ThemeData theme = Theme.of(context);
-          return Padding(
-            padding: const EdgeInsets.only(top: 18),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: theme.colorScheme.outlineVariant),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 18),
-                child: Column(
-                  children: <Widget>[
-                    _netRow(context, 'Current net worth', current, base, false),
-                    const SizedBox(height: 12),
-                    _netRow(
-                      context,
-                      widget.holdingId == 0
-                          ? 'After this holding'
-                          : 'After this update',
-                      next,
-                      base,
-                      true,
-                    ),
-                    if (!widget.priced ||
-                        (widget.currency != base &&
-                            (!rates.canConvert(widget.currency) ||
-                                !rates.canConvert(base))) ||
-                        summary.hasApproximateConversions) ...<Widget>[
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: Text(
-                          (!widget.priced
-                                  ? 'This asset is excluded until it has a price.'
-                                  : 'Some values are approximate')
-                              .tr(context),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    ),
-  );
-
-  Widget _netRow(
-    BuildContext context,
-    String label,
-    double amount,
-    String currency,
-    bool highlight,
-  ) => Row(
-    children: <Widget>[
-      Expanded(
-        child: Text(
-          label.tr(context),
-          style:
-              (highlight
-                      ? Theme.of(context).textTheme.bodyMedium
-                      : Theme.of(context).textTheme.bodySmall)
-                  ?.copyWith(
-                    color: highlight
-                        ? null
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-        ),
-      ),
-      Flexible(
-        fit: FlexFit.tight,
-        child: Text(
-          CurrencyUtil.format(amount, currency),
-          textAlign: TextAlign.end,
-          style:
-              (highlight
-                      ? Theme.of(context).textTheme.bodyMedium
-                      : Theme.of(context).textTheme.bodySmall)
-                  ?.copyWith(
-                    color: highlight
-                        ? Theme.of(context).colorScheme.primary
-                        : null,
-                    fontWeight: FontWeight.w600,
-                  ),
-        ),
-      ),
-    ],
-  );
 }

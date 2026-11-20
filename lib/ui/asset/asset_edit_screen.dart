@@ -12,8 +12,8 @@ import '../../util/currency_util.dart';
 import '../components/form_components.dart';
 import '../components/holding_editor_guard.dart';
 import '../components/holding_editor_chrome.dart';
+import '../components/holding_saved_summary_screen.dart';
 import '../components/type_icons.dart';
-import '../components/ui_components.dart';
 import 'asset_edit_view_model.dart';
 import 'asset_form_state.dart';
 import 'stock_exchange_field.dart';
@@ -55,14 +55,12 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
   final FocusNode _manualValueFocus = FocusNode();
   bool _controllersPrimed = false;
   AssetFormState? _initialForm;
-  bool _searchSelection = false;
   final GlobalKey<HoldingEditorGuardState> _guard =
       GlobalKey<HoldingEditorGuardState>();
 
   Map<FocusNode, TextEditingController> get _requiredFields =>
       switch (_viewModel!.form.valuationMode) {
         ValuationMode.market => <FocusNode, TextEditingController>{
-          _symbolFocus: _symbol,
           _quantityFocus: _quantity,
         },
         ValuationMode.quantity => <FocusNode, TextEditingController>{
@@ -77,6 +75,40 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
       };
 
   void _focusNextRequired() => focusNextRequiredField(context, _requiredFields);
+
+  StockExchange? _activeExchange(
+    AssetFormState form,
+    AssetEditViewModel viewModel,
+  ) =>
+      form.isEditing ||
+          form.symbol.trim().isNotEmpty ||
+          viewModel.preferredExchanges.contains(form.exchange)
+      ? form.exchange
+      : null;
+
+  String _footerCalculation(BuildContext context, AssetFormState form) {
+    final String qty = form.quantity.trim().isEmpty
+        ? '0'
+        : form.quantity.trim();
+    switch (form.valuationMode) {
+      case ValuationMode.market:
+        if (form.lastPrice == null) {
+          return '$qty × ${CurrencyUtil.format(0, form.currency)} · '
+              '${'price not fetched yet'.tr(context)}';
+        }
+        return '$qty × ${CurrencyUtil.format(form.lastPrice!, form.currency)}';
+      case ValuationMode.quantity:
+        final double unitPrice = double.tryParse(form.pricePerUnit) ?? 0;
+        final String unit = form.type.unitLabel == null
+            ? ''
+            : ' ${form.type.unitLabel}';
+        return '$qty$unit × ${CurrencyUtil.format(unitPrice, form.currency)}';
+      case ValuationMode.flat:
+        return 'Current value in {currency}'
+            .tr(context)
+            .replaceAll('{currency}', form.currency);
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -101,6 +133,20 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     viewModel.consumeEvent();
     switch (event.type) {
       case AssetEditEventType.saved:
+        final saved = event.savedAsset ?? viewModel.form.toEntity();
+        unawaited(
+          _guard.currentState!.close(
+            replacement: MaterialPageRoute<void>(
+              builder: (_) => HoldingSavedSummaryScreen(
+                portfolioId: widget.portfolioId,
+                updated: widget.assetId != 0,
+                savedAsset: saved,
+                previousAsset: event.previousAsset,
+                notice: event.message,
+              ),
+            ),
+          ),
+        );
       case AssetEditEventType.deleted:
         final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
         final String? notice = event.message?.tr(context);
@@ -219,6 +265,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                     amount: form.estimatedValue,
                     currency: form.currency,
                     priced: !form.type.isMarketLinked || form.lastPrice != null,
+                    calculation: _footerCalculation(context, form),
                     saving: form.isSaving,
                     ready: !form.isFetchingPrice && form.validate() == null,
                     onSave: () {
@@ -243,7 +290,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                           context,
                         ),
                       ),
-                      if (form.valuationMode == ValuationMode.flat)
+                      if (form.valuationMode == ValuationMode.flat) ...<Widget>[
                         LabeledTextField(
                           canvas: true,
                           controller: _manualValue,
@@ -264,31 +311,19 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                           ),
                           prominent: true,
                           onChanged: viewModel.onManualValueChange,
-                        )
-                      else
-                        _EstimatedValueSummary(
-                          amount:
-                              form.type.isMarketLinked && form.lastPrice == null
-                              ? 'Price pending'.tr(context)
-                              : CurrencyUtil.format(
-                                  form.estimatedValue,
-                                  form.currency,
-                                ),
-                          caption: form.valuationMode == ValuationMode.market
-                              ? form.lastPrice == null
-                                    ? null
-                                    : '${form.quantity.isEmpty ? '0' : form.quantity} × '
-                                          '${CurrencyUtil.format(form.lastPrice!, form.currency)}'
-                              : '${form.quantity.isEmpty ? '0' : form.quantity} × '
-                                    '${CurrencyUtil.format(double.tryParse(form.pricePerUnit) ?? 0, form.currency)}',
                         ),
-                      const SizedBox(height: 12),
+                        const SizedBox(height: 12),
+                      ],
                       FormFieldPair(
                         first: DropdownSelector<AssetType>(
                           canvas: true,
                           label: 'Type'.tr(context),
                           dialogEyebrow: 'What you own'.tr(context),
                           dialogTitle: 'Choose a type'.tr(context),
+                          searchPlaceholder:
+                              'e.g. Stock, Cash, Gold, Real estate'.tr(context),
+                          supportingText: 'e.g. Stock, Cash, Gold, Real estate'
+                              .tr(context),
                           selected: form.type,
                           options: AssetType.values,
                           optionLabel: (AssetType type) =>
@@ -298,9 +333,9 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                           optionIcon: assetTypeIcon,
                           onSelected: (AssetType type) {
                             viewModel.onTypeChange(type);
-                            _searchSelection = false;
                             _name.text = viewModel.form.name;
                             _customName.text = viewModel.form.customName;
+                            _symbol.text = viewModel.form.symbol;
                             _focusNextRequired();
                           },
                           compact: true,
@@ -308,6 +343,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                         second: CurrencySelector(
                           canvas: true,
                           currency: form.currency,
+                          supportingText: 'e.g. INR, USD, EUR, GBP'.tr(context),
                           compact: true,
                           onTap: () => _pickCurrency(form.currency),
                         ),
@@ -316,14 +352,8 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                         const SizedBox(height: 18),
                         StockExchangeField(
                           canvas: true,
-                          selected:
-                              form.isEditing ||
-                                  form.symbol.trim().isNotEmpty ||
-                                  viewModel.preferredExchanges.contains(
-                                    form.exchange,
-                                  )
-                              ? form.exchange
-                              : null,
+                          selected: _activeExchange(form, viewModel),
+                          isMutualFund: form.type == AssetType.mutualFund,
                           preferredExchanges: viewModel.preferredExchanges,
                           onSavePreferences: viewModel.savePreferredExchanges,
                           compact: true,
@@ -335,7 +365,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                         ),
                       ],
                       if (!form.type.isMarketLinked) ...<Widget>[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         LabeledTextField(
                           canvas: true,
                           controller: _name,
@@ -346,24 +376,14 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                           ),
                           onSubmitted: (_) => _focusNextRequired(),
                           label: 'Name'.tr(context),
-                          placeholder: 'e.g. Apple shares'.tr(context),
+                          placeholder: form.type.nameExample.tr(context),
                           maxLength: 60,
                           onChanged: viewModel.onNameChange,
                         ),
                       ],
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       ..._valuationFields(form, viewModel),
-                      const SizedBox(height: 8),
-                      HoldingNetWorthPreview(
-                        portfolioId: widget.portfolioId,
-                        holdingId: widget.assetId,
-                        asset: true,
-                        value: form.estimatedValue,
-                        currency: form.currency,
-                        priced:
-                            !form.type.isMarketLinked || form.lastPrice != null,
-                      ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 56),
                     ],
                   ),
           ),
@@ -376,8 +396,31 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     AssetFormState form,
     AssetEditViewModel viewModel,
   ) {
+    final bool invalidQuantity =
+        form.quantity.trim().isNotEmpty &&
+        (double.tryParse(form.quantity.trim()) ?? 0) <= 0;
     switch (form.valuationMode) {
       case ValuationMode.market:
+        final String quantityPlaceholder = switch (form.type) {
+          AssetType.crypto =>
+            'e.g. {symbol}'.tr(context).replaceAll('{symbol}', '0.25'),
+          AssetType.mutualFund =>
+            'e.g. {symbol}'.tr(context).replaceAll('{symbol}', '15'),
+          _ => 'e.g. {symbol}'.tr(context).replaceAll('{symbol}', '10'),
+        };
+        final String quantityHint = switch (form.type) {
+          AssetType.crypto => 'Fractional coins supported (e.g. 0.25)'.tr(
+            context,
+          ),
+          AssetType.mutualFund => 'Units held (e.g. 15.5)'.tr(context),
+          _ => 'Shares held (e.g. 10)'.tr(context),
+        };
+        final bool invalidSymbol =
+            form.quoteSymbol.isNotEmpty &&
+            !isValidTickerSymbol(
+              form.quoteSymbol,
+              isCrypto: form.type == AssetType.crypto,
+            );
         final Widget quantityField = LabeledTextField(
           canvas: true,
           controller: _quantity,
@@ -388,70 +431,58 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
           ),
           onSubmitted: (_) => _focusNextRequired(),
           label: 'Quantity'.tr(context),
+          placeholder: quantityPlaceholder,
+          supportingText: invalidQuantity
+              ? 'Enter a positive number (decimals allowed, e.g. 0.25).'.tr(
+                  context,
+                )
+              : quantityHint,
+          isError: invalidQuantity,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           onChanged: viewModel.onQuantityChange,
         );
         return <Widget>[
-          if (form.name.trim().isNotEmpty && !_searchSelection) ...<Widget>[
-            Material(
-              color: Theme.of(context).colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(13),
-              child: ListTile(
-                key: const ValueKey<String>('selected-market-holding'),
-                leading: TypeAvatar(assetTypeIcon(form.type)),
-                title: Text(form.name),
-                subtitle: Text('${form.quoteSymbol} / ${form.currency}'),
-                trailing: Icon(
-                  Icons.search,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(13),
-                  side: BorderSide(
-                    color: Theme.of(context).colorScheme.outlineVariant,
-                  ),
-                ),
-                onTap: () {
-                  setState(() => _searchSelection = true);
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (!mounted) return;
-                    _symbolFocus.requestFocus();
-                    _symbol.selection = TextSelection(
-                      baseOffset: 0,
-                      extentOffset: _symbol.text.length,
-                    );
-                  });
-                },
-              ),
+          StockSearchField(
+            canvas: true,
+            controller: _symbol,
+            focusNode: _symbolFocus,
+            selectedName: form.name,
+            selectedSymbol: form.quoteSymbol,
+            currency: form.currency,
+            exchange: form.usesStockExchange
+                ? _activeExchange(form, viewModel)
+                : null,
+            errorText: invalidSymbol
+                ? (form.type == AssetType.crypto
+                          ? 'Search by name or enter a valid ticker (e.g. BTC or BTC-USD).'
+                          : 'Search by name or enter a valid ticker (e.g. AAPL, AIR.PA, or 7203.T).')
+                      .tr(context)
+                : null,
+            textInputAction: requiredFieldInputAction(
+              _requiredFields,
+              current: _symbolFocus,
             ),
-            const SizedBox(height: 12),
-            quantityField,
-          ] else
-            StockSearchField(
-              canvas: true,
-              controller: _symbol,
-              focusNode: _symbolFocus,
-              textInputAction: requiredFieldInputAction(
-                _requiredFields,
-                current: _symbolFocus,
-              ),
-              onSubmitted: (_) => _focusNextRequired(),
-              service: AppScope.of(context).stockSearchService,
-              type: switch (form.type) {
-                AssetType.crypto => StockSearchType.crypto,
-                AssetType.mutualFund => StockSearchType.fund,
-                _ => StockSearchType.stock,
-              },
-              quantityField: quantityField,
-              onChanged: viewModel.onSymbolChange,
-              onSelected: (result) {
-                _searchSelection = false;
-                viewModel.onStockSelected(result);
-                _symbol.text = viewModel.form.symbol;
-                _focusNextRequired();
-                unawaited(viewModel.fetchPrice());
-              },
-            ),
+            onSubmitted: (_) => _focusNextRequired(),
+            service: AppScope.of(context).stockSearchService,
+            type: switch (form.type) {
+              AssetType.crypto => StockSearchType.crypto,
+              AssetType.mutualFund => StockSearchType.fund,
+              _ => StockSearchType.stock,
+            },
+            quantityField: quantityField,
+            onChanged: viewModel.onSymbolChange,
+            onManualSelected: (String ticker) {
+              viewModel.onSymbolChange(ticker);
+              _symbol.text = viewModel.form.symbol;
+              _focusNextRequired();
+            },
+            onSelected: (result) {
+              viewModel.onStockSelected(result);
+              _symbol.text = viewModel.form.symbol;
+              _focusNextRequired();
+              unawaited(viewModel.fetchPrice());
+            },
+          ),
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: TextButton(
@@ -483,18 +514,23 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          LabeledTextField(
-            canvas: true,
+          OptionalCustomNameField(
+            key: ValueKey<AssetType>(form.type),
             controller: _customName,
             textInputAction: requiredFieldInputAction(_requiredFields),
             onSubmitted: (_) => _focusNextRequired(),
             label: 'Custom name (optional)'.tr(context),
             maxLength: 60,
-            placeholder: form.name.trim().isNotEmpty ? form.name.trim() : null,
+            placeholder: form.name.trim().isNotEmpty
+                ? form.name.trim()
+                : form.type.nameExample.tr(context),
             onChanged: viewModel.onCustomNameChange,
           ),
         ];
       case ValuationMode.quantity:
+        final bool invalidUnitPrice =
+            form.pricePerUnit.trim().isNotEmpty &&
+            (double.tryParse(form.pricePerUnit.trim()) ?? 0) <= 0;
         return <Widget>[
           FormFieldPair(
             first: LabeledTextField(
@@ -507,6 +543,15 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
               ),
               onSubmitted: (_) => _focusNextRequired(),
               label: 'Quantity'.tr(context),
+              placeholder: 'e.g. {symbol}'
+                  .tr(context)
+                  .replaceAll('{symbol}', '10'),
+              supportingText: invalidQuantity
+                  ? 'Enter a positive number (decimals allowed, e.g. 0.25).'.tr(
+                      context,
+                    )
+                  : 'Total weight in grams'.tr(context),
+              isError: invalidQuantity,
               suffix: form.type.unitLabel,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -525,6 +570,15 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
               label: 'Price per {unit}'
                   .tr(context)
                   .replaceAll('{unit}', form.type.unitLabel ?? 'unit'),
+              placeholder: 'e.g. {symbol}'
+                  .tr(context)
+                  .replaceAll('{symbol}', '7200'),
+              supportingText: invalidUnitPrice
+                  ? 'Enter a positive price.'.tr(context)
+                  : 'Rate in {currency} / g'
+                        .tr(context)
+                        .replaceAll('{currency}', form.currency),
+              isError: invalidUnitPrice,
               prefix: CurrencyUtil.symbol(form.currency),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -547,54 +601,5 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
       _focusNextRequired();
       await _viewModel?.onCurrencyChange(picked);
     }
-  }
-}
-
-class _EstimatedValueSummary extends StatelessWidget {
-  const _EstimatedValueSummary({required this.amount, this.caption});
-
-  final String amount;
-  final String? caption;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.only(top: 8, bottom: 20),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: theme.colorScheme.outlineVariant),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            'Estimated value'.tr(context),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            amount,
-            style: theme.textTheme.displaySmall?.copyWith(
-              fontSize: 32,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          if (caption != null) ...<Widget>[
-            const SizedBox(height: 6),
-            Text(
-              caption!,
-              key: const ValueKey<String>('asset-valuation-caption'),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 }

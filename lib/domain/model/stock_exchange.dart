@@ -34,6 +34,36 @@ enum StockExchange {
     return '$cleaned$suffix';
   }
 
+  /// Representative company or fund example for helper text and search hints.
+  (String name, String ticker) exampleHolding({
+    bool fund = false,
+  }) => switch (this) {
+    StockExchange.us => fund ? ('Vanguard S&P 500', 'VOO') : ('Apple', 'AAPL'),
+    StockExchange.shanghai =>
+      fund ? ('CSI 300 ETF', '510300') : ('Kweichow Moutai', '600519'),
+    StockExchange.euronextParis =>
+      fund ? ('Amundi MSCI World', 'CW8') : ('Airbus', 'AIR'),
+    StockExchange.euronextAmsterdam =>
+      fund ? ('Vanguard All-World', 'VWRL') : ('ASML', 'ASML'),
+    StockExchange.euronextBrussels =>
+      fund ? ('iShares Core MSCI', 'IWDA') : ('AB InBev', 'ABI'),
+    StockExchange.euronextLisbon =>
+      fund ? ('PSI 20 ETF', 'PPP') : ('EDP', 'EDP'),
+    StockExchange.euronextDublin =>
+      fund ? ('iShares S&P 500', 'CSPX') : ('Kerry Group', 'KRX'),
+    StockExchange.euronextOslo =>
+      fund ? ('OBX ETF', 'OBX') : ('Equinor', 'EQNR'),
+    StockExchange.euronextMilan =>
+      fund ? ('FTSE MIB ETF', 'IMIB') : ('Eni', 'ENI'),
+    StockExchange.tokyo => fund ? ('TOPIX ETF', '1306') : ('Toyota', '7203'),
+    StockExchange.hongKong =>
+      fund ? ('Tracker Fund', '2800') : ('Tencent', '0700'),
+    StockExchange.bse =>
+      fund ? ('Nifty 50 ETF', 'NIFTYBEES') : ('Reliance', 'RELIANCE'),
+    StockExchange.other =>
+      fund ? ('Vanguard FTSE', 'VWRL.L') : ('Vodafone', 'VOD.L'),
+  };
+
   static StockExchange fromSymbol(String symbol) {
     final String cleaned = symbol.trim().toUpperCase();
     for (final StockExchange exchange in values) {

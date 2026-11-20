@@ -5,9 +5,27 @@ import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
+import '../asset/asset_form_state.dart' show filterDecimal;
 import 'type_icons.dart';
 
 const EdgeInsets _editorFieldPadding = EdgeInsets.only(top: 24, bottom: 4);
+
+/// Slightly higher-contrast border for Canvas editor boxes and modal panels,
+/// matching `--box-line` in the prototype (`#3B5446` dark, `#C5D3C0` light)
+/// while keeping row/section dividers on the subtler `outlineVariant`.
+Color canvasBoxBorderColor(ColorScheme colors) {
+  if (colors.outlineVariant == const Color(0xFF2A3934)) {
+    return const Color(0xFF3B5446);
+  }
+  if (colors.outlineVariant == const Color(0xFFD1DCCE)) {
+    return const Color(0xFFC5D3C0);
+  }
+  return Color.lerp(
+    colors.outlineVariant,
+    colors.outline,
+    colors.brightness == Brightness.dark ? 0.24 : 0.16,
+  )!;
+}
 
 /// Shared field with optional Canvas outlines and amount emphasis.
 class LabeledTextField extends StatelessWidget {
@@ -29,6 +47,8 @@ class LabeledTextField extends StatelessWidget {
     this.prominent = false,
     this.maxLength,
     this.canvas = false,
+    this.showLabel = true,
+    this.inputFormatters,
     super.key,
   });
 
@@ -49,14 +69,38 @@ class LabeledTextField extends StatelessWidget {
   final bool prominent;
   final int? maxLength;
   final bool canvas;
+  final bool showLabel;
+  final List<TextInputFormatter>? inputFormatters;
 
   static final List<TextInputFormatter> _decimalFormatters =
       <TextInputFormatter>[
-        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,\-]')),
+        TextInputFormatter.withFunction((
+          TextEditingValue oldValue,
+          TextEditingValue newValue,
+        ) {
+          final String filtered = filterDecimal(newValue.text);
+          if (filtered == newValue.text) return newValue;
+          final int cursor = newValue.selection.extentOffset.clamp(
+            0,
+            newValue.text.length,
+          );
+          final int filteredCursor = filterDecimal(
+            newValue.text.substring(0, cursor),
+          ).length;
+          return TextEditingValue(
+            text: filtered,
+            selection: TextSelection.collapsed(offset: filteredCursor),
+          );
+        }),
       ];
 
   @override
   Widget build(BuildContext context) {
+    final List<TextInputFormatter>? effectiveFormatters =
+        inputFormatters ??
+        (keyboardType == const TextInputType.numberWithOptions(decimal: true)
+            ? _decimalFormatters
+            : null);
     final Widget field = TextField(
       controller: controller,
       focusNode: focusNode,
@@ -71,10 +115,7 @@ class LabeledTextField extends StatelessWidget {
           ? Theme.of(context).textTheme.displaySmall
                 ?.copyWith(color: Theme.of(context).colorScheme.primary)
           : Theme.of(context).textTheme.bodyLarge,
-      inputFormatters:
-          keyboardType == const TextInputType.numberWithOptions(decimal: true)
-          ? _decimalFormatters
-          : null,
+      inputFormatters: effectiveFormatters,
       decoration: InputDecoration(
         border: prominent ? InputBorder.none : null,
         enabledBorder: prominent ? InputBorder.none : null,
@@ -108,21 +149,23 @@ class LabeledTextField extends StatelessWidget {
           : theme.textTheme.bodyLarge;
       final OutlineInputBorder border = OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: colors.outlineVariant),
+        borderSide: BorderSide(color: canvasBoxBorderColor(colors)),
       );
       return Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(
-              label,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: colors.onSurface,
-                fontWeight: FontWeight.w500,
+            if (showLabel) ...<Widget>[
+              Text(
+                label,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: colors.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            const SizedBox(height: 7),
+              const SizedBox(height: 7),
+            ],
             Semantics(
               label: label,
               child: TextField(
@@ -136,11 +179,7 @@ class LabeledTextField extends StatelessWidget {
                 maxLength: maxLength,
                 keyboardType: keyboardType,
                 style: inputStyle,
-                inputFormatters:
-                    keyboardType ==
-                        const TextInputType.numberWithOptions(decimal: true)
-                    ? _decimalFormatters
-                    : null,
+                inputFormatters: effectiveFormatters,
                 decoration: InputDecoration(
                   labelText: null,
                   hintText: placeholder,
@@ -163,6 +202,26 @@ class LabeledTextField extends StatelessWidget {
                           borderSide: BorderSide(color: colors.outlineVariant),
                         )
                       : border,
+                  errorBorder: prominent
+                      ? UnderlineInputBorder(
+                          borderSide: BorderSide(color: colors.error),
+                        )
+                      : border.copyWith(
+                          borderSide: BorderSide(color: colors.error),
+                        ),
+                  focusedErrorBorder: prominent
+                      ? UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: colors.error,
+                            width: 1.5,
+                          ),
+                        )
+                      : border.copyWith(
+                          borderSide: BorderSide(
+                            color: colors.error,
+                            width: 1.5,
+                          ),
+                        ),
                   focusedBorder: prominent
                       ? UnderlineInputBorder(
                           borderSide: BorderSide(
@@ -249,6 +308,8 @@ class DropdownSelector<T> extends StatelessWidget {
     required this.onSelected,
     this.dialogEyebrow,
     this.dialogTitle,
+    this.searchPlaceholder,
+    this.supportingText,
     this.optionSubtitle,
     this.optionIcon,
     this.compact = false,
@@ -259,6 +320,8 @@ class DropdownSelector<T> extends StatelessWidget {
   final String label;
   final String? dialogEyebrow;
   final String? dialogTitle;
+  final String? searchPlaceholder;
+  final String? supportingText;
   final T selected;
   final List<T> options;
   final String Function(T) optionLabel;
@@ -275,6 +338,7 @@ class DropdownSelector<T> extends StatelessWidget {
         message: '$label: ${optionLabel(selected)}',
         child: PickerChip(
           fieldLabel: canvas ? label : null,
+          supportingText: canvas ? supportingText : null,
           label: optionLabel(selected),
           icon: optionIcon?.call(selected),
           onPressed: () async {
@@ -282,6 +346,7 @@ class DropdownSelector<T> extends StatelessWidget {
               context,
               eyebrow: dialogEyebrow,
               title: dialogTitle ?? label,
+              searchPlaceholder: searchPlaceholder,
               selected: selected,
               options: options,
               optionLabel: optionLabel,
@@ -325,6 +390,7 @@ class PickerChip extends StatelessWidget {
     this.icon,
     this.onPressed,
     this.fieldLabel,
+    this.supportingText,
     super.key,
   });
 
@@ -332,6 +398,7 @@ class PickerChip extends StatelessWidget {
   final IconData? icon;
   final VoidCallback? onPressed;
   final String? fieldLabel;
+  final String? supportingText;
 
   @override
   Widget build(BuildContext context) {
@@ -351,7 +418,7 @@ class PickerChip extends StatelessWidget {
             color: theme.colorScheme.surfaceContainerLow,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
-              side: BorderSide(color: theme.colorScheme.outlineVariant),
+              side: BorderSide(color: canvasBoxBorderColor(theme.colorScheme)),
             ),
             child: InkWell(
               borderRadius: BorderRadius.circular(10),
@@ -382,6 +449,19 @@ class PickerChip extends StatelessWidget {
               ),
             ),
           ),
+          if (supportingText != null && supportingText!.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 7),
+            Text(
+              supportingText!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 11.5,
+                height: 1.4,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ],
       );
     }
@@ -531,6 +611,7 @@ class CurrencySelector extends StatelessWidget {
   const CurrencySelector({
     required this.currency,
     required this.onTap,
+    this.supportingText,
     this.compact = false,
     this.canvas = false,
     super.key,
@@ -538,6 +619,7 @@ class CurrencySelector extends StatelessWidget {
 
   final String currency;
   final VoidCallback onTap;
+  final String? supportingText;
   final bool compact;
   final bool canvas;
 
@@ -554,6 +636,7 @@ class CurrencySelector extends StatelessWidget {
           icon: icon,
           onPressed: onTap,
           fieldLabel: canvas ? 'Currency'.tr(context) : null,
+          supportingText: canvas ? supportingText : null,
         ),
       );
     }
@@ -574,6 +657,141 @@ class CurrencySelector extends StatelessWidget {
   }
 }
 
+class OptionalCustomNameField extends StatefulWidget {
+  const OptionalCustomNameField({
+    required this.controller,
+    required this.label,
+    required this.onChanged,
+    this.placeholder,
+    this.maxLength = 60,
+    this.textInputAction,
+    this.onSubmitted,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final ValueChanged<String> onChanged;
+  final String? placeholder;
+  final int maxLength;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  State<OptionalCustomNameField> createState() =>
+      _OptionalCustomNameFieldState();
+}
+
+class _OptionalCustomNameFieldState extends State<OptionalCustomNameField> {
+  final FocusNode _focusNode = FocusNode();
+  late bool _expanded = widget.controller.text.trim().isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_syncFromController);
+  }
+
+  @override
+  void didUpdateWidget(OptionalCustomNameField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_syncFromController);
+      widget.controller.addListener(_syncFromController);
+    }
+    _syncFromController();
+  }
+
+  void _syncFromController() {
+    if (!_expanded && widget.controller.text.trim().isNotEmpty) {
+      setState(() => _expanded = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_syncFromController);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    final bool next = !_expanded;
+    setState(() => _expanded = next);
+    if (next) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
+      });
+    } else {
+      _focusNode.unfocus();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: colors.outlineVariant)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          InkWell(
+            key: const ValueKey<String>('custom-name-toggle'),
+            onTap: _toggle,
+            borderRadius: BorderRadius.circular(8),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        widget.label,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: _expanded
+                              ? colors.onSurface
+                              : colors.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      _expanded ? Icons.remove : Icons.edit_outlined,
+                      size: 16,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: LabeledTextField(
+                canvas: true,
+                showLabel: false,
+                controller: widget.controller,
+                focusNode: _focusNode,
+                label: widget.label,
+                placeholder: widget.placeholder,
+                maxLength: widget.maxLength,
+                textInputAction: widget.textInputAction,
+                onSubmitted: widget.onSubmitted,
+                onChanged: widget.onChanged,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// A searchable currency picker dialog. Returns the chosen code, or null.
 Future<String?> showCurrencyPickerDialog(
   BuildContext context, {
@@ -583,6 +801,7 @@ Future<String?> showCurrencyPickerDialog(
   context,
   eyebrow: eyebrow ?? 'Holding currency'.tr(context),
   title: 'Choose currency'.tr(context),
+  searchPlaceholder: 'e.g. INR, USD, Euro, Yen'.tr(context),
   selected: selected,
   options: <String>[
     ...CurrencyUtil.commonCurrencies,
@@ -601,6 +820,7 @@ Future<T?> showSelectionPickerDialog<T>(
   required List<T> options,
   required String Function(T) optionLabel,
   String? eyebrow,
+  String? searchPlaceholder,
   String? Function(T)? optionSubtitle,
   IconData Function(T)? optionIcon,
 }) {
@@ -613,6 +833,7 @@ Future<T?> showSelectionPickerDialog<T>(
       child: _SelectionPickerDialog<T>(
         eyebrow: eyebrow,
         title: title,
+        searchPlaceholder: searchPlaceholder,
         selected: selected,
         options: options,
         optionLabel: optionLabel,
@@ -630,12 +851,14 @@ class _SelectionPickerDialog<T> extends StatefulWidget {
     required this.options,
     required this.optionLabel,
     this.eyebrow,
+    this.searchPlaceholder,
     this.optionSubtitle,
     this.optionIcon,
   });
 
   final String? eyebrow;
   final String title;
+  final String? searchPlaceholder;
   final T? selected;
   final List<T> options;
   final String Function(T) optionLabel;
@@ -678,9 +901,10 @@ class _SelectionPickerDialogState<T> extends State<_SelectionPickerDialog<T>> {
     final ColorScheme colors = theme.colorScheme;
     final List<T> results = _results;
     final String searchLabel = 'Search'.tr(context);
+    final Color boxBorder = canvasBoxBorderColor(colors);
     final OutlineInputBorder searchBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: colors.outlineVariant),
+      borderSide: BorderSide(color: boxBorder),
     );
     return AlertDialog(
       backgroundColor: colors.surface,
@@ -689,7 +913,7 @@ class _SelectionPickerDialogState<T> extends State<_SelectionPickerDialog<T>> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: colors.outlineVariant),
+        side: BorderSide(color: boxBorder),
       ),
       titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 12),
       contentPadding: const EdgeInsets.symmetric(horizontal: 24),
@@ -747,7 +971,7 @@ class _SelectionPickerDialogState<T> extends State<_SelectionPickerDialog<T>> {
                 ),
                 decoration: InputDecoration(
                   labelText: null,
-                  hintText: searchLabel,
+                  hintText: widget.searchPlaceholder ?? searchLabel,
                   hintStyle: theme.textTheme.bodyLarge?.copyWith(
                     color: colors.onSurfaceVariant,
                   ),

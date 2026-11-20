@@ -55,8 +55,8 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke
 .state-details summary{font-size:11px;color:var(--lab-muted);padding:4px 0}
 .state-details pre{font:10px/1.65 Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:270px;overflow:auto;background:#e9ede3;border-radius:8px;padding:12px}
 .caption{text-align:center;color:var(--lab-muted);font-size:10px;margin-top:12px;letter-spacing:.2px}
-.device,.app-dialog{--bg:#f6f8f3;--surface:#fff;--soft:#edf2ea;--panel:#e5ecdf;--ink:#25332b;--muted:#5e7062;--line:#d6e0d1;--accent:#3d6249;--on-accent:#fff;--tint:#dce9d8;--danger:#a23a35;--danger-bg:#faeae6;--warm:#855c24;--warm-bg:#f7ecd9;color:var(--ink);font-size:16px;color-scheme:light}
-body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--surface:#1d2c26;--soft:#20302a;--panel:#293e32;--ink:#e8f0e9;--muted:#a3b8aa;--line:#344b3d;--accent:#c1e1bd;--on-accent:#1e3025;--tint:#2d4635;--danger:#ffb4ab;--danger-bg:#432b29;--warm:#e8c48a;--warm-bg:#3c3425;color-scheme:dark}
+.device,.app-dialog{--bg:#f6f8f3;--surface:#fff;--soft:#edf2ea;--panel:#e5ecdf;--ink:#25332b;--muted:#5e7062;--line:#d6e0d1;--box-line:#c5d3c0;--accent:#3d6249;--on-accent:#fff;--tint:#dce9d8;--danger:#a23a35;--danger-bg:#faeae6;--warm:#855c24;--warm-bg:#f7ecd9;color:var(--ink);font-size:16px;color-scheme:light}
+body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--surface:#1d2c26;--soft:#20302A;--panel:#293e32;--ink:#e8f0e9;--muted:#a3b8aa;--line:#2d4036;--box-line:#3b5446;--accent:#c1e1bd;--on-accent:#1e3025;--tint:#2d4635;--danger:#ffb4ab;--danger-bg:#432b29;--warm:#e8c48a;--warm-bg:#3c3425;color-scheme:dark}
 .device-wrap{width:min(100%,max(280px,calc((100dvh - 230px)*.45)));justify-self:center}
 .device{width:390px;zoom:var(--preview-scale,1);aspect-ratio:9/20;border:7px solid #243b2e;border-radius:39px;background:var(--bg);box-shadow:0 18px 55px #253c2b17,0 2px 6px #253c2b0d;display:flex;flex-direction:column;position:relative;overflow:hidden;isolation:isolate}
 .device[data-large=true]{font-size:25px}
@@ -146,9 +146,15 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 .reorder-buttons svg{width:16px;height:16px}
 .move-up svg{transform:rotate(-90deg)}
 .move-down svg{transform:rotate(90deg)}
-.picker{display:flex;align-items:center;gap:9px;width:100%;min-height:54px;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);text-align:left}
+.picker{display:flex;align-items:center;gap:9px;width:100%;min-height:54px;padding:11px;border:1px solid var(--box-line);border-radius:10px;background:var(--surface);color:var(--ink);text-align:left}
 .picker .picker-value{flex:1;min-width:0;font-size:.8em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.picker .picker-value.is-placeholder{color:var(--muted)}
+.picker .picker-detail{display:grid;min-width:0;flex:1;gap:2px}
+.picker .picker-detail strong{font-size:.82em;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.picker .picker-detail small{font-size:.64em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.picker[aria-invalid=true]{border-color:var(--danger);background:var(--danger-bg)}
 .picker>svg:last-child{width:14px;transform:rotate(90deg)}
+.picker>svg.picker-search-trail{width:16px;transform:none;color:var(--accent)}
 .picker>svg:first-child{width:19px;color:var(--accent)}
 .currency-glyph{display:grid;place-items:center;min-width:24px;min-height:24px;color:var(--accent);font-weight:600;font-size:1.05em}
 .picker-search{margin:8px 0 10px}
@@ -162,6 +168,7 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 .picker-option small{display:block;font-size:.69em;color:var(--muted)}
 .picker-option>svg:first-child{color:var(--accent)}
 .picker-option>svg:last-child{width:17px;color:var(--accent)}
+.picker-option>svg.option-chevron{width:15px;color:var(--muted)}
 .field-meta{display:flex;justify-content:space-between;gap:12px;font-size:.62em;color:var(--muted);margin-top:5px}
 .field-meta .at-limit{color:var(--warm)}
 .save-hint{font-size:.61em;color:var(--muted);margin:8px 0 0;line-height:1.5}
@@ -225,7 +232,7 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 .fields-grid>*{min-width:0}
 .field{display:block;margin:0 0 18px;position:relative}
 .field>span:first-child{display:block;font-size:.68em;color:var(--muted);font-weight:500;margin-bottom:7px}
-.field input,.field select,.field textarea{width:100%;min-width:0;min-height:50px;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:.87em;line-height:1.35;outline-offset:2px}
+.field input,.field select,.field textarea{width:100%;min-width:0;min-height:50px;padding:12px 13px;border:1px solid var(--box-line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:.87em;line-height:1.35;outline-offset:2px}
 .field input::placeholder,.field textarea::placeholder{font:inherit;letter-spacing:inherit;line-height:inherit;color:var(--muted);opacity:1}
 .field textarea{resize:vertical;min-height:90px}
 .field input[aria-invalid=true]{border-color:var(--danger);background:var(--danger-bg)}
@@ -261,9 +268,20 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 .selected-quote{background:var(--soft);border:1px solid var(--line);border-radius:13px;padding:14px;display:flex;gap:12px;align-items:center;margin-bottom:18px}
 .selected-quote strong{font-size:.8em;font-weight:550;display:block;overflow-wrap:anywhere}
 .selected-quote small{font-size:.65em;color:var(--muted)}
-.app-footer{border-top:1px solid var(--line);padding:13px 23px 18px;flex-shrink:0;background:var(--bg)}
-.app-footer .footer-summary{display:flex;justify-content:space-between;gap:15px;font-size:.67em;color:var(--muted);margin:0 0 10px}
-.footer-summary strong{font-weight:600;color:var(--ink);text-align:right}
+.custom-name{border-top:1px solid var(--line);margin:12px 0 4px}
+.custom-name summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:12px 0;font-size:.75em;font-weight:500;color:var(--muted)}
+.custom-name summary::-webkit-details-marker{display:none}
+.custom-name summary svg{width:16px;height:16px;color:var(--muted)}
+.custom-name .icon-collapse{display:none}
+.custom-name[open] .icon-expand{display:none}
+.custom-name[open] .icon-collapse{display:block}
+.custom-name .field{margin:2px 0 12px}
+.app-footer{border-top:1px solid var(--line);padding:14px 24px 18px;flex-shrink:0;background:var(--bg)}
+.footer-estimate{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:2px 0 13px;margin:0 0 12px;border-bottom:1px solid var(--line)}
+.footer-estimate-copy{min-width:0;flex:1}
+.footer-estimate .label{display:block;font-size:.72em;line-height:1.25;color:var(--muted);font-weight:500}
+.footer-estimate .estimated{flex-shrink:0;max-width:52%;font-size:1.58em;line-height:1.1;letter-spacing:-.65px;font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums;margin:0;text-align:right;overflow-wrap:anywhere}
+.footer-estimate .calculation{font-size:.66em;line-height:1.35;color:var(--muted);display:block;margin-top:4px;overflow-wrap:anywhere}
 .footer-actions{display:flex;gap:10px}
 .footer-actions .secondary{width:52px;padding:12px;flex-shrink:0}
 .progress{display:flex;gap:5px;margin:11px 0 22px}
@@ -281,17 +299,13 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 .review-line:last-child{border:0}
 .review-line dt{color:var(--muted)}
 .review-line dd{margin:0;text-align:right;max-width:64%;overflow-wrap:anywhere}
-.impact{border-top:1px solid var(--line);padding-top:20px;margin-top:23px}
-.impact .row{font-size:.72em}
-.impact .row strong{font-weight:550}
-.impact-total{display:flex;justify-content:space-between;gap:15px;margin:12px 0 5px;font-size:.85em}
-.impact-total strong{font-weight:600;color:var(--accent);overflow-wrap:anywhere;text-align:right}
+.picker-error{display:block;font-size:.66em;color:var(--danger);padding:10px 4px 4px;line-height:1.5}
 .success-mark{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;background:var(--tint);color:var(--accent);margin:29px auto 24px}
 .success-mark svg{width:32px;height:32px}
 .success-heading{text-align:center;font-size:1.8em;letter-spacing:-.7px;line-height:1.2;font-weight:500;margin:0 0 10px}
 .success-value{text-align:center;color:var(--accent);font-size:2.1em;line-height:1.4;overflow-wrap:anywhere;margin:10px 0}
 .center{text-align:center}
-.app-dialog{border:1px solid var(--line);border-radius:24px;padding:24px;width:calc(100% - 40px);max-width:375px;max-height:85dvh;overflow:auto;background:var(--bg);box-shadow:0 24px 90px #0003}
+.app-dialog{border:1px solid var(--box-line);border-radius:24px;padding:24px;width:calc(100% - 40px);max-width:375px;max-height:85dvh;overflow:auto;background:var(--bg);box-shadow:0 24px 90px #0003}
 .app-dialog::backdrop{background:#10231baa;backdrop-filter:blur(3px)}
 .app-dialog h2{font-size:1.4em;font-weight:500;letter-spacing:-.6px;line-height:1.25;margin:5px 0 10px}
 .app-dialog .primary{margin-top:12px}
@@ -310,7 +324,6 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 .device[data-large=true] .fields-grid,.device[data-large=true] .totals{grid-template-columns:1fr}
 .device[data-large=true] .type-grid{grid-template-columns:1fr}
 .device[data-large=true] .app-footer{padding:10px 17px}
-.device[data-large=true] .app-footer .footer-summary{display:none}
 .device[data-large=true] .page{--page-inset:18px}
 .device[data-large=true] .page-title{font-size:1.65em}
 .device[data-large=true] .networth{font-size:1.7em}
@@ -351,6 +364,8 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 <symbol id="i-candle" viewBox="0 0 24 24"><path d="M8 4v3M8 15v5M6 7h4v8H6zM16 5v4M16 17v3M14 9h4v8h-4z"/></symbol>
 <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
 <symbol id="i-tune" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M13 5v4M4 17h3M11 17h9M7 15v4"/></symbol>
+<symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+<symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
 <symbol id="i-signal" viewBox="0 0 24 24"><path d="M4 19v-3M9 19v-7M14 19V8M19 19V4"/></symbol>
 <symbol id="i-battery" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M23 10v4M5 10h11v4H5z"/></symbol>
 </defs></svg>
@@ -399,7 +414,7 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
       <button class="text-link" data-action="sample">Fill this draft with example data</button><br>
       <button class="text-link" data-action="reset">Reset all demo data</button>
     </section>
-    <details class="design-notes"><summary>Why these Canvas choices?</summary><p><strong>One exit:</strong> Back leaves the form; a changed draft gets a discard confirmation. A second Cancel action is useful in a dialog without clear navigation, but redundant in this screen. <a href="https://www.nngroup.com/articles/ten-usability-heuristics/#toc-3-user-control-and-freedom-3" target="_blank" rel="noreferrer">The principle is a clear exit</a>, not a mandatory extra button.</p><p><strong>Focused fields &amp; pickers:</strong> Type, Currency, and Exchange share the same searchable dialog and single-line picker chips. Market suggestions sit directly beneath search, amount hints match the input scale, and Name or Custom name identifies each holding without a redundant Notes input (while preserving any previously stored notes).</p><p><strong>60 characters:</strong> a proposed product limit for custom names and required holding names. It allows descriptive labels while keeping lists readable. The counter counts user-perceived characters; fetched company names are not truncated.</p><p><strong>Ready to save:</strong> required fields must be valid; a quote is optional so offline entry still works. Selecting a market holding fetches once automatically, without waiting for a quantity. Bonds keep the app's current manual-value model, not an invented ticker lookup.</p><p><strong>Holdings first:</strong> names, tickers, and values are the reading experience. The small group menu holds name/value sorting and an explicit Arrange manually view; reorder arrows never occupy the normal list. Switching sorts does not erase your custom arrangement. Values are compared in the base currency; unpriced holdings stay last.</p></details>
+    <details class="design-notes"><summary>Why these Canvas choices?</summary><p><strong>One exit:</strong> Back leaves the form; a changed draft gets a discard confirmation. A second Cancel action is useful in a dialog without clear navigation, but redundant in this screen. <a href="https://www.nngroup.com/articles/ten-usability-heuristics/#toc-3-user-control-and-freedom-3" target="_blank" rel="noreferrer">The principle is a clear exit</a>, not a mandatory extra button.</p><p><strong>Focused fields, live bottom estimate &amp; input guardrails:</strong> All form boxes share a crisp outline and type-aware examples. Market search opens a searchable popup dialog that filters to valid ticker/company characters (`A–Z`, `0–9`, `.`, `-` — since Tokyo/Hong Kong/Shanghai tickers like `7203.T`, `0700.HK`, `600519.SS` and funds like `S&amp;P 500` include digits alongside alphabetical tickers), while Quantity accepts positive fractional decimals only (`&gt; 0`). For assets, Estimated value starts at `0` (`₹0` / `$0`) pinned directly above Save, without a redundant Current / After net-worth block below the form.</p><p><strong>60 characters:</strong> a proposed product limit for custom names and required holding names. It allows descriptive labels while keeping lists readable. The counter counts user-perceived characters; fetched company names are not truncated.</p><p><strong>Ready to save:</strong> required fields must be valid; a quote is optional so offline entry still works. Selecting a market holding fetches once automatically, without waiting for a quantity. Bonds keep the app's current manual-value model, not an invented ticker lookup.</p><p><strong>Holdings first:</strong> names, tickers, and values are the reading experience. The small group menu holds name/value sorting and an explicit Arrange manually view; reorder arrows never occupy the normal list. Switching sorts does not erase your custom arrangement. Values are compared in the base currency; unpriced holdings stay last.</p></details>
     <details class="state-details"><summary>Under the surface / live state</summary><pre id="state-output"></pre></details>
   </aside>
 </main>
@@ -471,11 +486,28 @@ const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g,char=>({'&':'
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
 const money = (value,currency='INR') => new Intl.NumberFormat(currency==='INR'?'en-IN':'en-US',{style:'currency',currency,minimumFractionDigits:0,maximumFractionDigits:0}).format(value);
 const numeric = value => value !== '' && /^\d+(\.\d*)?$|^\.\d+$/.test(value) && Number.isFinite(Number(value));
+const positiveDecimal = value => numeric(value) && Number(value) > 0;
+const sanitizePositiveDecimal = raw => {
+  let out='',dot=false;
+  for(const ch of String(raw??'')){
+    if(ch>='0'&&ch<='9')out+=ch;
+    else if(ch==='.'&&!dot){out+=ch;dot=true;}
+  }
+  return out;
+};
+const sanitizeMarketQuery = raw => String(raw??'').replace(/[^\p{L}\p{N}\s.&/\-]/gu,'');
+const validTickerSymbol = (value,type='stock') => {
+  const cleaned=String(value??'').trim().toUpperCase();
+  if(!cleaned||cleaned.length>24)return false;
+  return type==='crypto'
+    ?/^[A-Z0-9]{1,12}(-[A-Z]{2,6})?$/.test(cleaned)
+    :/^[A-Z0-9]{1,12}([.-][A-Z0-9]{1,6})?$/.test(cleaned);
+};
 const NAME_LIMIT = 60;
 const nameSegmenter = new Intl.Segmenter(undefined,{granularity:'grapheme'});
 const nameCharacters = value => Array.from(nameSegmenter.segment(value),part=>part.segment);
 const currencyGlyph = code => escapeHTML(new Intl.NumberFormat('en',{style:'currency',currency:code,currencyDisplay:'narrowSymbol'}).formatToParts(0).find(part=>part.type==='currency').value);
-const initialDraft = kind => ({id:null,kind,type:kind==='asset'?'stock':'loan',currency:'INR',exchange:'us',name:'',customName:'',symbol:'',quantity:'',unitPrice:'',amount:'',notes:'',price:null,quoteName:'',quoteMessage:'',quoteAttempted:false,searching:false,dirty:false});
+const initialDraft = kind => ({id:null,kind,type:kind==='asset'?'stock':'loan',currency:'INR',exchange:'us',name:'',customName:'',customNameOpen:false,symbol:'',quantity:'',unitPrice:'',amount:'',notes:'',price:null,quoteName:'',quoteMessage:'',quoteAttempted:false,searching:false,dirty:false});
 const seed = () => [
   {id:1,portfolio:'Personal',kind:'asset',type:'stock',name:'Apple Inc.',quoteName:'Apple Inc.',symbol:'AAPL',exchange:'us',quantity:'100',price:17869.9,amount:1786990,currency:'INR',priced:true,order:0},
   {id:7,portfolio:'Personal',kind:'asset',type:'stock',name:'Microsoft Corporation',quoteName:'Microsoft Corporation',symbol:'MSFT',exchange:'us',quantity:'50',price:31220.38,amount:1561019,currency:'INR',priced:true,order:1},
@@ -632,11 +664,55 @@ function kindTabs() {
   if(draft().id!==null)return `<p class="app-eyebrow">Editing ${state.kind} / ${currentType().label}</p>`;
   return `<div class="asset-kind" aria-label="Holding kind"><button data-action="kind" data-value="asset" aria-pressed="${state.kind==='asset'}">Asset / I own</button><button data-action="kind" data-value="liability" aria-pressed="${state.kind==='liability'}">Liability / I owe</button></div>`;
 }
+const EXCHANGE_EXAMPLES = {
+  us:{stock:['Apple','AAPL'],mutualFund:['Vanguard S&P 500','VOO']},
+  bse:{stock:['Reliance','RELIANCE'],mutualFund:['Nifty 50 ETF','NIFTYBEES']},
+  paris:{stock:['Airbus','AIR'],mutualFund:['Amundi MSCI World','CW8']},
+  amsterdam:{stock:['ASML','ASML'],mutualFund:['Vanguard All-World','VWRL']},
+  brussels:{stock:['AB InBev','ABI'],mutualFund:['iShares Core MSCI','IWDA']},
+  lisbon:{stock:['EDP','EDP'],mutualFund:['PSI 20 ETF','PPP']},
+  dublin:{stock:['Kingspan','KRX'],mutualFund:['iShares S&P 500','CSPX']},
+  oslo:{stock:['Equinor','EQNR'],mutualFund:['OBX ETF','OBX']},
+  milan:{stock:['Eni','ENI'],mutualFund:['FTSE MIB ETF','IMIB']},
+  shanghai:{stock:['Kweichow Moutai','600519'],mutualFund:['CSI 300 ETF','510300']},
+  tokyo:{stock:['Toyota','7203'],mutualFund:['TOPIX ETF','1306']},
+  hongKong:{stock:['Tencent','0700'],mutualFund:['Tracker Fund','2800']},
+  other:{stock:['Vodafone','VOD.L'],mutualFund:['Vanguard FTSE','VWRL.L']}
+};
+const NAME_EXAMPLES = {
+  asset:{gold:'e.g. Family gold',cash:'e.g. Emergency fund',bankDeposit:'e.g. High-yield savings',realEstate:'e.g. Primary residence',vehicle:'e.g. Family car',bond:'e.g. Treasury bond',other:'e.g. Watch collection'},
+  liability:{loan:'e.g. Personal loan',mortgage:'e.g. Home loan',creditCard:'e.g. Travel card',pendingPayment:'e.g. Contractor invoice',tax:'e.g. Income tax FY26',other:'e.g. Family borrowing'}
+};
+function typeExampleHint() {
+  return state.kind==='asset'?'e.g. Stock, Cash, Gold, Real estate':'e.g. Loan, Mortgage, Credit card';
+}
+function currencyExampleHint() {
+  return 'e.g. INR, USD, EUR, GBP';
+}
+function exchangeExampleHint() {
+  const current=activeExchange();
+  if(!current)return 'e.g. US (NYSE / Nasdaq), BSE (India), Euronext';
+  const [company,ticker]=(EXCHANGE_EXAMPLES[current.id]||EXCHANGE_EXAMPLES.us)[draft().type==='mutualFund'?'mutualFund':'stock'];
+  return current.suffix?`Adds ${current.suffix} automatically (e.g. ${ticker}${current.suffix})`:current.id==='other'?`Full Yahoo ticker with suffix (e.g. ${ticker})`:`e.g. ${company} (${ticker}) · NYSE / Nasdaq`;
+}
+function marketSearchExample(inDialog=false) {
+  const d=draft();
+  if(d.type==='crypto')return inDialog?'e.g. Bitcoin, BTC-USD, ETH-EUR':'e.g. Bitcoin, Ethereum, or BTC-USD';
+  const current=activeExchange(),[company,ticker]=(EXCHANGE_EXAMPLES[current?.id||'us']||EXCHANGE_EXAMPLES.us)[d.type==='mutualFund'?'mutualFund':'stock'];
+  const qualified=current?.suffix&&!ticker.includes('.')?ticker+current.suffix:ticker;
+  return inDialog?`e.g. ${company} or ${qualified}`:`Search ${company}, or enter ${qualified}`;
+}
+function marketHelperHint() {
+  const d=draft();
+  if(d.type==='crypto')return 'e.g. BTC defaults to BTC-USD, or pick an explicit pair like BTC-EUR.';
+  const current=activeExchange(),[,ticker]=(EXCHANGE_EXAMPLES[current?.id||'us']||EXCHANGE_EXAMPLES.us)[d.type==='mutualFund'?'mutualFund':'stock'];
+  return current?.suffix?`e.g. ${ticker} (${current.label}) or a full Yahoo ticker.`:`e.g. ${ticker}, AIR.PA, or RELIANCE.BO.`;
+}
 function typeSelect() {
-  return `<div class="field"><span id="type-label">Type</span><button class="picker" id="holding-type" type="button" data-action="type-picker" aria-haspopup="dialog" aria-labelledby="type-label type-value">${icon(currentType().icon)}<span class="picker-value" id="type-value">${currentType().label}</span>${icon('next')}</button></div>`;
+  return `<div class="field"><span id="type-label">Type</span><button class="picker" id="holding-type" type="button" data-action="type-picker" aria-haspopup="dialog" aria-labelledby="type-label type-value" aria-describedby="hint-type">${icon(currentType().icon)}<span class="picker-value" id="type-value">${currentType().label}</span>${icon('next')}</button><small class="hint" id="hint-type">${escapeHTML(typeExampleHint())}</small></div>`;
 }
 function currencySelect() {
-  return `<div class="field"><span id="currency-label">Currency</span><button class="picker" id="currency" type="button" data-action="currency-picker" aria-haspopup="dialog" aria-labelledby="currency-label currency-value"><span class="currency-glyph" aria-hidden="true">${currencyGlyph(draft().currency)}</span><span class="picker-value" id="currency-value">${draft().currency}</span>${icon('next')}</button></div>`;
+  return `<div class="field"><span id="currency-label">Currency</span><button class="picker" id="currency" type="button" data-action="currency-picker" aria-haspopup="dialog" aria-labelledby="currency-label currency-value" aria-describedby="hint-currency"><span class="currency-glyph" aria-hidden="true">${currencyGlyph(draft().currency)}</span><span class="picker-value" id="currency-value">${draft().currency}</span>${icon('next')}</button><small class="hint" id="hint-currency">${escapeHTML(currencyExampleHint())}</small></div>`;
 }
 function field(key,label,placeholder='',options={}) {
   const error=state.errors[key],hint=options.hint||'',limited=key==='name'||key==='customName';
@@ -650,16 +726,20 @@ const activeExchange = () => {
 const exchangeIcon = id => id==='other'?'globe':'candle';
 function exchangeSelect() {
   const current=activeExchange(),label=current?(current.id==='us'?'US exchange':current.label):'Exchange';
-  return `<div class="field"><span id="exchange-label">Exchange</span><button class="picker" id="exchange" type="button" data-action="exchange-picker" aria-haspopup="dialog" aria-labelledby="exchange-label exchange-value">${icon(current?exchangeIcon(current.id):'candle')}<span class="picker-value" id="exchange-value">${escapeHTML(label)}</span>${icon('next')}</button></div>`;
+  return `<div class="field"><span id="exchange-label">Exchange</span><button class="picker" id="exchange" type="button" data-action="exchange-picker" aria-haspopup="dialog" aria-labelledby="exchange-label exchange-value" aria-describedby="hint-exchange">${icon(current?exchangeIcon(current.id):'candle')}<span class="picker-value" id="exchange-value">${escapeHTML(label)}</span>${icon('next')}</button><small class="hint" id="hint-exchange">${escapeHTML(exchangeExampleHint())}</small></div>`;
 }
 function valueSummary() {
-  return `<div class="amount-summary"><span class="label">${state.kind==='liability'?'Outstanding amount':'Estimated value'}</span><strong class="estimated${!isPriced()?' pending':''}" data-live="amount">${isPriced()?money(amount(),draft().currency):'Waiting for a price'}</strong><span class="calculation" data-live="calculation">${calculation()}</span></div>`;
+  return `<div class="amount-summary"><span class="label">${state.kind==='liability'?'Outstanding amount':'Estimated value'}</span><strong class="estimated" data-live="amount">${money(amount(),draft().currency)}</strong><span class="calculation" data-live="calculation">${calculation()}</span></div>`;
+}
+function footerEstimate() {
+  if(state.kind!=='asset')return '';
+  return `<div class="footer-estimate"><div class="footer-estimate-copy"><span class="label">Estimated value</span><span class="calculation" data-live="calculation">${calculation()}</span></div><strong class="estimated" data-live="amount">${money(amount(),draft().currency)}</strong></div>`;
 }
 function calculation() {
   const d=draft();
-  if(market()) return d.price===null?'A price is not needed to save this holding.':`${escapeHTML(d.quantity||'0')} x ${money(d.price,d.currency)} / illustrative quote`;
-  if(state.kind==='asset'&&currentType().mode==='quantity') return `${escapeHTML(d.quantity||'0')} g x ${money(Number(d.unitPrice)||0,d.currency)} per gram`;
-  return state.kind==='liability'?'Only the amount you still owe, not the original loan.':'The current value of this holding.';
+  if(market()) return d.price===null?`${escapeHTML(d.quantity||'0')} × ${money(0,d.currency)} · price not fetched yet`:`${escapeHTML(d.quantity||'0')} × ${money(d.price,d.currency)} / illustrative quote`;
+  if(state.kind==='asset'&&currentType().mode==='quantity') return `${escapeHTML(d.quantity||'0')} g × ${money(Number(d.unitPrice)||0,d.currency)} per gram`;
+  return state.kind==='liability'?'Only the amount you still owe, not the original loan.':`Current value in ${escapeHTML(d.currency)}`;
 }
 function quoteMatches(query) {
   if(state.connection!=='online') return [];
@@ -673,42 +753,47 @@ function quoteResults(query) {
   if(!matches.length) return `<div class="banner">${icon('search')}<span>No example match. Enter a full ticker manually; this demo searches a small, fixed catalogue.</span></div>`;
   return `<div class="result-list">${matches.slice(0,6).map(quote=>`<button class="result" type="button" data-action="quote" data-symbol="${quote.symbol}"><span class="ticker-mark">${quote.symbol.slice(0,2)}</span><span class="grow"><strong>${quote.name}</strong><small>${quote.symbol}${quote.type==='crypto'?'':` · ${EXCHANGES.find(exchange=>exchange.id===quote.exchange).label}`}</small></span>${icon('next')}</button>`).join('')}</div>`;
 }
+function customNameField() {
+  const d=draft(),error=state.errors.customName,count=nameCharacters(d.customName).length,open=d.customNameOpen||Boolean(d.customName.trim())||Boolean(error);
+  const example=d.quoteName||(d.type==='crypto'?'e.g. Cold wallet BTC':d.type==='mutualFund'?'e.g. Retirement index fund':'e.g. Long-term shares');
+  return `<details class="custom-name" id="custom-name-details"${open?' open':''}><summary><span>Custom name <span class="muted">(optional)</span></span><svg class="icon-expand" aria-hidden="true"><use href="#i-pencil"/></svg><svg class="icon-collapse" aria-hidden="true"><use href="#i-minus"/></svg></summary><div class="field"><input id="field-customName" aria-label="Custom name (optional)" data-field="customName" value="${escapeHTML(d.customName)}" placeholder="${escapeHTML(example)}" autocomplete="off" ${error?'aria-invalid="true"':''} aria-describedby="count-customName error-customName"><span class="field-meta"><span>Up to ${NAME_LIMIT} characters</span><span id="count-customName"${count===NAME_LIMIT?' class="at-limit"':''}>${count}/${NAME_LIMIT}</span></span><small class="error" id="error-customName">${error||''}</small></div></details>`;
+}
+function marketSelect() {
+  const d=draft(),label=d.type==='crypto'?'Coin or ticker':d.type==='mutualFund'?'Fund or ticker':'Company or ticker',error=state.errors.symbol,hasSymbol=Boolean(d.symbol.trim()),code=quoteSymbol();
+  const body=d.quoteName
+    ?`<span class="ticker-mark" aria-hidden="true">${escapeHTML(code.slice(0,2))}</span><span class="picker-detail" id="symbol-value"><strong>${escapeHTML(d.quoteName)}</strong><small>${escapeHTML(code)} / ${escapeHTML(d.currency)}</small></span>${icon('search').replace('<svg','<svg class="picker-search-trail"')}`
+    :hasSymbol
+    ?`<span class="ticker-mark" aria-hidden="true">${escapeHTML(code.slice(0,2))}</span><span class="picker-detail" id="symbol-value"><strong>${escapeHTML(code)}</strong><small>Manual ticker · ${escapeHTML(d.currency)}</small></span>${icon('search').replace('<svg','<svg class="picker-search-trail"')}`
+    :`${icon('search')}<span class="picker-value is-placeholder" id="symbol-value">${escapeHTML(marketSearchExample(false))}</span>${icon('next')}`;
+  return `<div class="field"><span id="symbol-label">${label}</span><button class="picker" id="field-symbol" type="button" data-action="market-picker" aria-haspopup="dialog"${error?' aria-invalid="true"':''} aria-labelledby="symbol-label symbol-value" aria-describedby="hint-symbol error-symbol">${body}</button><small class="hint" id="hint-symbol">${escapeHTML(marketHelperHint())}</small><small class="error" id="error-symbol">${error||''}</small></div>`;
+}
 function marketFields() {
-  const d=draft(),searching=!d.quoteName||d.searching;
-  return `${searching?`<div class="search-stack">${field('symbol',d.type==='crypto'?'Coin or ticker':'Company or ticker','Search')}<div id="quote-results">${quoteResults(d.symbol)}</div></div>`:`<button class="selected-quote" type="button" data-action="change-market" aria-label="Change ${escapeHTML(d.quoteName)} selection"><span class="ticker-mark">${escapeHTML(quoteSymbol().slice(0,2))}</span><span class="grow"><strong>${escapeHTML(d.quoteName)}</strong><small>${escapeHTML(quoteSymbol())} / ${escapeHTML(d.currency)}</small></span><span class="quote-change">${icon('search')}Change</span></button>`}
-    ${field('quantity','Quantity',d.type==='crypto'?'e.g. 0.25':'e.g. 10',{number:true})}
+  const d=draft(),qtyHint=d.type==='crypto'?'Fractional coins supported (e.g. 0.25)':d.type==='mutualFund'?'Units held (e.g. 15.5)':'Shares held (e.g. 10)';
+  return `${marketSelect()}
+    ${field('quantity','Quantity',d.type==='crypto'?'e.g. 0.25':d.type==='mutualFund'?'e.g. 15':'e.g. 10',{number:true,hint:qtyHint})}
     <button class="inline-button" type="button" data-action="fetch"${state.busy||!d.symbol.trim()?' disabled':''}>${icon('refresh')}${state.busy?'Getting example price...':d.quoteAttempted?'Refresh example price':'Fetch example price'}</button>
     <div id="quote-feedback">${d.quoteMessage?`<div class="banner${d.price===null?' warning':''}" role="status">${icon('info')}<span>${escapeHTML(d.quoteMessage)}</span></div>`:''}</div>
-    ${field('customName','Custom name (optional)',d.quoteName||'e.g. Long-term shares')}`;
+    ${customNameField()}`;
 }
 function detailFields({canvas=false}={}) {
   const type=currentType(),flat=state.kind==='liability'||type.mode==='flat';
   let html='';
   if(canvas&&flat) html+=field('amount',state.kind==='liability'?'Outstanding amount':'Value','0.00',{number:true,prominent:true,hint:state.kind==='liability'?'The amount you still owe. Zero is allowed.':'Your estimate of its value today. Zero is allowed.'});
-  if(!flat||!canvas) html+=valueSummary();
   if(canvas) html+=`<div class="fields-grid">${typeSelect()}${currencySelect()}</div>`;
   else html+=currencySelect();
   if(usesExchange()) html+=exchangeSelect();
-  if(!market()) html+=field('name',state.kind==='liability'?'Name':'Name',state.kind==='liability'?'e.g. Home loan':type.id==='gold'?'e.g. Family gold':'e.g. Emergency fund');
+  if(!market()) html+=field('name','Name',NAME_EXAMPLES[state.kind][type.id]||'e.g. Emergency fund');
   if(!canvas&&flat) html+=field('amount',state.kind==='liability'?'Outstanding amount':'Value','0.00',{number:true,hint:state.kind==='liability'?'The remaining balance, not the monthly payment. Zero is allowed.':'Enter a total in your selected currency. Zero is allowed.'});
   if(market()) html+=marketFields();
-  else if(type.mode==='quantity') html+=`<div class="fields-grid">${field('quantity','Weight / grams','e.g. 10',{number:true})}${field('unitPrice','Price per gram','e.g. 7200',{number:true})}</div>`;
+  else if(type.mode==='quantity') html+=`<div class="fields-grid">${field('quantity','Weight / grams','e.g. 10',{number:true,hint:'Total weight in grams'})}${field('unitPrice','Price per gram','e.g. 7200',{number:true,hint:`Rate in ${draft().currency} / g`})}</div>`;
   return html;
 }
-function netAfterDraft() {
-  const original=state.holdings.find(holding=>holding.id===draft().id);
-  const previous=original?original.amount*FX[original.currency]*(original.kind==='asset'?1:-1):0;
-  return totals().net-previous+amount()*FX[draft().currency]*(state.kind==='asset'?1:-1);
-}
-function impact() {
-  return `<div class="impact"><div class="row between"><span class="muted">Current net worth</span><strong>${money(totals().net)}</strong></div><div class="impact-total"><span>After ${draft().id===null?'this holding':'this update'}</span><strong data-live="after">${money(netAfterDraft())}</strong></div><p class="subtle">${!isPriced()?'This asset is excluded until it has a price.':'INR estimate using fixed demo FX rates.'}</p></div>`;
-}
-function footer(primary,action,{back=false,preview=true}={}) {
+function footer(primary,action,{back=false,estimate=false}={}) {
   const gated=action==='save'||action==='review',invalid=gated&&Object.keys(draftErrors()).length>0;
-  return `<footer class="app-footer">${preview?`<div class="footer-summary"><span>${escapeHTML(state.portfolio)} / ${state.kind}</span><strong data-live="footer-amount">${isPriced()?money(amount(),draft().currency):'Price pending'}</strong></div>`:''}<div class="footer-actions">${back?`<button class="secondary" data-action="previous-step" aria-label="Previous step">${icon('back')}</button>`:''}<button class="primary" data-action="${action}"${state.busy||invalid?' disabled':''}${gated?' aria-describedby="save-help"':''}>${state.busy?'Working...':action==='save'&&draft().id!==null?'Save changes':primary}${!state.busy&&action!=='save'?icon('next'):''}</button></div>${gated?`<p class="save-hint" id="save-help">${invalid?'Complete the required fields with valid values.':market()&&draft().price===null?'Ready to save without a price; refresh when available.':'All required details are ready.'}</p>`:''}</footer>`;
+  return `<footer class="app-footer">${estimate?footerEstimate():''}<div class="footer-actions">${back?`<button class="secondary" data-action="previous-step" aria-label="Previous step">${icon('back')}</button>`:''}<button class="primary" data-action="${action}"${state.busy||invalid?' disabled':''}${gated?' aria-describedby="save-help"':''}>${state.busy?'Working...':action==='save'&&draft().id!==null?'Save changes':primary}${!state.busy&&action!=='save'?icon('next'):''}</button></div>${gated?`<p class="save-hint" id="save-help">${invalid?'Complete the required fields with valid values.':market()&&draft().price===null?'Ready to save without a price; refresh when available.':'All required details are ready.'}</p>`:''}</footer>`;
 }
 function canvas() {
-  return `${appHeader()}<div class="app-scroll"><div class="page">${kindTabs()}<p class="app-eyebrow">To ${escapeHTML(state.portfolio)}</p><h1 class="page-title">${draft().id===null?'Add':'Edit'} ${state.kind}</h1><p class="app-copy">${state.kind==='asset'?'A little more of your picture, in one place.':'Keep what you owe in perspective.'}</p>${offlineBanner()}${detailFields({canvas:true})}${impact()}</div></div>${footer('Save '+state.kind,'save')}`;
+  return `${appHeader()}<div class="app-scroll"><div class="page">${kindTabs()}<p class="app-eyebrow">To ${escapeHTML(state.portfolio)}</p><h1 class="page-title">${draft().id===null?'Add':'Edit'} ${state.kind}</h1><p class="app-copy">${state.kind==='asset'?'A little more of your picture, in one place.':'Keep what you owe in perspective.'}</p>${offlineBanner()}${detailFields({canvas:true})}</div></div>${footer('Save '+state.kind,'save',{estimate:state.kind==='asset'})}`;
 }
 function typeCards() {
   return `<div class="type-grid">${types().map(type=>`<button class="type-option" data-action="type" data-value="${type.id}" aria-pressed="${draft().type===type.id}">${icon(type.icon)}<strong>${type.label}</strong><small>${type.hint}</small></button>`).join('')}</div>`;
@@ -716,7 +801,7 @@ function typeCards() {
 function guide() {
   const choosing=state.phase==='type';
   return `${appHeader()}<div class="app-scroll"><div class="page">${kindTabs()}<div class="progress" aria-label="Step ${choosing?1:2} of 3"><span class="done"></span><span class="${choosing?'':'done'}"></span><span></span></div><p class="step-label">0${choosing?1:2} / 03 &nbsp; ${choosing?'The kind of holding':'The details'}</p><h1 class="page-title">${choosing?(state.kind==='asset'?'What do you own?':'What do you owe?'):(market()?'Make it yours.':'Give it some detail.')}</h1><p class="app-copy">${choosing?'Choose a category. We will only ask for what matters.':`${currentType().label} / ${escapeHTML(state.portfolio)}. You can review before saving.`}</p>
-    ${choosing?typeCards():offlineBanner()+detailFields()}</div></div>${choosing?footer('Continue with '+currentType().label,'next-type',{preview:false}):footer('Review holding','review',{back:true})}`;
+    ${choosing?typeCards():offlineBanner()+detailFields()}</div></div>${choosing?footer('Continue with '+currentType().label,'next-type'):footer('Review holding','review',{back:true,estimate:state.kind==='asset'})}`;
 }
 function review() {
   const d=draft(),type=currentType();
@@ -725,7 +810,7 @@ function review() {
   if(usesExchange()) rows.push(['Exchange',EXCHANGES.find(exchange=>exchange.id===d.exchange).label]);
   if(type.mode==='quantity') rows.push(['Weight',d.quantity+' g'],['Price per gram',money(Number(d.unitPrice),d.currency)]);
   if(d.notes.trim()) rows.push(['Notes',d.notes.trim()]);
-  return `${appHeader()}<div class="app-scroll"><div class="page">${state.variant==='B'?'<div class="progress" aria-label="Step 3 of 3"><span class="done"></span><span class="done"></span><span class="done"></span></div><p class="step-label">03 / 03 &nbsp; A final look</p>':'<p class="app-eyebrow">One last look</p>'}<h1 class="page-title">Does that look right?</h1><p class="app-copy">Your ${state.kind}, ready for ${escapeHTML(state.portfolio)}.</p>${valueSummary()}<dl class="review-panel">${rows.map(([label,value])=>`<div class="review-line"><dt>${label}</dt><dd>${escapeHTML(value)}</dd></div>`).join('')}</dl>${market()&&d.price===null?`<div class="banner warning">${icon('info')}<span><strong>Save now. Price later.</strong>We will try an example quote when saving. If unavailable, this holding stays unpriced and is excluded from net worth until refreshed.</span></div>`:''}${impact()}<button class="inline-button" data-action="edit">${icon('back')}Edit details</button></div></div>${footer('Save '+state.kind,'save',{back:true})}`;
+  return `${appHeader()}<div class="app-scroll"><div class="page">${state.variant==='B'?'<div class="progress" aria-label="Step 3 of 3"><span class="done"></span><span class="done"></span><span class="done"></span></div><p class="step-label">03 / 03 &nbsp; A final look</p>':'<p class="app-eyebrow">One last look</p>'}<h1 class="page-title">Does that look right?</h1><p class="app-copy">Your ${state.kind}, ready for ${escapeHTML(state.portfolio)}.</p>${valueSummary()}<dl class="review-panel">${rows.map(([label,value])=>`<div class="review-line"><dt>${label}</dt><dd>${escapeHTML(value)}</dd></div>`).join('')}</dl>${market()&&d.price===null?`<div class="banner warning">${icon('info')}<span><strong>Save now. Price later.</strong>We will try an example quote when saving. If unavailable, this holding stays unpriced and is excluded from net worth until refreshed.</span></div>`:''}<button class="inline-button" data-action="edit">${icon('back')}Edit details</button></div></div>${footer('Save '+state.kind,'save',{back:true})}`;
 }
 function success() {
   const holding=state.saved,t=totals();
@@ -756,10 +841,8 @@ function render(keepScroll=false) {
   exposeState();
 }
 function updateLive() {
-  document.querySelectorAll('[data-live="amount"]').forEach(node=>{node.textContent=isPriced()?money(amount(),draft().currency):'Waiting for a price';node.classList.toggle('pending',!isPriced());});
-  document.querySelectorAll('[data-live="footer-amount"]').forEach(node=>{node.textContent=isPriced()?money(amount(),draft().currency):'Price pending';});
+  document.querySelectorAll('[data-live="amount"]').forEach(node=>{node.textContent=money(amount(),draft().currency);});
   document.querySelectorAll('[data-live="calculation"]').forEach(node=>{node.innerHTML=calculation();});
-  document.querySelectorAll('[data-live="after"]').forEach(node=>{node.textContent=money(netAfterDraft());});
   const invalid=Object.keys(draftErrors()).length>0;
   document.querySelectorAll('#app [data-action="save"],#app [data-action="review"]').forEach(button=>{button.disabled=state.busy||invalid;});
   const saveHelp=document.getElementById('save-help');
@@ -774,7 +857,7 @@ function invalidateQuote() {
 function changeType(value) {
   if(value===draft().type)return;
   const previousMarket=market();invalidateQuote();draft().type=value;
-  if(previousMarket!==market()){draft().symbol='';draft().customName='';}
+  if(previousMarket||market()){draft().symbol='';draft().customName='';draft().customNameOpen=false;}
   state.errors={};draft().dirty=true;
 }
 function begin(kind,type,clear=false) {
@@ -799,15 +882,17 @@ function showDialog(content) {
 function closeDialog(){const focusTarget=pickerConfig?.closeFocus;pickerConfig=null;document.getElementById('modal').close();if(focusTarget)document.getElementById(focusTarget)?.focus({preventScroll:true});}
 function renderPickerItems(query='') {
   if(!pickerConfig)return '';
+  if(pickerConfig.render)return pickerConfig.render(query);
   const q=query.trim().toUpperCase(),matches=pickerConfig.items.filter(item=>item.search.toUpperCase().includes(q));
   if(!matches.length)return '<p class="picker-empty">No matching options.</p>';
   return matches.map(item=>`<button class="picker-option" type="button" data-action="${item.action}" data-value="${escapeHTML(item.value)}" aria-pressed="${item.selected}">${item.leading}<span class="grow"><strong>${escapeHTML(item.title)}</strong>${item.subtitle?`<small>${escapeHTML(item.subtitle)}</small>`:''}</span>${item.selected?icon('check'):''}</button>`).join('');
 }
-function selectionPicker({eyebrow,title,items,closeFocus}) {
-  showDialog(`<p class="app-eyebrow">${escapeHTML(eyebrow)}</p><h2 id="dialog-title">${escapeHTML(title)}</h2><label class="field picker-search"><span>Search</span><input id="picker-query" data-picker-search placeholder="Search" autocomplete="off"></label><div class="picker-list" id="picker-list"></div><button class="quiet" type="button" data-action="close-modal">Close</button>`);
-  pickerConfig={items,closeFocus};
-  document.getElementById('picker-list').innerHTML=renderPickerItems();
-  document.getElementById('picker-query')?.focus();
+function selectionPicker({eyebrow,title,items=[],closeFocus,label='Search',placeholder='Search',initialQuery='',sanitize=null,render}) {
+  showDialog(`<p class="app-eyebrow">${escapeHTML(eyebrow)}</p><h2 id="dialog-title">${escapeHTML(title)}</h2><label class="field picker-search"><span>${escapeHTML(label)}</span><input id="picker-query" data-picker-search value="${escapeHTML(initialQuery)}" placeholder="${escapeHTML(placeholder)}" autocomplete="off"></label><div class="picker-list" id="picker-list"></div><button class="quiet" type="button" data-action="close-modal">Close</button>`);
+  pickerConfig={items,closeFocus,sanitize,render};
+  document.getElementById('picker-list').innerHTML=renderPickerItems(initialQuery);
+  const input=document.getElementById('picker-query');
+  if(input){input.focus();if(initialQuery)input.select();}
 }
 function settingsPreview() {
   showDialog(`<p class="app-eyebrow">Appearance preview</p><h2 id="dialog-title">Settings</h2><p class="app-copy">These controls affect this HTML preview only. Other app settings are outside this holding-entry exploration.</p><label class="field"><span>Appearance</span><select data-preview-setting="appearance"><option value="light"${document.body.dataset.theme==='light'?' selected':''}>Classic</option><option value="dark"${document.body.dataset.theme==='dark'?' selected':''}>Midnight</option></select></label><label class="field"><span>Text size</span><select data-preview-setting="text-size"><option value="normal"${document.getElementById('device').dataset.large==='false'?' selected':''}>Default</option><option value="large"${document.getElementById('device').dataset.large==='true'?' selected':''}>Large preview</option></select></label><button class="primary" data-action="close-modal">Done</button>`);
@@ -817,6 +902,7 @@ function typePicker() {
     eyebrow:state.kind==='asset'?'What you own':'What you owe',
     title:'Choose a type',
     closeFocus:'holding-type',
+    placeholder:state.kind==='asset'?'e.g. Stock, Cash, Gold, Real estate':'e.g. Loan, Mortgage, Credit card',
     items:types().map(type=>({action:'pick-type',value:type.id,selected:draft().type===type.id,leading:icon(type.icon),title:type.label,subtitle:type.hint,search:`${type.label} ${type.hint}`}))
   });
 }
@@ -825,6 +911,7 @@ function currencyPicker() {
     eyebrow:'Holding currency',
     title:'Choose currency',
     closeFocus:'currency',
+    placeholder:'e.g. INR, USD, Euro, Yen',
     items:Object.entries(CURRENCIES).map(([code,label])=>({action:'pick-currency',value:code,selected:draft().currency===code,leading:`<span class="currency-glyph" aria-hidden="true">${currencyGlyph(code)}</span>`,title:`${code} — ${label}`,subtitle:'',search:`${code} — ${label}`}))
   });
 }
@@ -834,11 +921,66 @@ function exchangePicker() {
     eyebrow:'Market listing',
     title:'Exchange',
     closeFocus:'exchange',
+    placeholder:'e.g. US, BSE, Euronext, Tokyo',
     items:[
-      ...listed.map(exchange=>({action:'pick-exchange',value:exchange.id,selected:current?.id===exchange.id,leading:icon(exchangeIcon(exchange.id)),title:exchange.label,subtitle:exchange.suffix?`Adds ${exchange.suffix} automatically`:'',search:exchange.label})),
+      ...listed.map(exchange=>({action:'pick-exchange',value:exchange.id,selected:current?.id===exchange.id,leading:icon(exchangeIcon(exchange.id)),title:exchange.label,subtitle:exchange.suffix?`Adds ${exchange.suffix} automatically`:'',search:`${exchange.label} ${exchange.suffix}`})),
       {action:'preferences',value:'preferences',selected:false,leading:icon('tune'),title:'Manage preferred exchanges',subtitle:'',search:'Manage preferred exchanges'}
     ]
   });
+}
+function marketPicker() {
+  const d=draft(),isCrypto=d.type==='crypto',currentCode=quoteSymbol();
+  const title=isCrypto?'Choose coin or ticker':d.type==='mutualFund'?'Choose fund or ticker':'Choose company or ticker';
+  const placeholder=marketSearchExample(true);
+  selectionPicker({
+    eyebrow:`${currentType().label} · Market search`,
+    title,
+    closeFocus:'field-symbol',
+    placeholder,
+    initialQuery:d.symbol,
+    sanitize:sanitizeMarketQuery,
+    render(rawQuery=''){
+      const trimmed=rawQuery.trim(),upper=trimmed.toUpperCase(),matches=quoteMatches(trimmed);
+      const validManual=validTickerSymbol(upper,d.type);
+      const manualRow=trimmed&&validManual&&!matches.some(quote=>quote.symbol===upper)
+        ?`<button class="picker-option" type="button" data-action="use-manual-ticker" data-value="${escapeHTML(upper)}" aria-pressed="false">${icon('search')}<span class="grow"><strong>Use "${escapeHTML(upper)}"</strong><small>Enter ticker manually (letters/digits, e.g. ${d.type==='crypto'?'BTC-USD':'AAPL, 7203.T'})${state.connection!=='online'?' · save offline':''}</small></span>${icon('next').replace('<svg','<svg class="option-chevron"')}</button>`
+        :'';
+      const invalidNotice=trimmed&&!validManual&&!matches.length
+        ?`<small class="picker-error">Search by name or enter a valid ticker (letters/digits only, e.g. ${d.type==='crypto'?'BTC or BTC-USD':'AAPL, AIR.PA, or 7203.T'}).</small>`
+        :'';
+      if(state.connection!=='online'){
+        return `${manualRow}${invalidNotice}<p class="picker-empty">${state.connection==='offline'?'No internet connection. Enter a valid ticker above to save offline.':'Search unavailable. Enter a valid ticker above or try again.'}</p>`;
+      }
+      const rows=matches.slice(0,8).map(quote=>{
+        const selected=Boolean(d.symbol.trim())&&quote.symbol===currentCode;
+        const subtitle=quote.type==='crypto'?`${quote.symbol} · ${quote.currency}`:`${quote.symbol} · ${EXCHANGES.find(exchange=>exchange.id===quote.exchange).label}`;
+        return `<button class="picker-option" type="button" data-action="quote" data-symbol="${escapeHTML(quote.symbol)}" aria-pressed="${selected}"><span class="ticker-mark" aria-hidden="true">${escapeHTML(quote.symbol.slice(0,2))}</span><span class="grow"><strong>${escapeHTML(quote.name)}</strong><small>${escapeHTML(subtitle)}</small></span>${selected?icon('check'):''}</button>`;
+      }).join('');
+      if(!rows&&!manualRow)return `${invalidNotice}<p class="picker-empty">No matching listings.</p>`;
+      return rows+manualRow;
+    }
+  });
+}
+function useManualTicker(raw) {
+  const cleaned=raw.trim().toUpperCase();
+  if(!validTickerSymbol(cleaned,draft().type))return;
+  invalidateQuote();
+  draft().symbol=cleaned;
+  draft().searching=false;
+  if(usesExchange()&&cleaned.includes('.')){
+    const exchange=EXCHANGES.find(exchange=>exchange.suffix&&cleaned.endsWith(exchange.suffix))||EXCHANGES.find(exchange=>exchange.id==='other');
+    draft().exchange=exchange.id;
+    draft().currency=exchange.currency||draft().currency;
+  }
+  delete state.errors.symbol;
+  draft().dirty=true;
+  pickerConfig=null;
+  closeDialog();
+  render(true);
+  if(!draft().quantity.trim())document.getElementById('field-quantity')?.focus({preventScroll:true});
+  else document.getElementById('field-symbol')?.focus({preventScroll:true});
+  void fetchQuote();
+  announce('Using ticker '+quoteSymbol()+'.');
 }
 function setExchange(value) {
   if(activeExchange()?.id===value)return;
@@ -871,7 +1013,7 @@ function editHolding(id) {
   closeDialog();state.request++;state.busy=false;state.kind=holding.kind;state.portfolio=holding.portfolio;
   const type=(holding.kind==='asset'?ASSETS:LIABILITIES).find(type=>type.id===holding.type),linked=type.mode==='market';
   state.drafts[state.kind]={...initialDraft(state.kind),id:holding.id,type:holding.type,currency:holding.currency,
-    exchange:holding.exchange||'us',name:linked?'':holding.name,customName:holding.customName||'',symbol:holding.symbol||'',
+    exchange:holding.exchange||'us',name:linked?'':holding.name,customName:holding.customName||'',customNameOpen:Boolean((holding.customName||'').trim()),symbol:holding.symbol||'',
     quantity:holding.quantity||'',unitPrice:holding.unitPrice||'',amount:String(holding.amount),notes:holding.notes||'',
     price:linked&&holding.priced?holding.price:null,quoteName:holding.quoteName||'',quoteAttempted:linked,dirty:false};
   state.errors={};state.screen='editor';state.phase='details';render();announce('Editing '+holding.name);
@@ -922,9 +1064,9 @@ function draftErrors() {
   if(state.kind==='liability'||currentType().mode==='flat'){
     if(!numeric(d.amount)) errors.amount='Enter a valid amount, zero or greater.';
   }else{
-    if(!numeric(d.quantity)||Number(d.quantity)<=0) errors.quantity=currentType().mode==='quantity'?'Enter a weight greater than zero.':'Enter a quantity greater than zero.';
-    if(market()&&!d.symbol.trim()) errors.symbol='Enter a ticker symbol or select a search result.';
-    if(currentType().mode==='quantity'&&(!numeric(d.unitPrice)||Number(d.unitPrice)<=0)) errors.unitPrice='Enter a price greater than zero.';
+    if(!positiveDecimal(d.quantity)) errors.quantity=currentType().mode==='quantity'?'Enter a valid positive weight (decimals allowed, e.g. 10.5).':'Enter a valid positive quantity (decimals allowed, e.g. 0.25 or 10).';
+    if(market()&&!validTickerSymbol(quoteSymbol(),d.type)) errors.symbol='Choose a listing or enter a valid ticker symbol (letters/digits, e.g. AAPL, 7203.T, BTC-USD).';
+    if(currentType().mode==='quantity'&&!positiveDecimal(d.unitPrice)) errors.unitPrice='Enter a valid positive price.';
   }
   if(!Number.isFinite(amount())||!Number.isFinite(amount()*FX[d.currency])) errors[state.kind==='liability'||currentType().mode==='flat'?'amount':'quantity']='This value is too large for the demo.';
   return errors;
@@ -940,10 +1082,11 @@ function validate() {
 function pickQuote(symbol) {
   const quote=QUOTES.find(quote=>quote.symbol===symbol);
   if(!quote) return;
+  pickerConfig=null;closeDialog();
   invalidateQuote();draft().type=quote.type;draft().symbol=quote.symbol;draft().quoteName=quote.name;
   if(quote.exchange) draft().exchange=quote.exchange;
-  draft().currency=quote.currency;draft().dirty=true;state.errors={};state.phase='details';render();
-  draft().searching=false;
+  draft().currency=quote.currency;draft().dirty=true;state.errors={};state.phase='details';draft().searching=false;render(true);
+  if(!draft().quantity.trim())document.getElementById('field-quantity')?.focus({preventScroll:true});
   void fetchQuote();
   announce(quote.name+' selected. Fetching its example price automatically.');
 }
@@ -1046,10 +1189,11 @@ document.addEventListener('click',event=>{
   else if(action==='type-picker')typePicker();
   else if(action==='currency-picker')currencyPicker();
   else if(action==='exchange-picker')exchangePicker();
+  else if(action==='market-picker'||action==='change-market')marketPicker();
   else if(action==='pick-type'){pickerConfig=null;changeType(value);closeDialog();render(true);document.getElementById('holding-type')?.focus({preventScroll:true});}
   else if(action==='pick-currency'){pickerConfig=null;setCurrency(value);closeDialog();render(true);document.getElementById('currency')?.focus({preventScroll:true});}
   else if(action==='pick-exchange'){pickerConfig=null;setExchange(value);closeDialog();render(true);document.getElementById('exchange')?.focus({preventScroll:true});}
-  else if(action==='change-market'){draft().searching=true;render(true);const input=document.getElementById('field-symbol');input.focus();input.select();}
+  else if(action==='use-manual-ticker')useManualTicker(value);
   else if(action==='scenario'){const next=()=>begin(button.dataset.kind,button.dataset.type,true);if(state.screen==='editor'||state.screen==='review')confirmDiscard(next);else next();}
   else if(action==='kind'){if(value!==state.kind&&draft().id===null){state.request++;state.busy=false;state.kind=value;state.phase=state.variant==='B'?'type':'details';state.errors={};render();}}
   else if(action==='type'){changeType(value);render();}
@@ -1083,8 +1227,29 @@ document.addEventListener('click',event=>{
 });
 document.addEventListener('input',event=>{
   const input=event.target;
-  if(input.matches('[data-picker-search]')){document.getElementById('picker-list').innerHTML=renderPickerItems(input.value);return;}
+  if(input.matches('[data-picker-search]')){
+    if(pickerConfig?.sanitize){
+      const caret=input.selectionStart,cleaned=pickerConfig.sanitize(input.value);
+      if(cleaned!==input.value){
+        const removed=input.value.length-cleaned.length;
+        input.value=cleaned;
+        const pos=Math.max(0,(caret??cleaned.length)-removed);
+        input.setSelectionRange(pos,pos);
+      }
+    }
+    document.getElementById('picker-list').innerHTML=renderPickerItems(input.value);
+    return;
+  }
   const key=input.dataset.field;if(!key||input.tagName==='SELECT')return;
+  if(key==='quantity'||key==='unitPrice'||key==='amount'){
+    const caret=input.selectionStart,cleaned=sanitizePositiveDecimal(input.value);
+    if(cleaned!==input.value){
+      const removed=input.value.length-cleaned.length;
+      input.value=cleaned;
+      const pos=Math.max(0,(caret??cleaned.length)-removed);
+      input.setSelectionRange(pos,pos);
+    }
+  }
   if((key==='name'||key==='customName')&&event.isComposing)return;
   if(key==='name'||key==='customName'){
     const characters=nameCharacters(input.value);
@@ -1126,6 +1291,14 @@ document.addEventListener('input',event=>{
 document.addEventListener('compositionend',event=>{
   if(event.target.matches('[data-field="name"],[data-field="customName"]'))event.target.dispatchEvent(new Event('input',{bubbles:true}));
 });
+document.addEventListener('toggle',event=>{
+  if(event.target.id!=='custom-name-details')return;
+  draft().customNameOpen=event.target.open;
+  if(event.target.open&&document.activeElement===event.target.querySelector('summary')){
+    document.getElementById('field-customName')?.focus({preventScroll:true});
+  }
+  exposeState();
+},true);
 document.addEventListener('focusout',event=>{
   const input=event.target,key=input.dataset.field;
   if(!key||!input.matches('input'))return;
@@ -1150,7 +1323,15 @@ document.addEventListener('change',event=>{
 });
 document.addEventListener('keydown',event=>{
   if(event.defaultPrevented||event.altKey||event.ctrlKey||event.metaKey)return;
-  if(document.getElementById('modal').open){if(event.key==='Escape'){event.preventDefault();pendingAction=null;closeDialog();}return;}
+  if(document.getElementById('modal').open){
+    if(event.key==='Escape'){event.preventDefault();pendingAction=null;closeDialog();return;}
+    if(event.key==='Enter'&&event.target.matches('[data-picker-search]')){
+      const first=document.querySelector('#picker-list .picker-option');
+      if(first){event.preventDefault();first.click();}
+      return;
+    }
+    return;
+  }
   if(state.addOpen){
     if(event.key==='Escape'){event.preventDefault();setAddOpen(false,true);return;}
     if(event.key==='Tab'){

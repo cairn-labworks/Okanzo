@@ -13,6 +13,7 @@ import 'package:okanzo/domain/model/theme_mode.dart';
 import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/components/form_components.dart';
 import 'package:okanzo/ui/components/holding_editor_chrome.dart';
+import 'package:okanzo/ui/components/holding_saved_summary_screen.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:okanzo/util/screenshot_protection.dart';
 
@@ -25,6 +26,25 @@ Future<void> tap(WidgetTester tester, Finder finder) async {
 }
 
 Future<void> enter(WidgetTester tester, String label, String value) async {
+  if (label == 'Company or Ticker' || label == 'Coin or ticker') {
+    final Finder trigger = find.byWidgetPredicate(
+      (Widget widget) =>
+          widget.key == const ValueKey<String>('market-search-trigger') ||
+          widget.key == const ValueKey<String>('selected-market-holding'),
+    );
+    await tap(tester, trigger);
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      ),
+      value,
+    );
+    await tester.pump();
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    return;
+  }
   final Finder field = find.byWidgetPredicate(
     (widget) => widget is LabeledTextField && widget.label == label,
   );
@@ -137,6 +157,7 @@ void main() {
     );
     await capture(tester, 'canvas-holdings');
     await tap(tester, find.text('Microsoft'));
+    expect(find.text('ASSET / STOCK'), findsOneWidget);
     await capture(tester, 'canvas-details');
     await tap(tester, find.text('Edit asset'));
     expect(
@@ -152,6 +173,10 @@ void main() {
         matching: find.byType(FilledButton),
       ),
     );
+    expect(find.byType(HoldingSavedSummaryScreen), findsOneWidget);
+    expect(find.text('Asset updated.'), findsOneWidget);
+    await capture(tester, 'canvas-saved-summary');
+    await tap(tester, find.byKey(const ValueKey<String>('back-to-portfolio')));
     expect(
       (await tester.runAsync(
         () => container.assetRepository.getById(assets[1]),
@@ -170,6 +195,25 @@ void main() {
     await tap(tester, find.text('An asset'));
     await enter(tester, 'Company or Ticker', 'AAPL');
     await enter(tester, 'Quantity', '2');
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey<String>('custom-name-toggle')),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(OptionalCustomNameField),
+        matching: find.byIcon(Icons.edit_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(HoldingEditorFooter),
+        matching: find.byType(HoldingPortfolioLabel),
+      ),
+      findsNothing,
+    );
     await capture(tester, 'canvas-add-asset-market');
     await tap(tester, find.byType(DropdownSelector<AssetType>));
     await tap(tester, find.text('Cash').last);
@@ -183,6 +227,8 @@ void main() {
         matching: find.byType(FilledButton),
       ),
     );
+    expect(find.text('Asset added.'), findsOneWidget);
+    await tap(tester, find.byKey(const ValueKey<String>('back-to-portfolio')));
     final AssetEntity cash = (await tester.runAsync(
       () => container.assetRepository.getForPortfolio(portfolioId),
     ))!.singleWhere((asset) => asset.name == 'Travel fund');
@@ -214,6 +260,8 @@ void main() {
         matching: find.byType(FilledButton),
       ),
     );
+    expect(find.text('Liability added.'), findsOneWidget);
+    await tap(tester, find.byKey(const ValueKey<String>('back-to-portfolio')));
     final LiabilityEntity added = (await tester.runAsync(
       () => container.liabilityRepository.getForPortfolio(portfolioId),
     ))!.singleWhere((liability) => liability.name == 'Example loan');
@@ -222,7 +270,8 @@ void main() {
     await tap(tester, find.text('Loan'));
     expect(find.text(CurrencyUtil.format(250.75, 'USD')), findsWidgets);
     await tap(tester, find.text('Example loan'));
-    await tap(tester, find.text('Delete'));
+    expect(find.text('LIABILITY / LOAN'), findsOneWidget);
+    await tap(tester, find.text('Delete liability'));
     await capture(tester, 'canvas-delete-confirmation');
     expect(
       await tester.runAsync(

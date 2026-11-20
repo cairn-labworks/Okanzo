@@ -373,24 +373,25 @@ void main() {
       expect(chips[0].top, chips[1].top);
       expect(chips[2].top, greaterThan(chips[1].top));
       expect(find.byType(DropdownMenu<AssetType>), findsNothing);
-      await _tap(
-        tester,
-        find.byKey(const ValueKey<String>('selected-market-holding')),
+      final Finder selectedMarket = find.byKey(
+        const ValueKey<String>('selected-market-holding'),
       );
       expect(
-        tester.getRect(_field('Company or Ticker')).top,
+        tester.getRect(selectedMarket).top,
         lessThan(tester.getRect(_field('Quantity')).top),
       );
+      await _tap(tester, selectedMarket);
       final TextField tickerField = tester.widget<TextField>(
         find.descendant(
-          of: _field('Company or Ticker'),
+          of: find.byType(AlertDialog),
           matching: find.byType(TextField),
         ),
       );
-      expect(tickerField.decoration?.hintText, 'Search');
+      expect(tickerField.decoration?.hintText, 'Search Apple, or enter AAPL');
       expect(tickerField.style?.fontSize, 16);
       expect(find.text('Search Yahoo Finance'), findsNothing);
       expect(find.text('Uses fetched name if left blank'), findsNothing);
+      await _tap(tester, find.widgetWithText(TextButton, 'Close'));
       final ThemeData editorTheme = Theme.of(
         tester.element(find.byType(AssetEditScreen)),
       );
@@ -718,7 +719,11 @@ void main() {
       expect(
         tester.getRect(_field(strings.text('Quantity'))).top,
         greaterThan(
-          tester.getRect(_field(strings.text('Company or Ticker'))).top,
+          tester
+              .getRect(
+                find.byKey(const ValueKey<String>('selected-market-holding')),
+              )
+              .top,
         ),
       );
       _saveVisible(tester);

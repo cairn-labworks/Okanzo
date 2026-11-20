@@ -125,6 +125,14 @@ Future<void> _reveal(WidgetTester tester, Finder finder) async {
 }
 
 Future<void> _tap(WidgetTester tester, Finder finder) async {
+  if (find.byType(AlertDialog).evaluate().isNotEmpty &&
+      find
+          .descendant(of: find.byType(AlertDialog), matching: finder)
+          .evaluate()
+          .isNotEmpty) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+  }
   await _reveal(tester, finder);
   await tester.tap(finder);
   await tester.pumpAndSettle();
@@ -132,70 +140,90 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 }
 
 Future<void> _enter(WidgetTester tester, String label, String value) async {
-  final Finder field = _editorInput(label);
-  final Finder selected = find.byKey(
-    const ValueKey<String>('selected-market-holding'),
-  );
-  if ((label == 'Company or Ticker' || label == 'Coin or ticker') &&
-      field.evaluate().isEmpty) {
-    await _reveal(
-      tester,
-      find.byWidgetPredicate(
-        (Widget widget) =>
-            widget is StockSearchField ||
-            widget.key == const ValueKey<String>('selected-market-holding'),
-      ),
-    );
-    if (selected.evaluate().isNotEmpty) {
-      await _tap(tester, selected);
-    }
-  }
-  await _tap(tester, field);
-  await tester.enterText(field, value);
-  await tester.pump(const Duration(milliseconds: 400));
   if (label == 'Company or Ticker' || label == 'Coin or ticker') {
+    if (find.byType(AlertDialog).evaluate().isEmpty) {
+      final Finder trigger = find.byWidgetPredicate(
+        (Widget widget) =>
+            widget.key == const ValueKey<String>('market-search-trigger') ||
+            widget.key == const ValueKey<String>('selected-market-holding'),
+      );
+      await _tap(tester, trigger);
+    }
+    final Finder dialogInput = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(dialogInput, value);
+    await tester.pump(const Duration(milliseconds: 400));
     expect(
-      tester.widget<TextField>(field).focusNode!.hasFocus,
+      tester
+          .widget<EditableText>(
+            find.descendant(
+              of: dialogInput,
+              matching: find.byType(EditableText),
+            ),
+          )
+          .focusNode
+          .hasFocus,
       isTrue,
       reason: 'Search input must have focus after entering $value',
     );
     debugPrint(
       'DEVICE CHECK: searching $value; progress=${find.byType(LinearProgressIndicator).evaluate().length}',
     );
+    return;
   }
+  final Finder field = _editorInput(label);
+  if (label == 'Custom name (optional)' && field.evaluate().isEmpty) {
+    await _revealCustomName(tester);
+  }
+  await _tap(tester, field);
+  await tester.enterText(field, value);
+  await tester.pump(const Duration(milliseconds: 400));
 }
 
-Finder _listing(String symbol) => find.byWidgetPredicate(
-  (Widget widget) =>
-      widget is ListTile &&
-      widget.subtitle is Text &&
-      (((widget.subtitle! as Text).data ?? '') == symbol ||
-          ((widget.subtitle! as Text).data ?? '').startsWith('$symbol · ')),
-);
+Finder _listing(String symbol) => find.byWidgetPredicate((Widget widget) {
+  if (widget is! ListTile) return false;
+  final Widget? raw = widget.subtitle;
+  final Widget? unwrapped = raw is Padding ? raw.child : raw;
+  if (unwrapped is! Text) return false;
+  final String text = unwrapped.data ?? '';
+  return text == symbol || text.startsWith('$symbol · ');
+});
 
 Finder _editorField(String label) => find.byWidgetPredicate(
-  (widget) => widget is LabeledTextField && widget.label == label,
+  (widget) =>
+      widget is OptionalCustomNameField && widget.label == label ||
+      (widget is LabeledTextField && widget.showLabel && widget.label == label),
 );
 
 Finder _editorInput(String label) =>
     find.descendant(of: _editorField(label), matching: find.byType(TextField));
 
+Future<void> _revealCustomName(WidgetTester tester) async {
+  final Finder input = _editorInput('Custom name (optional)');
+  if (input.evaluate().isEmpty) {
+    await _tap(
+      tester,
+      find.byKey(const ValueKey<String>('custom-name-toggle')),
+    );
+  }
+  await _reveal(tester, input);
+}
+
 void _expectSuggestionsBelowSearch(WidgetTester tester, String label) {
+  final Finder dialog = find.byType(AlertDialog);
+  final Finder searchInput = find.descendant(
+    of: dialog,
+    matching: find.byType(TextField),
+  );
   final Rect firstResult = tester.getRect(
-    find
-        .descendant(
-          of: find.byType(StockSearchField),
-          matching: find.byType(ListTile),
-        )
-        .first,
+    find.descendant(of: dialog, matching: find.byType(ListTile)).first,
   );
-  expect(
-    firstResult.top - tester.getRect(_editorField(label)).bottom,
-    inInclusiveRange(0, 12),
-  );
+  expect(firstResult.top, greaterThan(tester.getRect(searchInput).bottom));
   expect(
     firstResult.bottom,
-    lessThan(tester.getRect(_editorField('Quantity')).top),
+    lessThan(tester.getRect(find.widgetWithText(TextButton, 'Close')).top),
   );
 }
 
@@ -281,12 +309,11 @@ Finder get _saveButton => find.descendant(
 );
 
 String _input(WidgetTester tester, String label) {
-  if ((label == 'Company or Ticker' || label == 'Coin or ticker') &&
-      _editorInput(label).evaluate().isEmpty) {
-    final ListTile selected = tester.widget<ListTile>(
-      find.byKey(const ValueKey<String>('selected-market-holding')),
+  if (label == 'Company or Ticker' || label == 'Coin or ticker') {
+    final StockSearchField field = tester.widget<StockSearchField>(
+      find.byType(StockSearchField),
     );
-    return (selected.subtitle! as Text).data!.split(' / ').first;
+    return (field.selectedSymbol ?? field.controller.text).trim();
   }
   return tester.widget<TextField>(_editorInput(label)).controller!.text;
 }
@@ -367,7 +394,10 @@ void main() {
         await _tap(tester, find.text('Open search test editor'));
         await _waitUntil(
           tester,
-          () => _editorInput('Company or Ticker').evaluate().isNotEmpty,
+          () => find
+              .byKey(const ValueKey<String>('market-search-trigger'))
+              .evaluate()
+              .isNotEmpty,
           'asset editor',
         );
 
@@ -378,12 +408,11 @@ void main() {
           'Apple company result',
         );
         _expectSuggestionsBelowSearch(tester, 'Company or Ticker');
-        expect(_listing('AAPL').hitTestable(), findsOneWidget);
         await _tap(tester, _listing('AAPL'));
         await _expectAutomaticPrice(tester);
         checks['stockSuggestionsAndAutomaticPrice'] = true;
         expect(_input(tester, 'Company or Ticker'), 'AAPL');
-        await _reveal(tester, _editorInput('Custom name (optional)'));
+        await _revealCustomName(tester);
         expect(_input(tester, 'Custom name (optional)'), isEmpty);
         expect(
           tester
@@ -435,7 +464,7 @@ void main() {
         );
         await _tap(tester, _listing('AIR.PA'));
         expect(_input(tester, 'Company or Ticker'), 'AIR.PA');
-        await _reveal(tester, _editorInput('Custom name (optional)'));
+        await _revealCustomName(tester);
         expect(
           _input(tester, 'Custom name (optional)'),
           'My search test holding',
@@ -489,6 +518,10 @@ void main() {
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
           'saved asset with automatic price fetch',
         );
+        await _tap(
+          tester,
+          find.byKey(const ValueKey<String>('back-to-portfolio')),
+        );
         final AssetEntity saved =
             (await container.assetRepository.getForPortfolio(testPortfolio))
                 .single;
@@ -520,7 +553,7 @@ void main() {
         await _expectAutomaticPrice(tester);
         checks['cryptoSuggestionsSingleLineTypeAndAutomaticPrice'] = true;
         expect(_input(tester, 'Coin or ticker'), 'BTC-USD');
-        await _reveal(tester, _editorInput('Custom name (optional)'));
+        await _revealCustomName(tester);
         expect(_input(tester, 'Custom name (optional)'), isEmpty);
         expect(
           tester
@@ -559,6 +592,10 @@ void main() {
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
           'saved cryptocurrency',
         );
+        await _tap(
+          tester,
+          find.byKey(const ValueKey<String>('back-to-portfolio')),
+        );
         final AssetEntity crypto =
             (await container.assetRepository.getForPortfolio(testPortfolio))
                 .singleWhere(
@@ -588,6 +625,8 @@ void main() {
         expect(find.text('Save asset'), findsOneWidget);
         await _enter(tester, 'Custom name (optional)', 'Unsaved asset');
         await _enter(tester, 'Company or Ticker', 'MSFT');
+        await tester.testTextInput.receiveAction(TextInputAction.search);
+        await tester.pumpAndSettle();
         await _enter(tester, 'Quantity', '5');
         await tester.pageBack();
         await tester.pumpAndSettle();
@@ -669,6 +708,10 @@ void main() {
               .isNotEmpty,
           'offline search notice',
         );
+        await _tap(
+          tester,
+          find.byKey(const ValueKey<String>('use-manual-ticker')),
+        );
         await _enter(tester, 'Quantity', '3');
         await _tap(tester, _saveButton);
         await _waitUntil(
@@ -681,6 +724,10 @@ void main() {
             'No internet connection. Saved without latest price — refresh when online.',
           ),
           findsOneWidget,
+        );
+        await _tap(
+          tester,
+          find.byKey(const ValueKey<String>('back-to-portfolio')),
         );
         final AssetEntity offlineSaved =
             (await container.assetRepository.getForPortfolio(testPortfolio))

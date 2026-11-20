@@ -56,6 +56,20 @@ enum AssetType {
     AssetType.other => 'Something else you own',
   };
 
+  /// Contextual example name placeholder for this asset category.
+  String get nameExample => switch (this) {
+    AssetType.stock => 'e.g. Long-term shares',
+    AssetType.mutualFund => 'e.g. Retirement index fund',
+    AssetType.crypto => 'e.g. Cold wallet BTC',
+    AssetType.gold => 'e.g. Family gold',
+    AssetType.cash => 'e.g. Emergency fund',
+    AssetType.bankDeposit => 'e.g. High-yield savings',
+    AssetType.realEstate => 'e.g. Primary residence',
+    AssetType.vehicle => 'e.g. Family car',
+    AssetType.bond => 'e.g. Treasury bond',
+    AssetType.other => 'e.g. Watch collection',
+  };
+
   /// Unknown names fall back to [AssetType.other], as in the Android app.
   static AssetType fromName(String? name) {
     for (final type in values) {

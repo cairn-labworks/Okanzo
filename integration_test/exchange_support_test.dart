@@ -100,22 +100,52 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 }
 
 Future<void> _enter(WidgetTester tester, String label, String value) async {
+  if (label == 'Company or Ticker' || label == 'Coin or ticker') {
+    final Finder trigger = find.byWidgetPredicate(
+      (Widget widget) =>
+          widget.key == const ValueKey<String>('market-search-trigger') ||
+          widget.key == const ValueKey<String>('selected-market-holding'),
+    );
+    if (trigger.evaluate().isEmpty) {
+      await tester.scrollUntilVisible(
+        trigger,
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+    }
+    await _tap(tester, trigger);
+    final Finder dialogInput = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(dialogInput, value);
+    await tester.pump();
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    return;
+  }
   final Finder field = find.descendant(
     of: find.byWidgetPredicate(
-      (widget) => widget is LabeledTextField && widget.label == label,
+      (widget) =>
+          widget is OptionalCustomNameField && widget.label == label ||
+          (widget is LabeledTextField &&
+              widget.showLabel &&
+              widget.label == label),
     ),
     matching: find.byType(TextField),
   );
-  if ((label == 'Company or Ticker' || label == 'Coin or ticker') &&
-      field.evaluate().isEmpty &&
-      find
-          .byKey(const ValueKey<String>('selected-market-holding'))
-          .evaluate()
-          .isNotEmpty) {
-    await _tap(
-      tester,
-      find.byKey(const ValueKey<String>('selected-market-holding')),
+  if (label == 'Custom name (optional)' && field.evaluate().isEmpty) {
+    final Finder toggle = find.byKey(
+      const ValueKey<String>('custom-name-toggle'),
     );
+    if (toggle.evaluate().isEmpty) {
+      await tester.scrollUntilVisible(
+        toggle,
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+    }
+    await _tap(tester, toggle);
   }
   if (field.evaluate().isEmpty) {
     await tester.scrollUntilVisible(
@@ -405,6 +435,10 @@ void main() {
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
           'saving ${listing.symbol}',
+        );
+        await _tap(
+          tester,
+          find.byKey(const ValueKey<String>('back-to-portfolio')),
         );
         final AssetEntity asset =
             (await container.assetRepository.getForPortfolio(portfolioId))
@@ -702,6 +736,10 @@ void main() {
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
           'saving $symbol in EUR',
         );
+        await _tap(
+          tester,
+          find.byKey(const ValueKey<String>('back-to-portfolio')),
+        );
         final AssetEntity asset =
             (await container.assetRepository.getForPortfolio(portfolioId))
                 .singleWhere((AssetEntity row) => row.displayName == name);
@@ -733,6 +771,10 @@ void main() {
           tester,
           () => find.byType(AssetEditScreen).evaluate().isEmpty,
           'saving $symbol in GBP',
+        );
+        await _tap(
+          tester,
+          find.byKey(const ValueKey<String>('back-to-portfolio')),
         );
         final AssetEntity updated = (await container.assetRepository.getById(
           asset.id,

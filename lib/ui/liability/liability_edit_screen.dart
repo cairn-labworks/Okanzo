@@ -11,6 +11,7 @@ import '../asset/asset_edit_view_model.dart' show AssetEditEventType;
 import '../components/form_components.dart';
 import '../components/holding_editor_guard.dart';
 import '../components/holding_editor_chrome.dart';
+import '../components/holding_saved_summary_screen.dart';
 import '../components/type_icons.dart';
 import 'liability_edit_view_model.dart';
 import 'liability_form_state.dart';
@@ -78,6 +79,20 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
     viewModel.consumeEvent();
     switch (event.type) {
       case AssetEditEventType.saved:
+        final saved = event.savedLiability ?? viewModel.form.toEntity();
+        unawaited(
+          _guard.currentState!.close(
+            replacement: MaterialPageRoute<void>(
+              builder: (_) => HoldingSavedSummaryScreen(
+                portfolioId: widget.portfolioId,
+                updated: widget.liabilityId != 0,
+                savedLiability: saved,
+                previousLiability: event.previousLiability,
+                notice: event.message,
+              ),
+            ),
+          ),
+        );
       case AssetEditEventType.deleted:
         unawaited(_guard.currentState!.close());
       case AssetEditEventType.error:
@@ -225,6 +240,11 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                           label: 'Type'.tr(context),
                           dialogEyebrow: 'What you owe'.tr(context),
                           dialogTitle: 'Choose a type'.tr(context),
+                          searchPlaceholder: 'e.g. Loan, Mortgage, Credit card'
+                              .tr(context),
+                          supportingText: 'e.g. Loan, Mortgage, Credit card'.tr(
+                            context,
+                          ),
                           selected: form.type,
                           options: LiabilityType.values,
                           optionLabel: (LiabilityType type) =>
@@ -241,11 +261,12 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                         second: CurrencySelector(
                           canvas: true,
                           currency: form.currency,
+                          supportingText: 'e.g. INR, USD, EUR, GBP'.tr(context),
                           compact: true,
                           onTap: () => _pickCurrency(form.currency),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
                       LabeledTextField(
                         canvas: true,
                         controller: _name,
@@ -256,17 +277,9 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                         ),
                         onSubmitted: (_) => _focusNextRequired(),
                         label: 'Name'.tr(context),
-                        placeholder: 'e.g. Home loan'.tr(context),
+                        placeholder: form.type.nameExample.tr(context),
                         maxLength: 60,
                         onChanged: viewModel.onNameChange,
-                      ),
-                      const SizedBox(height: 16),
-                      HoldingNetWorthPreview(
-                        portfolioId: widget.portfolioId,
-                        holdingId: widget.liabilityId,
-                        asset: false,
-                        value: double.tryParse(form.amount) ?? 0,
-                        currency: form.currency,
                       ),
                       const SizedBox(height: 24),
                     ],

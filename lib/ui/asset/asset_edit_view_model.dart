@@ -16,10 +16,17 @@ import 'asset_form_state.dart';
 enum AssetEditEventType { saved, deleted, error }
 
 class AssetEditEvent {
-  const AssetEditEvent(this.type, [this.message]);
+  const AssetEditEvent(
+    this.type, [
+    this.message,
+    this.savedAsset,
+    this.previousAsset,
+  ]);
 
   final AssetEditEventType type;
   final String? message;
+  final AssetEntity? savedAsset;
+  final AssetEntity? previousAsset;
 }
 
 class AssetEditViewModel extends ChangeNotifier {
@@ -42,6 +49,7 @@ class AssetEditViewModel extends ChangeNotifier {
   final int _assetId;
 
   AssetFormState _form;
+  AssetEntity? _loadedEntity;
   AssetEditEvent? _event;
   int _priceRequest = 0;
   bool _convertingCurrency = false;
@@ -72,6 +80,7 @@ class AssetEditViewModel extends ChangeNotifier {
     if (_assetId != 0) {
       final AssetEntity? asset = await _assetRepository.getById(_assetId);
       if (asset != null) {
+        _loadedEntity = asset;
         _form = AssetFormState.fromEntity(asset);
         notifyListeners();
         return;
@@ -326,9 +335,17 @@ class AssetEditViewModel extends ChangeNotifier {
       }
     }
     if (_cancelled || _disposed) return;
-    await _assetRepository.save(_form.toEntity());
+    final AssetEntity toSave = _form.toEntity();
+    final int savedId = await _assetRepository.save(toSave);
     if (_cancelled || _disposed) return;
-    _emit(AssetEditEvent(AssetEditEventType.saved, notice));
+    _emit(
+      AssetEditEvent(
+        AssetEditEventType.saved,
+        notice,
+        toSave.copyWith(id: savedId),
+        _loadedEntity,
+      ),
+    );
   }
 
   void cancel() {
