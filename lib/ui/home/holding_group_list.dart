@@ -111,34 +111,43 @@ class HoldingGroupList<T> extends StatelessWidget {
                     constraints: BoxConstraints(
                       maxHeight: MediaQuery.sizeOf(context).height * .55,
                     ),
-                    child: ListView(
-                      shrinkWrap: true,
-                      children: <Widget>[
-                        for (int i = 0; i < order.length; i++)
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(name(order[i])),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                IconButton(
-                                  tooltip: 'Move up'.tr(context),
-                                  onPressed: saving || i == 0
-                                      ? null
-                                      : () => move(i, i - 1),
-                                  icon: const Icon(Icons.keyboard_arrow_up),
+                    child: ClipRect(
+                      child: Material(
+                        type: MaterialType.transparency,
+                        clipBehavior: Clip.hardEdge,
+                        child: ListView(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          children: <Widget>[
+                            for (int i = 0; i < order.length; i++)
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(name(order[i])),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    IconButton(
+                                      tooltip: 'Move up'.tr(context),
+                                      onPressed: saving || i == 0
+                                          ? null
+                                          : () => move(i, i - 1),
+                                      icon: const Icon(Icons.keyboard_arrow_up),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Move down'.tr(context),
+                                      onPressed: saving || i == order.length - 1
+                                          ? null
+                                          : () => move(i, i + 1),
+                                      icon: const Icon(
+                                        Icons.keyboard_arrow_down,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                IconButton(
-                                  tooltip: 'Move down'.tr(context),
-                                  onPressed: saving || i == order.length - 1
-                                      ? null
-                                      : () => move(i, i + 1),
-                                  icon: const Icon(Icons.keyboard_arrow_down),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                   TextButton(

@@ -682,24 +682,31 @@ class _LanguageDialogState extends State<_LanguageDialog> {
             Flexible(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 420),
-                child: RadioGroup<AppLanguage>(
-                  groupValue: widget.selected,
-                  onChanged: _select,
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: <Widget>[
-                      for (final AppLanguage language in AppLanguage.values)
-                        RadioListTile<AppLanguage>(
-                          key: ValueKey<AppLanguage>(language),
-                          value: language,
-                          enabled: !_saving,
-                          title: Text(
-                            language == AppLanguage.system
-                                ? 'Use device language'.tr(context)
-                                : language.displayName,
-                          ),
-                        ),
-                    ],
+                child: ClipRect(
+                  child: Material(
+                    type: MaterialType.transparency,
+                    clipBehavior: Clip.hardEdge,
+                    child: RadioGroup<AppLanguage>(
+                      groupValue: widget.selected,
+                      onChanged: _select,
+                      child: ListView(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        children: <Widget>[
+                          for (final AppLanguage language in AppLanguage.values)
+                            RadioListTile<AppLanguage>(
+                              key: ValueKey<AppLanguage>(language),
+                              value: language,
+                              enabled: !_saving,
+                              title: Text(
+                                language == AppLanguage.system
+                                    ? 'Use device language'.tr(context)
+                                    : language.displayName,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),

@@ -828,15 +828,47 @@ void main() {
           tester.widget<TextField>(search).decoration?.border,
           isA<OutlineInputBorder>(),
         );
+        final Finder selectedTileFinder = find.descendant(
+          of: dialog,
+          matching: find.widgetWithText(ListTile, initial),
+        );
         final ListTile selectedTile = tester.widget<ListTile>(
-          find.descendant(
-            of: dialog,
-            matching: find.widgetWithText(ListTile, initial),
-          ),
+          selectedTileFinder,
         );
         expect(selectedTile.selected, isTrue);
         expect(selectedTile.selectedTileColor, colors.primaryContainer);
         expect(selectedTile.trailing, isNotNull);
+        final Finder listView = find.descendant(
+          of: dialog,
+          matching: find.byType(ListView),
+        );
+        final Finder listMaterial = find
+            .ancestor(of: listView, matching: find.byType(Material))
+            .first;
+        expect(
+          tester.widget<Material>(listMaterial).clipBehavior,
+          Clip.hardEdge,
+        );
+        final RenderBox inkCanvas =
+            Material.of(tester.element(selectedTileFinder)) as RenderBox;
+        final Rect inkRect =
+            inkCanvas.localToGlobal(Offset.zero) & inkCanvas.size;
+        expect(
+          inkRect.top,
+          greaterThanOrEqualTo(tester.getRect(search).bottom),
+        );
+        expect(
+          inkRect.bottom,
+          lessThanOrEqualTo(
+            tester.getRect(find.widgetWithText(TextButton, 'Close')).top,
+          ),
+        );
+        await tester.drag(listView, const Offset(0, -90));
+        await tester.pumpAndSettle();
+        expect(
+          tester.getRect(listMaterial).top,
+          greaterThanOrEqualTo(tester.getRect(search).bottom),
+        );
         await tester.enterText(search, 'zzz-no-match');
         await tester.pumpAndSettle();
         expect(
@@ -898,19 +930,41 @@ void main() {
           choice,
         );
         await _tap(tester, find.byType(CurrencySelector));
+        final Finder currencyDialog = find.byType(AlertDialog);
         expect(
           find.descendant(
-            of: find.byType(AlertDialog),
+            of: currencyDialog,
             matching: find.text('HOLDING CURRENCY'),
           ),
           findsOneWidget,
         );
         expect(
           find.descendant(
-            of: find.byType(AlertDialog),
+            of: currencyDialog,
             matching: find.text('Choose currency'),
           ),
           findsOneWidget,
+        );
+        final Finder currencyList = find.descendant(
+          of: currencyDialog,
+          matching: find.byType(ListView),
+        );
+        final Finder currencyMaterial = find
+            .ancestor(of: currencyList, matching: find.byType(Material))
+            .first;
+        final Finder currencySearch = find.descendant(
+          of: currencyDialog,
+          matching: find.byType(TextField),
+        );
+        await tester.drag(currencyList, const Offset(0, -120));
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<Material>(currencyMaterial).clipBehavior,
+          Clip.hardEdge,
+        );
+        expect(
+          tester.getRect(currencyMaterial).top,
+          greaterThanOrEqualTo(tester.getRect(currencySearch).bottom),
         );
         await _tap(tester, find.widgetWithText(TextButton, 'Close'));
       },

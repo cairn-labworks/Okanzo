@@ -205,38 +205,48 @@ class _PreferredExchangesDialogState extends State<_PreferredExchangesDialog> {
             Flexible(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 420),
-                child: ListView(
-                  shrinkWrap: true,
-                  children: <Widget>[
-                    for (final StockExchange exchange in StockExchange.values)
-                      CheckboxListTile(
-                        key: ValueKey<StockExchange>(exchange),
-                        contentPadding: EdgeInsets.zero,
-                        minLeadingWidth: 20,
-                        horizontalTitleGap: 10,
-                        secondary: Icon(
-                          stockExchangeIcon(exchange),
-                          size: 20,
-                          color: _selected.contains(exchange)
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        title: Text(
-                          exchange.displayName.tr(context),
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        value: _selected.contains(exchange),
-                        onChanged: _saving
-                            ? null
-                            : (bool? checked) => setState(() {
-                                if (checked == true) {
-                                  _selected.add(exchange);
-                                } else {
-                                  _selected.remove(exchange);
-                                }
-                              }),
-                      ),
-                  ],
+                child: ClipRect(
+                  child: Material(
+                    type: MaterialType.transparency,
+                    clipBehavior: Clip.hardEdge,
+                    child: ListView(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      children: <Widget>[
+                        for (final StockExchange exchange
+                            in StockExchange.values)
+                          CheckboxListTile(
+                            key: ValueKey<StockExchange>(exchange),
+                            contentPadding: EdgeInsets.zero,
+                            minLeadingWidth: 20,
+                            horizontalTitleGap: 10,
+                            secondary: Icon(
+                              stockExchangeIcon(exchange),
+                              size: 20,
+                              color: _selected.contains(exchange)
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                            ),
+                            title: Text(
+                              exchange.displayName.tr(context),
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            value: _selected.contains(exchange),
+                            onChanged: _saving
+                                ? null
+                                : (bool? checked) => setState(() {
+                                    if (checked == true) {
+                                      _selected.add(exchange);
+                                    } else {
+                                      _selected.remove(exchange);
+                                    }
+                                  }),
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

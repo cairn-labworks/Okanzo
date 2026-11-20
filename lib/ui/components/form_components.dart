@@ -787,88 +787,99 @@ class _SelectionPickerDialogState<T> extends State<_SelectionPickerDialog<T>> {
                           ),
                         ),
                       )
-                    : Scrollbar(
-                        controller: _scroll,
-                        child: ListView.builder(
-                          controller: _scroll,
-                          padding: EdgeInsets.zero,
-                          shrinkWrap: true,
-                          itemCount: results.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            final T option = results[index];
-                            final bool isSelected = option == widget.selected;
-                            final bool nextIsSelected =
-                                index + 1 < results.length &&
-                                results[index + 1] == widget.selected;
-                            final bool showDivider =
-                                !isSelected &&
-                                !nextIsSelected &&
-                                index < results.length - 1;
-                            final String? subtitle = widget.optionSubtitle
-                                ?.call(option);
-                            final bool hasSubtitle =
-                                subtitle != null && subtitle.isNotEmpty;
-                            final Widget tile = ListTile(
-                              minTileHeight: hasSubtitle ? 62 : 56,
-                              minLeadingWidth: 22,
-                              horizontalTitleGap: 12,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: hasSubtitle ? 3 : 0,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              selected: isSelected,
-                              selectedTileColor: colors.primaryContainer,
-                              leading: widget.optionIcon == null
-                                  ? null
-                                  : Icon(
-                                      widget.optionIcon!(option),
-                                      size: 20,
-                                      color: colors.primary,
+                    : ClipRect(
+                        child: Material(
+                          type: MaterialType.transparency,
+                          clipBehavior: Clip.hardEdge,
+                          child: Scrollbar(
+                            controller: _scroll,
+                            child: ListView.builder(
+                              controller: _scroll,
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: results.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                final T option = results[index];
+                                final bool isSelected =
+                                    option == widget.selected;
+                                final bool nextIsSelected =
+                                    index + 1 < results.length &&
+                                    results[index + 1] == widget.selected;
+                                final bool showDivider =
+                                    !isSelected &&
+                                    !nextIsSelected &&
+                                    index < results.length - 1;
+                                final String? subtitle = widget.optionSubtitle
+                                    ?.call(option);
+                                final bool hasSubtitle =
+                                    subtitle != null && subtitle.isNotEmpty;
+                                final Widget tile = ListTile(
+                                  minTileHeight: hasSubtitle ? 62 : 56,
+                                  minLeadingWidth: 22,
+                                  horizontalTitleGap: 12,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: hasSubtitle ? 3 : 0,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  selected: isSelected,
+                                  selectedTileColor: colors.primaryContainer,
+                                  leading: widget.optionIcon == null
+                                      ? null
+                                      : Icon(
+                                          widget.optionIcon!(option),
+                                          size: 20,
+                                          color: colors.primary,
+                                        ),
+                                  title: Text(
+                                    widget.optionLabel(option),
+                                    style: theme.textTheme.bodyLarge?.copyWith(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
+                                      color: colors.onSurface,
                                     ),
-                              title: Text(
-                                widget.optionLabel(option),
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                  color: colors.onSurface,
-                                ),
-                              ),
-                              subtitle: !hasSubtitle
-                                  ? null
-                                  : Padding(
-                                      padding: const EdgeInsets.only(top: 2),
-                                      child: Text(
-                                        subtitle,
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color: colors.onSurfaceVariant,
-                                            ),
+                                  ),
+                                  subtitle: !hasSubtitle
+                                      ? null
+                                      : Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 2,
+                                          ),
+                                          child: Text(
+                                            subtitle,
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color:
+                                                      colors.onSurfaceVariant,
+                                                ),
+                                          ),
+                                        ),
+                                  trailing: isSelected
+                                      ? Icon(
+                                          Icons.check_rounded,
+                                          size: 18,
+                                          color: colors.primary,
+                                        )
+                                      : null,
+                                  onTap: () =>
+                                      Navigator.of(context).pop(option),
+                                );
+                                if (!showDivider) return tile;
+                                return DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: colors.outlineVariant,
                                       ),
                                     ),
-                              trailing: isSelected
-                                  ? Icon(
-                                      Icons.check_rounded,
-                                      size: 18,
-                                      color: colors.primary,
-                                    )
-                                  : null,
-                              onTap: () => Navigator.of(context).pop(option),
-                            );
-                            if (!showDivider) return tile;
-                            return DecoratedBox(
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(
-                                    color: colors.outlineVariant,
                                   ),
-                                ),
-                              ),
-                              child: tile,
-                            );
-                          },
+                                  child: tile,
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ),
               ),
