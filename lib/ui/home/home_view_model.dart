@@ -303,11 +303,14 @@ class HomeViewModel extends ChangeNotifier {
     );
     _lastAssetCategoryOrder = savedOrder;
     final Map<AssetType, List<AssetEntity>> byType =
-        groupBy<AssetType, AssetEntity>(_assets, (AssetEntity a) => a.type);
+        groupBy<AssetType, AssetEntity>(
+          _assets,
+          (AssetEntity a) => a.type.displayCategory,
+        );
     final List<AssetType> ordered = orderTypes<AssetType>(
       byType.keys,
       savedOrder,
-      AssetType.fromName,
+      (key) => AssetType.fromName(key).displayCategory,
     );
     return <AssetCategoryGroup>[
       for (final AssetType type in ordered)

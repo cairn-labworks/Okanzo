@@ -87,6 +87,9 @@ class CurrencyUtil {
     return '$sign$currencySymbol${_integerFormat.format(rounded.abs())}';
   }
 
+  static String formatRate(double amount, String code) =>
+      '${symbol(code)}${NumberFormat.decimalPatternDigits(decimalDigits: 2).format(amount)}';
+
   /// A masked placeholder for a hidden balance, e.g. "₹ ••••" or "US $ ••••".
   static String masked(String code) => '${symbol(code)} $maskShort';
 

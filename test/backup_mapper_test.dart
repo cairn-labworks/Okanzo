@@ -26,6 +26,31 @@ void main() {
   });
 
   group('backup mapping', () {
+    test(
+      'silver metadata and per-gram value survive database and backup maps',
+      () {
+        final AssetEntity asset = AssetEntity.fromMap(<String, Object?>{
+          'id': 42,
+          'portfolioId': 1,
+          'type': 'METALS',
+          'name': 'Sterling pendant',
+          'currency': 'USD',
+          'metal': 'silver',
+          'purity': '925',
+          'quantity': 12.5,
+          'lastPrice': 0.74,
+          'createdAt': 0,
+          'updatedAt': 0,
+        });
+        expect(asset.value, 9.25);
+        expect(asset.toMap()['purity'], '925');
+        final json = assetToBackup(asset).toJson();
+        expect(json['metal'], 'silver');
+        expect(json['purity'], '925');
+        expect(backupToAsset(BackupAsset.fromJson(json), 2, 0).value, 9.25);
+      },
+    );
+
     final AssetEntity asset = AssetEntity(
       id: 11,
       portfolioId: 5,

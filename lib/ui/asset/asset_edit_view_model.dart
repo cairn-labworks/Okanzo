@@ -8,6 +8,7 @@ import '../../data/remote/stock/stock_search_service.dart';
 import '../../data/repository/asset_repository.dart';
 import '../../data/repository/settings_repository.dart';
 import '../../domain/model/asset_type.dart';
+import '../../domain/model/precious_metal.dart';
 import '../../domain/model/stock_exchange.dart';
 import '../../util/result.dart';
 import 'asset_form_state.dart';
@@ -56,6 +57,7 @@ class AssetEditViewModel extends ChangeNotifier {
   bool _cancelled = false;
   bool _disposed = false;
   Result<StockQuote>? _quoteAttempt;
+  bool _metalOffline = false;
 
   AssetFormState get form => _form;
 
@@ -99,6 +101,7 @@ class AssetEditViewModel extends ChangeNotifier {
 
   void _updateQuoteInput(AssetFormState next) {
     _quoteAttempt = null;
+    _metalOffline = false;
     _priceRequest++;
     _convertingCurrency = false;
     _update(next.copyWith(isFetchingPrice: false, isSaving: false));
@@ -124,6 +127,12 @@ class AssetEditViewModel extends ChangeNotifier {
         type: type,
         name: nextName,
         customName: nextCustomName,
+        clearMetal: true,
+        quantity:
+            type == AssetType.metals && _form.type != AssetType.gold ||
+                _form.type == AssetType.metals
+            ? ''
+            : null,
         exchange: _form.usesStockExchange
             ? _form.exchange
             : StockExchange.fromSymbol(_form.symbol),
@@ -138,6 +147,11 @@ class AssetEditViewModel extends ChangeNotifier {
       _update(_form.copyWith(customName: value));
 
   Future<void> onCurrencyChange(String value) async {
+    if (_form.type == AssetType.metals && value != _form.currency) {
+      _updateQuoteInput(_form.copyWith(currency: value, clearLastPrice: true));
+      await fetchMetalPrice();
+      return;
+    }
     if (value == _form.currency) {
       if (_convertingCurrency) {
         _priceRequest++;
@@ -191,6 +205,45 @@ class AssetEditViewModel extends ChangeNotifier {
 
   void onQuantityChange(String value) =>
       _update(_form.copyWith(quantity: filterDecimal(value)));
+
+  void onMetalChange(PreciousMetal metal) {
+    if (metal == _form.metal) return;
+    _updateQuoteInput(
+      _form.copyWith(metal: metal, clearPurity: true, clearLastPrice: true),
+    );
+  }
+
+  Future<void> onPurityChange(String purity) async {
+    if (_form.metal?.grades[purity] == null || purity == _form.purity) return;
+    _updateQuoteInput(_form.copyWith(purity: purity, clearLastPrice: true));
+    await fetchMetalPrice();
+  }
+
+  Future<void> fetchMetalPrice() async {
+    final metal = _form.metal;
+    final purity = _form.purity;
+    if (_form.type != AssetType.metals || metal == null || purity == null) {
+      return;
+    }
+    final int request = ++_priceRequest;
+    _update(_form.copyWith(isFetchingPrice: true));
+    final Result<double> result = await _assetRepository.fetchMetalPrice(
+      metal,
+      purity,
+      currency: _form.currency,
+    );
+    if (_disposed || _cancelled || request != _priceRequest) return;
+    _metalOffline = result.isOffline;
+    _update(
+      _form.copyWith(
+        lastPrice: result.isSuccess ? result.value : null,
+        lastPriceTimestamp: result.isSuccess
+            ? DateTime.now().millisecondsSinceEpoch
+            : null,
+        isFetchingPrice: false,
+      ),
+    );
+  }
 
   void onPricePerUnitChange(String value) =>
       _update(_form.copyWith(pricePerUnit: filterDecimal(value)));
@@ -302,6 +355,11 @@ class AssetEditViewModel extends ChangeNotifier {
     }
     _update(_form.copyWith(isSaving: true));
     String? notice;
+    if (_form.type == AssetType.metals && _form.lastPrice == null) {
+      notice = _metalOffline
+          ? 'No internet connection. Saved without latest price — refresh when online.'
+          : 'Saved without a metal price. Refresh when available.';
+    }
     if (_form.valuationMode == ValuationMode.market &&
         _form.lastPrice == null) {
       final int request = ++_priceRequest;

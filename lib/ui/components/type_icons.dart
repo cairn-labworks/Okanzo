@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/model/asset_type.dart';
 import '../../domain/model/liability_type.dart';
+import '../../domain/model/precious_metal.dart';
 import '../../domain/model/release_notes.dart';
 import '../../domain/model/stock_exchange.dart';
 import '../../util/currency_data.dart';
@@ -15,7 +16,9 @@ IconData assetTypeIcon(AssetType type) {
     case AssetType.crypto:
       return Icons.currency_bitcoin;
     case AssetType.gold:
-      return Icons.diamond;
+      return metalIcon(PreciousMetal.gold);
+    case AssetType.metals:
+      return Icons.layers_outlined;
     case AssetType.cash:
       return Icons.payments;
     case AssetType.bankDeposit:
@@ -30,6 +33,13 @@ IconData assetTypeIcon(AssetType type) {
       return Icons.category;
   }
 }
+
+IconData metalIcon(PreciousMetal metal) => switch (metal) {
+  PreciousMetal.gold => Icons.view_agenda_outlined,
+  PreciousMetal.silver => Icons.toll_outlined,
+  PreciousMetal.platinum => Icons.view_in_ar_outlined,
+  PreciousMetal.palladium => Icons.hexagon_outlined,
+};
 
 IconData liabilityTypeIcon(LiabilityType type) {
   switch (type) {

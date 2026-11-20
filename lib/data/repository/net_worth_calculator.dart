@@ -27,7 +27,7 @@ class NetWorthCalculator {
     final Map<String, List<AssetEntity>> assetGroups =
         groupBy<String, AssetEntity>(
           assets,
-          (AssetEntity asset) => asset.type.storageName,
+          (AssetEntity asset) => asset.type.displayCategory.storageName,
         );
     final List<CategoryTotal> assetBreakdown =
         sortedByDescending<CategoryTotal>(

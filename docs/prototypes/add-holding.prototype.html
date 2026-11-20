@@ -169,6 +169,19 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 .picker-option>svg:first-child{color:var(--accent)}
 .picker-option>svg:last-child{width:17px;color:var(--accent)}
 .picker-option>svg.option-chevron{width:15px;color:var(--muted)}
+.metal-icon{display:inline-grid;place-items:center;min-width:20px;flex-shrink:0;color:var(--metal-tone,var(--accent))}
+.metal-icon svg{width:20px;height:20px}
+[data-metal=gold]{--metal-tone:#80551b}
+[data-metal=silver]{--metal-tone:#526578}
+[data-metal=platinum]{--metal-tone:#635687}
+[data-metal=palladium]{--metal-tone:#366967}
+body[data-theme=dark] [data-metal=gold]{--metal-tone:#ecc37f}
+body[data-theme=dark] [data-metal=silver]{--metal-tone:#c3d3e2}
+body[data-theme=dark] [data-metal=platinum]{--metal-tone:#cbbce8}
+body[data-theme=dark] [data-metal=palladium]{--metal-tone:#a2d0cb}
+.holding-open .metal-icon{margin-inline-start:4px}
+.metal-price .rate{display:flex;align-items:center;min-height:54px;padding:8px 11px;background:var(--soft);border-radius:10px;font-size:.84em;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.metal-price .rate[data-pending]{color:var(--muted);font-weight:500}
 .field-meta{display:flex;justify-content:space-between;gap:12px;font-size:.62em;color:var(--muted);margin-top:5px}
 .field-meta .at-limit{color:var(--warm)}
 .save-hint{font-size:.61em;color:var(--muted);margin:8px 0 0;line-height:1.5}
@@ -347,7 +360,11 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 <symbol id="i-down" viewBox="0 0 24 24"><path d="m3 7 6 6 4-4 8 10M15 19h6v-6"/></symbol>
 <symbol id="i-bank" viewBox="0 0 24 24"><path d="m3 8 9-5 9 5H3ZM5 10v8M10 10v8M15 10v8M20 10v8M3 21h18"/></symbol>
 <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M20 8H5a2 2 0 0 1 0-4h13v4M3 6v13a2 2 0 0 0 2 2h15V8M20 12h-6v5h6"/><path d="M16.5 14.5h.1"/></symbol>
-<symbol id="i-gold" viewBox="0 0 24 24"><path d="m6 6-4 5 10 10 10-10-4-5H6ZM2 11h20M6 6l6 15 6-15"/></symbol>
+<symbol id="i-metals" viewBox="0 0 24 24"><path d="M2 19h9l-2-5H4l-2 5Zm11 0h9l-2-5h-5l-2 5ZM8 12h8l-1.6-5H9.6L8 12Z"/></symbol>
+<symbol id="i-gold" viewBox="0 0 24 24"><path d="M3 17h18l-3-9H6l-3 9ZM9 12h6"/></symbol>
+<symbol id="i-silver" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></symbol>
+<symbol id="i-platinum" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 9 8-4.5M12 12 4 7.5M12 12v9"/></symbol>
+<symbol id="i-palladium" viewBox="0 0 24 24"><path d="m8 3-5 5v8l5 5h8l5-5V8l-5-5H8Z"/><circle cx="12" cy="12" r="3"/></symbol>
 <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 9v12h14V9M10 21v-7h4v7"/></symbol>
 <symbol id="i-chart" viewBox="0 0 24 24"><path d="M12 3v9h9A9 9 0 1 1 12 3ZM16 3.9A9 9 0 0 1 20.1 8H16V3.9Z"/></symbol>
 <symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/></symbol>
@@ -407,10 +424,11 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
       <div class="scenario-grid">
         <button class="scenario" data-action="scenario" data-kind="asset" data-type="cash"><svg aria-hidden="true"><use href="#i-wallet"/></svg>Cash asset</button>
         <button class="scenario" data-action="scenario" data-kind="asset" data-type="stock"><svg aria-hidden="true"><use href="#i-trend"/></svg>Stock asset</button>
-        <button class="scenario" data-action="scenario" data-kind="asset" data-type="gold"><svg aria-hidden="true"><use href="#i-gold"/></svg>Gold asset</button>
+        <button class="scenario" data-action="scenario" data-kind="asset" data-type="metals"><svg aria-hidden="true"><use href="#i-metals"/></svg>Metals asset</button>
         <button class="scenario" data-action="scenario" data-kind="liability" data-type="loan"><svg aria-hidden="true"><use href="#i-bank"/></svg>Loan liability</button>
       </div>
       <p>Or begin with <strong>Add holding</strong>. On Home, open a type group, sort its holdings, and tap one for details, edit, or delete.</p>
+      <p>For <strong>Metals</strong>, choose the metal and its purity, then enter grams. The rate is a fictional example, not a live quote. Expand Metals on Home to compare the individual icons.</p>
       <button class="text-link" data-action="sample">Fill this draft with example data</button><br>
       <button class="text-link" data-action="reset">Reset all demo data</button>
     </section>
@@ -431,7 +449,7 @@ const ASSETS = [
   {id:'stock',label:'Stock',icon:'trend',mode:'market',hint:'Company shares'},
   {id:'mutualFund',label:'Mutual fund / ETF',icon:'grid',mode:'market',hint:'Funds and indexes'},
   {id:'crypto',label:'Cryptocurrency',icon:'coin',mode:'market',hint:'Coins and tokens'},
-  {id:'gold',label:'Gold',icon:'gold',mode:'quantity',hint:'Weight in grams'},
+  {id:'metals',label:'Metals',icon:'metals',mode:'metal',hint:'Gold, silver, platinum and palladium'},
   {id:'cash',label:'Cash',icon:'wallet',mode:'flat',hint:'Money on hand'},
   {id:'bankDeposit',label:'Bank / deposit',icon:'bank',mode:'flat',hint:'Savings and deposits'},
   {id:'realEstate',label:'Real estate',icon:'home',mode:'flat',hint:'Property value'},
@@ -439,6 +457,12 @@ const ASSETS = [
   {id:'bond',label:'Bond',icon:'file',mode:'flat',hint:'Current holding value'},
   {id:'other',label:'Other',icon:'grid',mode:'flat',hint:'Something else you own'}
 ];
+const METALS = {
+  gold:{label:'Gold',rate:9847.09,example:'Family gold',karat:true,purities:[['24K',1],['22K',22/24],['18K',18/24],['14K',14/24]]},
+  silver:{label:'Silver',rate:112,example:'Silver coins',purities:[['999',0.999,'Fine silver'],['925',0.925,'Sterling silver'],['900',0.9,'Coin silver']]},
+  platinum:{label:'Platinum',rate:2900,example:'Platinum ring',purities:[['999',0.999],['950',0.95],['900',0.9]]},
+  palladium:{label:'Palladium',rate:2750,example:'Palladium bar',purities:[['999',0.999],['950',0.95]]}
+};
 const LIABILITIES = [
   {id:'loan',label:'Loan',icon:'bank',hint:'Personal or other borrowing'},
   {id:'mortgage',label:'Mortgage',icon:'home',hint:'Property borrowing'},
@@ -484,7 +508,14 @@ const CONCEPTS = {
 };
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const metalIcon = metal => `<span class="metal-icon" data-metal="${metal}">${icon(metal||'metals')}</span>`;
 const money = (value,currency='INR') => new Intl.NumberFormat(currency==='INR'?'en-IN':'en-US',{style:'currency',currency,minimumFractionDigits:0,maximumFractionDigits:0}).format(value);
+const metalMoney = (value,currency) => new Intl.NumberFormat(currency==='INR'?'en-IN':'en-US',{style:'currency',currency,minimumFractionDigits:2,maximumFractionDigits:2}).format(value);
+function exampleMetalPrice({metal,purity,currency}) {
+  const entry=METALS[metal],grade=entry?.purities.find(([id])=>id===purity);
+  return grade?Math.round(entry.rate*grade[1]/FX[currency]*100)/100:null;
+}
+const metalDescription = ({metal,purity}) => `${METALS[metal].label} · ${purity}`;
 const numeric = value => value !== '' && /^\d+(\.\d*)?$|^\.\d+$/.test(value) && Number.isFinite(Number(value));
 const positiveDecimal = value => numeric(value) && Number(value) > 0;
 const sanitizePositiveDecimal = raw => {
@@ -507,11 +538,12 @@ const NAME_LIMIT = 60;
 const nameSegmenter = new Intl.Segmenter(undefined,{granularity:'grapheme'});
 const nameCharacters = value => Array.from(nameSegmenter.segment(value),part=>part.segment);
 const currencyGlyph = code => escapeHTML(new Intl.NumberFormat('en',{style:'currency',currency:code,currencyDisplay:'narrowSymbol'}).formatToParts(0).find(part=>part.type==='currency').value);
-const initialDraft = kind => ({id:null,kind,type:kind==='asset'?'stock':'loan',currency:'INR',exchange:'us',name:'',customName:'',customNameOpen:false,symbol:'',quantity:'',unitPrice:'',amount:'',notes:'',price:null,quoteName:'',quoteMessage:'',quoteAttempted:false,searching:false,dirty:false});
+const initialDraft = kind => ({id:null,kind,type:kind==='asset'?'stock':'loan',currency:'INR',exchange:'us',name:'',customName:'',customNameOpen:false,symbol:'',quantity:'',metal:'',purity:'',amount:'',notes:'',price:null,quoteName:'',quoteMessage:'',quoteAttempted:false,searching:false,dirty:false});
 const seed = () => [
   {id:1,portfolio:'Personal',kind:'asset',type:'stock',name:'Apple Inc.',quoteName:'Apple Inc.',symbol:'AAPL',exchange:'us',quantity:'100',price:17869.9,amount:1786990,currency:'INR',priced:true,order:0},
   {id:7,portfolio:'Personal',kind:'asset',type:'stock',name:'Microsoft Corporation',quoteName:'Microsoft Corporation',symbol:'MSFT',exchange:'us',quantity:'50',price:31220.38,amount:1561019,currency:'INR',priced:true,order:1},
-  {id:2,portfolio:'Personal',kind:'asset',type:'gold',name:'Family gold',quantity:'100',unitPrice:'9847.09',amount:984709,currency:'INR',priced:true,order:0},
+  {id:2,portfolio:'Personal',kind:'asset',type:'metals',metal:'gold',purity:'24K',name:'Family gold',quantity:'100',price:9847.09,amount:984709,currency:'INR',priced:true,order:0},
+  {id:10,portfolio:'Personal',kind:'asset',type:'metals',metal:'silver',purity:'925',name:'Silver coins',quantity:'250',price:103.60,amount:25900,currency:'INR',priced:true,order:1},
   {id:3,portfolio:'Personal',kind:'asset',type:'cash',name:'Emergency fund',amount:350000,currency:'INR',notes:'Liquid reserve',priced:true,order:0},
   {id:8,portfolio:'Personal',kind:'asset',type:'cash',name:'Travel fund',amount:240825,currency:'INR',priced:true,order:1},
   {id:4,portfolio:'Personal',kind:'liability',type:'mortgage',name:'Home loan',amount:3800000,currency:'INR',priced:true,order:0},
@@ -535,13 +567,15 @@ const draft = () => state.drafts[state.kind];
 const types = () => state.kind==='asset'?ASSETS:LIABILITIES;
 const currentType = () => types().find(type=>type.id===draft().type);
 const market = () => state.kind==='asset'&&currentType().mode==='market';
+const metals = () => state.kind==='asset'&&currentType().mode==='metal';
 const usesExchange = () => market()&&draft().type!=='crypto';
 const amount = () => {
   const d=draft();
   if(state.kind==='liability'||currentType().mode==='flat') return Number(d.amount)||0;
-  return (Number(d.quantity)||0)*(market()?(d.price??0):(Number(d.unitPrice)||0));
+  return (Number(d.quantity)||0)*(d.price??0);
 };
-const isPriced = () => !market()||draft().price!==null;
+const isPriced = () => !(market()||metals())||draft().price!==null;
+const estimateValue = () => metals()&&draft().purity&&!isPriced()?'Price pending':money(amount(),draft().currency);
 const totals = (portfolio=state.portfolio) => {
   const holdings=state.holdings.filter(holding=>holding.portfolio===portfolio);
   const assets=holdings.filter(holding=>holding.kind==='asset').reduce((sum,holding)=>sum+holding.amount*FX[holding.currency],0);
@@ -570,7 +604,7 @@ function appHeader(back=true) {
     ${back?`<span class="header-brand">OKANZO</span><span class="header-sub">${escapeHTML(state.portfolio)}</span>`:state.screen==='success'?'<span class="header-brand">OKANZO</span>':`<div class="row"><button class="icon-button" data-action="refresh-holdings" aria-label="Refresh pending example prices"${state.busy?' disabled':''}>${icon('refresh')}</button><button class="icon-button" data-action="hide" aria-label="${state.hidden?'Show':'Hide'} balances" aria-pressed="${state.hidden}">${icon('eye')}</button><button class="icon-button" data-action="settings" aria-label="Settings">${icon('settings')}</button></div>`}</header>`;
 }
 function offlineBanner() {
-  return state.connection==='online'?'':`<div class="banner warning">${icon(state.connection==='offline'?'offline':'info')}<span><strong>${state.connection==='offline'?"You're offline. Keep going.":'Quote service is unavailable.'}</strong>${market()?'You can save the holding without a latest price, then refresh later.':'Manual values can still be saved in this demo.'}</span></div>`;
+  return state.connection==='online'?'':`<div class="banner warning">${icon(state.connection==='offline'?'offline':'info')}<span><strong>${state.connection==='offline'?"You're offline. Keep going.":'Quote service is unavailable.'}</strong>${market()||metals()?'You can save the holding without a latest price, then refresh later.':'Manual values can still be saved in this demo.'}</span></div>`;
 }
 function addHoldingControl() {
   if(state.addLayout==='dialog')return `<button class="primary" data-action="add">${icon('plus')}Add holding</button>`;
@@ -632,9 +666,10 @@ function homeGroups() {
     if(!holdings.length)return '';
     const expanded=!!state.expanded[key],total=holdings.reduce((sum,holding)=>sum+holding.amount*FX[holding.currency],0),pending=holdings.filter(holding=>!holding.priced).length;
     const id=`group-${state.homeTab}-${type.id}`,label=groupLabels[type.id]||type.label;
-    return `<section class="holding-group"><button class="group-toggle" data-action="toggle-group" data-value="${type.id}" aria-expanded="${expanded}" aria-controls="${id}"><span class="tile-icon">${icon(type.icon)}</span><span class="grow"><strong>${label}</strong><small>${holdings.length} holding${holdings.length===1?'':'s'}${pending?` / ${pending} pending`:''}</small></span><span class="group-total">${state.hidden?'******':pending===holdings.length?'Price pending':money(total)}</span>${icon('next')}</button>
+    const onlyMetal=holdings[0].metal&&holdings.every(holding=>holding.metal===holdings[0].metal)?holdings[0].metal:'';
+    return `<section class="holding-group"><button class="group-toggle" data-action="toggle-group" data-value="${type.id}" aria-expanded="${expanded}" aria-controls="${id}"><span class="tile-icon">${onlyMetal?metalIcon(onlyMetal):icon(type.icon)}</span><span class="grow"><strong>${label}</strong><small>${holdings.length} holding${holdings.length===1?'':'s'}${pending?` / ${pending} pending`:''}</small></span><span class="group-total">${state.hidden?'******':pending===holdings.length?'Price pending':money(total)}</span>${icon('next')}</button>
       ${expanded?`<div class="group-holdings" id="${id}"><div class="group-list-heading"><span>Your holdings</span><button class="icon-button group-options" data-action="group-options" data-value="${type.id}" aria-label="Sort or arrange ${label.toLowerCase()}" aria-haspopup="dialog">${icon('more')}</button></div>
-      ${holdings.map(holding=>`<div class="holding-row" data-holding="${holding.id}"><button class="holding-open" data-action="holding-details" data-id="${holding.id}"><span class="grow"><strong>${escapeHTML(holding.name)}${holding.isNew?'<span class="new-label">New</span>':''}</strong><small>${escapeHTML(holding.symbol||type.label)}</small></span><span class="value">${!holding.priced?'Price pending':state.hidden?'******':money(holding.amount*FX[holding.currency])}</span></button></div>`).join('')}</div>`:`<div id="${id}" hidden></div>`}</section>`;
+      ${holdings.map(holding=>`<div class="holding-row" data-holding="${holding.id}"><button class="holding-open" data-action="holding-details" data-id="${holding.id}">${holding.metal?metalIcon(holding.metal):''}<span class="grow"><strong>${escapeHTML(holding.name)}${holding.isNew?'<span class="new-label">New</span>':''}</strong><small>${escapeHTML(holding.metal?metalDescription(holding):holding.symbol||type.label)}</small></span><span class="value">${!holding.priced?'Price pending':state.hidden?'******':money(holding.amount*FX[holding.currency])}</span></button></div>`).join('')}</div>`:`<div id="${id}" hidden></div>`}</section>`;
   }).join('')||'<p class="app-copy" style="padding:20px 0">Nothing here yet. Add your first holding.</p>';
 }
 function home() {
@@ -680,11 +715,11 @@ const EXCHANGE_EXAMPLES = {
   other:{stock:['Vodafone','VOD.L'],mutualFund:['Vanguard FTSE','VWRL.L']}
 };
 const NAME_EXAMPLES = {
-  asset:{gold:'e.g. Family gold',cash:'e.g. Emergency fund',bankDeposit:'e.g. High-yield savings',realEstate:'e.g. Primary residence',vehicle:'e.g. Family car',bond:'e.g. Treasury bond',other:'e.g. Watch collection'},
+  asset:{cash:'e.g. Emergency fund',bankDeposit:'e.g. High-yield savings',realEstate:'e.g. Primary residence',vehicle:'e.g. Family car',bond:'e.g. Treasury bond',other:'e.g. Watch collection'},
   liability:{loan:'e.g. Personal loan',mortgage:'e.g. Home loan',creditCard:'e.g. Travel card',pendingPayment:'e.g. Contractor invoice',tax:'e.g. Income tax FY26',other:'e.g. Family borrowing'}
 };
 function typeExampleHint() {
-  return state.kind==='asset'?'e.g. Stock, Cash, Gold, Real estate':'e.g. Loan, Mortgage, Credit card';
+  return state.kind==='asset'?'e.g. Stock, Cash, Metals, Real estate':'e.g. Loan, Mortgage, Credit card';
 }
 function currencyExampleHint() {
   return 'e.g. INR, USD, EUR, GBP';
@@ -729,16 +764,16 @@ function exchangeSelect() {
   return `<div class="field"><span id="exchange-label">Exchange</span><button class="picker" id="exchange" type="button" data-action="exchange-picker" aria-haspopup="dialog" aria-labelledby="exchange-label exchange-value" aria-describedby="hint-exchange">${icon(current?exchangeIcon(current.id):'candle')}<span class="picker-value" id="exchange-value">${escapeHTML(label)}</span>${icon('next')}</button><small class="hint" id="hint-exchange">${escapeHTML(exchangeExampleHint())}</small></div>`;
 }
 function valueSummary() {
-  return `<div class="amount-summary"><span class="label">${state.kind==='liability'?'Outstanding amount':'Estimated value'}</span><strong class="estimated" data-live="amount">${money(amount(),draft().currency)}</strong><span class="calculation" data-live="calculation">${calculation()}</span></div>`;
+  return `<div class="amount-summary"><span class="label">${state.kind==='liability'?'Outstanding amount':'Estimated value'}</span><strong class="estimated" data-live="amount">${estimateValue()}</strong><span class="calculation" data-live="calculation">${calculation()}</span></div>`;
 }
 function footerEstimate() {
   if(state.kind!=='asset')return '';
-  return `<div class="footer-estimate"><div class="footer-estimate-copy"><span class="label">Estimated value</span><span class="calculation" data-live="calculation">${calculation()}</span></div><strong class="estimated" data-live="amount">${money(amount(),draft().currency)}</strong></div>`;
+  return `<div class="footer-estimate"><div class="footer-estimate-copy"><span class="label">Estimated value</span><span class="calculation" data-live="calculation">${calculation()}</span></div><strong class="estimated" data-live="amount">${estimateValue()}</strong></div>`;
 }
 function calculation() {
   const d=draft();
   if(market()) return d.price===null?`${escapeHTML(d.quantity||'0')} × ${money(0,d.currency)} · price not fetched yet`:`${escapeHTML(d.quantity||'0')} × ${money(d.price,d.currency)} / illustrative quote`;
-  if(state.kind==='asset'&&currentType().mode==='quantity') return `${escapeHTML(d.quantity||'0')} g × ${money(Number(d.unitPrice)||0,d.currency)} per gram`;
+  if(metals()) return !d.purity?'Choose a metal and purity for an estimate.':d.price===null?`${escapeHTML(d.quantity||'0')} g · price pending`:`${escapeHTML(d.quantity||'0')} g × ${metalMoney(d.price,d.currency)} per gram`;
   return state.kind==='liability'?'Only the amount you still owe, not the original loan.':`Current value in ${escapeHTML(d.currency)}`;
 }
 function quoteMatches(query) {
@@ -775,6 +810,19 @@ function marketFields() {
     <div id="quote-feedback">${d.quoteMessage?`<div class="banner${d.price===null?' warning':''}" role="status">${icon('info')}<span>${escapeHTML(d.quoteMessage)}</span></div>`:''}</div>
     ${customNameField()}`;
 }
+function metalSelect(key,label,value,leading,hint='',disabled=false) {
+  const error=state.errors[key];
+  return `<div class="field"><span id="${key}-label">${label}</span><button class="picker" id="field-${key}" type="button" data-action="${key}-picker" aria-haspopup="dialog" aria-labelledby="${key}-label ${key}-value" aria-describedby="hint-${key} error-${key}"${error?' aria-invalid="true"':''}${disabled?' disabled':''}>${leading}<span class="picker-value" id="${key}-value">${value}</span>${icon('next')}</button><small class="hint" id="hint-${key}">${hint}</small><small class="error" id="error-${key}">${error||''}</small></div>`;
+}
+function metalFields() {
+  const d=draft(),metal=METALS[d.metal],karat=metal?.karat;
+  const rate=d.price!==null?metalMoney(d.price,d.currency):d.purity?'Price pending':'—';
+  return `<div class="fields-grid">${metalSelect('metal','Metal',metal?.label||'Choose metal',metalIcon(d.metal))}${metalSelect('purity','Purity',d.purity||(karat?'Choose karat':metal?'Choose grade':'Not selected'),'',!metal?'Choose a metal first.':karat?'Measured in karats.':'Fineness in parts per thousand.',!metal)}</div>
+    ${field('name','Name',metal?'e.g. '+metal.example:'e.g. Family gold')}
+    <div class="fields-grid">${field('quantity','Weight (grams)','e.g. 10.5',{number:true,hint:'Total weight in grams.'})}
+      <div class="field metal-price"><span id="metal-price-label">Price per gram</span><output class="rate" aria-labelledby="metal-price-label" aria-describedby="metal-price-hint"${d.price===null?' data-pending':''}>${rate}</output><small class="hint" id="metal-price-hint">${d.price!==null?`Example rate in ${d.currency}, not live.`:d.purity?'Refresh when back online.':'Shown after choosing purity.'}</small></div>
+    </div>`;
+}
 function detailFields({canvas=false}={}) {
   const type=currentType(),flat=state.kind==='liability'||type.mode==='flat';
   let html='';
@@ -782,35 +830,36 @@ function detailFields({canvas=false}={}) {
   if(canvas) html+=`<div class="fields-grid">${typeSelect()}${currencySelect()}</div>`;
   else html+=currencySelect();
   if(usesExchange()) html+=exchangeSelect();
+  if(metals()) return html+metalFields();
   if(!market()) html+=field('name','Name',NAME_EXAMPLES[state.kind][type.id]||'e.g. Emergency fund');
   if(!canvas&&flat) html+=field('amount',state.kind==='liability'?'Outstanding amount':'Value','0.00',{number:true,hint:state.kind==='liability'?'The remaining balance, not the monthly payment. Zero is allowed.':'Enter a total in your selected currency. Zero is allowed.'});
   if(market()) html+=marketFields();
-  else if(type.mode==='quantity') html+=`<div class="fields-grid">${field('quantity','Weight / grams','e.g. 10',{number:true,hint:'Total weight in grams'})}${field('unitPrice','Price per gram','e.g. 7200',{number:true,hint:`Rate in ${draft().currency} / g`})}</div>`;
   return html;
 }
+const saveHint = invalid => invalid?'Complete the required fields with valid values.':!isPriced()?'Ready to save without a price; refresh when available.':'All required details are ready.';
 function footer(primary,action,{back=false,estimate=false}={}) {
   const gated=action==='save'||action==='review',invalid=gated&&Object.keys(draftErrors()).length>0;
-  return `<footer class="app-footer">${estimate?footerEstimate():''}<div class="footer-actions">${back?`<button class="secondary" data-action="previous-step" aria-label="Previous step">${icon('back')}</button>`:''}<button class="primary" data-action="${action}"${state.busy||invalid?' disabled':''}${gated?' aria-describedby="save-help"':''}>${state.busy?'Working...':action==='save'&&draft().id!==null?'Save changes':primary}${!state.busy&&action!=='save'?icon('next'):''}</button></div>${gated?`<p class="save-hint" id="save-help">${invalid?'Complete the required fields with valid values.':market()&&draft().price===null?'Ready to save without a price; refresh when available.':'All required details are ready.'}</p>`:''}</footer>`;
+  return `<footer class="app-footer">${estimate?footerEstimate():''}<div class="footer-actions">${back?`<button class="secondary" data-action="previous-step" aria-label="Previous step">${icon('back')}</button>`:''}<button class="primary" data-action="${action}"${state.busy||invalid?' disabled':''}${gated?' aria-describedby="save-help"':''}>${state.busy?'Working...':action==='save'&&draft().id!==null?'Save changes':primary}${!state.busy&&action!=='save'?icon('next'):''}</button></div>${gated?`<p class="save-hint" id="save-help">${saveHint(invalid)}</p>`:''}</footer>`;
 }
 function canvas() {
   return `${appHeader()}<div class="app-scroll"><div class="page">${kindTabs()}<p class="app-eyebrow">To ${escapeHTML(state.portfolio)}</p><h1 class="page-title">${draft().id===null?'Add':'Edit'} ${state.kind}</h1><p class="app-copy">${state.kind==='asset'?'A little more of your picture, in one place.':'Keep what you owe in perspective.'}</p>${offlineBanner()}${detailFields({canvas:true})}</div></div>${footer('Save '+state.kind,'save',{estimate:state.kind==='asset'})}`;
 }
 function typeCards() {
-  return `<div class="type-grid">${types().map(type=>`<button class="type-option" data-action="type" data-value="${type.id}" aria-pressed="${draft().type===type.id}">${icon(type.icon)}<strong>${type.label}</strong><small>${type.hint}</small></button>`).join('')}</div>`;
+  return `<div class="type-grid">${types().map(type=>`<button class="type-option" data-action="type" data-value="${type.id}" aria-pressed="${draft().type===type.id}"${type.mode==='metal'?' id="guide-metals" aria-haspopup="dialog"':''}>${icon(type.icon)}<strong>${type.label}</strong><small>${type.hint}</small></button>`).join('')}</div>`;
 }
 function guide() {
   const choosing=state.phase==='type';
   return `${appHeader()}<div class="app-scroll"><div class="page">${kindTabs()}<div class="progress" aria-label="Step ${choosing?1:2} of 3"><span class="done"></span><span class="${choosing?'':'done'}"></span><span></span></div><p class="step-label">0${choosing?1:2} / 03 &nbsp; ${choosing?'The kind of holding':'The details'}</p><h1 class="page-title">${choosing?(state.kind==='asset'?'What do you own?':'What do you owe?'):(market()?'Make it yours.':'Give it some detail.')}</h1><p class="app-copy">${choosing?'Choose a category. We will only ask for what matters.':`${currentType().label} / ${escapeHTML(state.portfolio)}. You can review before saving.`}</p>
-    ${choosing?typeCards():offlineBanner()+detailFields()}</div></div>${choosing?footer('Continue with '+currentType().label,'next-type'):footer('Review holding','review',{back:true,estimate:state.kind==='asset'})}`;
+    ${choosing?typeCards():offlineBanner()+detailFields()}</div></div>${choosing?footer('Continue with '+(metals()&&draft().metal?METALS[draft().metal].label:currentType().label),'next-type'):footer('Review holding','review',{back:true,estimate:state.kind==='asset'})}`;
 }
 function review() {
   const d=draft(),type=currentType();
   const rows=[['Portfolio',state.portfolio],['Category',type.label],['Name',market()?(d.customName.trim()||d.quoteName||quoteSymbol()):d.name],['Currency',d.currency]];
   if(market()) rows.push(['Ticker',quoteSymbol()],['Quantity',d.quantity],['Price',d.price===null?'Not available':money(d.price,d.currency)]);
   if(usesExchange()) rows.push(['Exchange',EXCHANGES.find(exchange=>exchange.id===d.exchange).label]);
-  if(type.mode==='quantity') rows.push(['Weight',d.quantity+' g'],['Price per gram',money(Number(d.unitPrice),d.currency)]);
+  if(metals()) rows.push(['Metal',METALS[d.metal].label],['Purity',d.purity],['Weight',d.quantity+' g'],['Example price per gram',d.price===null?'Pending':metalMoney(d.price,d.currency)]);
   if(d.notes.trim()) rows.push(['Notes',d.notes.trim()]);
-  return `${appHeader()}<div class="app-scroll"><div class="page">${state.variant==='B'?'<div class="progress" aria-label="Step 3 of 3"><span class="done"></span><span class="done"></span><span class="done"></span></div><p class="step-label">03 / 03 &nbsp; A final look</p>':'<p class="app-eyebrow">One last look</p>'}<h1 class="page-title">Does that look right?</h1><p class="app-copy">Your ${state.kind}, ready for ${escapeHTML(state.portfolio)}.</p>${valueSummary()}<dl class="review-panel">${rows.map(([label,value])=>`<div class="review-line"><dt>${label}</dt><dd>${escapeHTML(value)}</dd></div>`).join('')}</dl>${market()&&d.price===null?`<div class="banner warning">${icon('info')}<span><strong>Save now. Price later.</strong>We will try an example quote when saving. If unavailable, this holding stays unpriced and is excluded from net worth until refreshed.</span></div>`:''}<button class="inline-button" data-action="edit">${icon('back')}Edit details</button></div></div>${footer('Save '+state.kind,'save',{back:true})}`;
+  return `${appHeader()}<div class="app-scroll"><div class="page">${state.variant==='B'?'<div class="progress" aria-label="Step 3 of 3"><span class="done"></span><span class="done"></span><span class="done"></span></div><p class="step-label">03 / 03 &nbsp; A final look</p>':'<p class="app-eyebrow">One last look</p>'}<h1 class="page-title">Does that look right?</h1><p class="app-copy">Your ${state.kind}, ready for ${escapeHTML(state.portfolio)}.</p>${valueSummary()}<dl class="review-panel">${rows.map(([label,value])=>`<div class="review-line"><dt>${label}</dt><dd>${escapeHTML(value)}</dd></div>`).join('')}</dl>${!isPriced()?`<div class="banner warning">${icon('info')}<span><strong>Save now. Price later.</strong>${market()?'We will try an example quote when saving. If unavailable, this holding stays unpriced and is excluded from net worth until refreshed.':'This holding stays unpriced and is excluded from net worth until refreshed.'}</span></div>`:''}<button class="inline-button" data-action="edit">${icon('back')}Edit details</button></div></div>${footer('Save '+state.kind,'save',{back:true})}`;
 }
 function success() {
   const holding=state.saved,t=totals();
@@ -841,12 +890,12 @@ function render(keepScroll=false) {
   exposeState();
 }
 function updateLive() {
-  document.querySelectorAll('[data-live="amount"]').forEach(node=>{node.textContent=money(amount(),draft().currency);});
+  document.querySelectorAll('[data-live="amount"]').forEach(node=>{node.textContent=estimateValue();});
   document.querySelectorAll('[data-live="calculation"]').forEach(node=>{node.innerHTML=calculation();});
   const invalid=Object.keys(draftErrors()).length>0;
   document.querySelectorAll('#app [data-action="save"],#app [data-action="review"]').forEach(button=>{button.disabled=state.busy||invalid;});
   const saveHelp=document.getElementById('save-help');
-  if(saveHelp)saveHelp.textContent=invalid?'Complete the required fields with valid values.':market()&&draft().price===null?'Ready to save without a price; refresh when available.':'All required details are ready.';
+  if(saveHelp)saveHelp.textContent=saveHint(invalid);
   const fetchButton=document.querySelector('#app [data-action="fetch"]');
   if(fetchButton)fetchButton.disabled=state.busy||!draft().symbol.trim();
   exposeState();
@@ -856,8 +905,9 @@ function invalidateQuote() {
 }
 function changeType(value) {
   if(value===draft().type)return;
-  const previousMarket=market();invalidateQuote();draft().type=value;
+  const previousMarket=market(),previousMetals=metals();invalidateQuote();draft().type=value;
   if(previousMarket||market()){draft().symbol='';draft().customName='';draft().customNameOpen=false;}
+  if(previousMetals||metals()){draft().metal='';draft().purity='';draft().quantity='';}
   state.errors={};draft().dirty=true;
 }
 function begin(kind,type,clear=false) {
@@ -866,6 +916,7 @@ function begin(kind,type,clear=false) {
   if(type) draft().type=type;
   state.screen='editor';state.phase=state.variant==='B'?'type':'details';
   state.errors={};state.message='';render();if(innerWidth<=700)document.getElementById('device').scrollIntoView({block:'center'});announce('Add '+kind+'. '+CONCEPTS[state.variant].name);
+  if(type==='metals')metalPicker();
 }
 function switchVariant(value) {
   if(!Object.hasOwn(CONCEPTS,value)) return;
@@ -887,12 +938,13 @@ function renderPickerItems(query='') {
   if(!matches.length)return '<p class="picker-empty">No matching options.</p>';
   return matches.map(item=>`<button class="picker-option" type="button" data-action="${item.action}" data-value="${escapeHTML(item.value)}" aria-pressed="${item.selected}">${item.leading}<span class="grow"><strong>${escapeHTML(item.title)}</strong>${item.subtitle?`<small>${escapeHTML(item.subtitle)}</small>`:''}</span>${item.selected?icon('check'):''}</button>`).join('');
 }
-function selectionPicker({eyebrow,title,items=[],closeFocus,label='Search',placeholder='Search',initialQuery='',sanitize=null,render}) {
-  showDialog(`<p class="app-eyebrow">${escapeHTML(eyebrow)}</p><h2 id="dialog-title">${escapeHTML(title)}</h2><label class="field picker-search"><span>${escapeHTML(label)}</span><input id="picker-query" data-picker-search value="${escapeHTML(initialQuery)}" placeholder="${escapeHTML(placeholder)}" autocomplete="off"></label><div class="picker-list" id="picker-list"></div><button class="quiet" type="button" data-action="close-modal">Close</button>`);
+function selectionPicker({eyebrow,title,items=[],closeFocus,label='Search',placeholder='Search',initialQuery='',sanitize=null,render,searchable=true}) {
+  showDialog(`<p class="app-eyebrow">${escapeHTML(eyebrow)}</p><h2 id="dialog-title">${escapeHTML(title)}</h2>${searchable?`<label class="field picker-search"><span>${escapeHTML(label)}</span><input id="picker-query" data-picker-search value="${escapeHTML(initialQuery)}" placeholder="${escapeHTML(placeholder)}" autocomplete="off"></label>`:''}<div class="picker-list" id="picker-list"></div><button class="quiet" type="button" data-action="close-modal">Close</button>`);
   pickerConfig={items,closeFocus,sanitize,render};
   document.getElementById('picker-list').innerHTML=renderPickerItems(initialQuery);
   const input=document.getElementById('picker-query');
   if(input){input.focus();if(initialQuery)input.select();}
+  else (document.querySelector('#picker-list [aria-pressed="true"]')||document.querySelector('#picker-list button'))?.focus();
 }
 function settingsPreview() {
   showDialog(`<p class="app-eyebrow">Appearance preview</p><h2 id="dialog-title">Settings</h2><p class="app-copy">These controls affect this HTML preview only. Other app settings are outside this holding-entry exploration.</p><label class="field"><span>Appearance</span><select data-preview-setting="appearance"><option value="light"${document.body.dataset.theme==='light'?' selected':''}>Classic</option><option value="dark"${document.body.dataset.theme==='dark'?' selected':''}>Midnight</option></select></label><label class="field"><span>Text size</span><select data-preview-setting="text-size"><option value="normal"${document.getElementById('device').dataset.large==='false'?' selected':''}>Default</option><option value="large"${document.getElementById('device').dataset.large==='true'?' selected':''}>Large preview</option></select></label><button class="primary" data-action="close-modal">Done</button>`);
@@ -902,8 +954,27 @@ function typePicker() {
     eyebrow:state.kind==='asset'?'What you own':'What you owe',
     title:'Choose a type',
     closeFocus:'holding-type',
-    placeholder:state.kind==='asset'?'e.g. Stock, Cash, Gold, Real estate':'e.g. Loan, Mortgage, Credit card',
+    placeholder:typeExampleHint(),
     items:types().map(type=>({action:'pick-type',value:type.id,selected:draft().type===type.id,leading:icon(type.icon),title:type.label,subtitle:type.hint,search:`${type.label} ${type.hint}`}))
+  });
+}
+function metalPicker() {
+  selectionPicker({
+    eyebrow:'Metals',
+    title:'Choose a metal',
+    closeFocus:state.variant==='B'&&state.phase==='type'?'guide-metals':'field-metal',
+    placeholder:'e.g. Gold or Silver',
+    items:Object.entries(METALS).map(([id,metal])=>({action:'pick-metal',value:id,selected:draft().metal===id,leading:metalIcon(id),title:metal.label,search:metal.label}))
+  });
+}
+function purityPicker() {
+  const d=draft(),metal=METALS[d.metal];
+  selectionPicker({
+    eyebrow:metal.label,
+    title:metal.karat?'Choose karat':'Choose fineness',
+    closeFocus:'field-purity',
+    searchable:false,
+    items:metal.purities.map(([id,fraction,description])=>({action:'pick-purity',value:id,selected:d.purity===id,leading:'',title:id,subtitle:description||`${Number((fraction*100).toFixed(2))}% ${metal.label.toLowerCase()}`,search:id}))
   });
 }
 function currencyPicker() {
@@ -992,7 +1063,8 @@ function setExchange(value) {
 function setCurrency(value) {
   if(value===draft().currency)return;
   const previous=draft().currency;draft().currency=value;
-  if(draft().price!==null){draft().price=draft().price*FX[previous]/FX[value];draft().quoteMessage='Example price converted with fixed demo FX rates.';}
+  if(metals()&&draft().price!==null) draft().price=exampleMetalPrice(draft());
+  else if(draft().price!==null){draft().price=draft().price*FX[previous]/FX[value];draft().quoteMessage='Example price converted with fixed demo FX rates.';}
   state.request++;state.busy=false;draft().dirty=true;
 }
 function holdingDetails(id) {
@@ -1002,7 +1074,7 @@ function holdingDetails(id) {
   const value=number=>state.hidden?'******':money(number,holding.currency);
   const rows=[['Portfolio',holding.portfolio],['Type',type.label],['Currency',holding.currency]];
   if(holding.symbol)rows.push(['Ticker',holding.symbol],['Quantity',state.hidden?'******':holding.quantity],['Last example price',holding.priced?value(holding.price):'Pending']);
-  if(type.mode==='quantity')rows.push(['Weight',state.hidden?'******':holding.quantity+' g'],['Price per gram',value(Number(holding.unitPrice))]);
+  if(type.mode==='metal')rows.push(['Metal',METALS[holding.metal].label],['Purity',holding.purity],['Weight',state.hidden?'******':holding.quantity+' g'],['Example price per gram',!holding.priced?'Pending':state.hidden?'******':metalMoney(holding.price,holding.currency)]);
   if(holding.notes)rows.push(['Notes',holding.notes]);
   showDialog(`<button class="icon-button detail-close" data-action="close-modal" aria-label="Close holding details">${icon('close')}</button><p class="app-eyebrow">${holding.kind} / ${type.label}</p><h2 class="detail-title" id="dialog-title">${escapeHTML(holding.name)}</h2><p class="success-value">${holding.priced?value(holding.amount):'Price pending'}</p><dl class="review-panel">${rows.map(([label,text])=>`<div class="review-line"><dt>${label}</dt><dd>${escapeHTML(text)}</dd></div>`).join('')}</dl><p class="detail-caption">Stored example values, not live financial data.</p><button class="primary" data-action="edit-holding" data-id="${id}">Edit ${holding.kind}</button><button class="secondary danger-button" data-action="request-delete" data-id="${id}">Delete ${holding.kind}</button>`);
   exposeState();
@@ -1014,8 +1086,8 @@ function editHolding(id) {
   const type=(holding.kind==='asset'?ASSETS:LIABILITIES).find(type=>type.id===holding.type),linked=type.mode==='market';
   state.drafts[state.kind]={...initialDraft(state.kind),id:holding.id,type:holding.type,currency:holding.currency,
     exchange:holding.exchange||'us',name:linked?'':holding.name,customName:holding.customName||'',customNameOpen:Boolean((holding.customName||'').trim()),symbol:holding.symbol||'',
-    quantity:holding.quantity||'',unitPrice:holding.unitPrice||'',amount:String(holding.amount),notes:holding.notes||'',
-    price:linked&&holding.priced?holding.price:null,quoteName:holding.quoteName||'',quoteAttempted:linked,dirty:false};
+    quantity:holding.quantity||'',metal:holding.metal||'',purity:holding.purity||'',amount:String(holding.amount),notes:holding.notes||'',
+    price:holding.price??null,quoteName:holding.quoteName||'',quoteAttempted:linked,dirty:false};
   state.errors={};state.screen='editor';state.phase='details';render();announce('Editing '+holding.name);
 }
 function requestDelete(id) {
@@ -1031,7 +1103,7 @@ function arrangeHoldings(type) {
   const category=(state.homeTab==='asset'?ASSETS:LIABILITIES).find(category=>category.id===type),label=groupLabels[type]||category.label;
   state.sorts[groupKey(state.homeTab,type)]='custom';
   const holdings=groupHoldings(state.homeTab,type);
-  showDialog(`<p class="app-eyebrow">${label} / Your arrangement</p><h2 id="dialog-title">Put things in your order.</h2><p class="app-copy">Move a holding up or down. Changes apply immediately; sorting by name or value will not erase them.</p>${holdings.map((holding,index)=>`<div class="arrange-row" data-holding="${holding.id}"><span class="grow"><strong>${escapeHTML(holding.name)}</strong><small>${escapeHTML(holding.symbol||category.label)}</small></span><span class="reorder-buttons"><button class="move-up" data-action="move-holding" data-id="${holding.id}" data-direction="-1" aria-label="Move ${escapeHTML(holding.name)} up"${index===0?' disabled':''}>${icon('next')}</button><button class="move-down" data-action="move-holding" data-id="${holding.id}" data-direction="1" aria-label="Move ${escapeHTML(holding.name)} down"${index===holdings.length-1?' disabled':''}>${icon('next')}</button></span></div>`).join('')}<button class="primary" data-action="group-done" data-value="${type}">Done</button>`);
+  showDialog(`<p class="app-eyebrow">${label} / Your arrangement</p><h2 id="dialog-title">Put things in your order.</h2><p class="app-copy">Move a holding up or down. Changes apply immediately; sorting by name or value will not erase them.</p>${holdings.map((holding,index)=>`<div class="arrange-row" data-holding="${holding.id}">${holding.metal?metalIcon(holding.metal):''}<span class="grow"><strong>${escapeHTML(holding.name)}</strong><small>${escapeHTML(holding.metal?metalDescription(holding):holding.symbol||category.label)}</small></span><span class="reorder-buttons"><button class="move-up" data-action="move-holding" data-id="${holding.id}" data-direction="-1" aria-label="Move ${escapeHTML(holding.name)} up"${index===0?' disabled':''}>${icon('next')}</button><button class="move-down" data-action="move-holding" data-id="${holding.id}" data-direction="1" aria-label="Move ${escapeHTML(holding.name)} down"${index===holdings.length-1?' disabled':''}>${icon('next')}</button></span></div>`).join('')}<button class="primary" data-action="group-done" data-value="${type}">Done</button>`);
 }
 function moveHolding(id,direction) {
   const holding=state.holdings.find(holding=>holding.id===id);
@@ -1064,9 +1136,12 @@ function draftErrors() {
   if(state.kind==='liability'||currentType().mode==='flat'){
     if(!numeric(d.amount)) errors.amount='Enter a valid amount, zero or greater.';
   }else{
-    if(!positiveDecimal(d.quantity)) errors.quantity=currentType().mode==='quantity'?'Enter a valid positive weight (decimals allowed, e.g. 10.5).':'Enter a valid positive quantity (decimals allowed, e.g. 0.25 or 10).';
+    if(!positiveDecimal(d.quantity)) errors.quantity=metals()?'Enter a valid positive weight (decimals allowed, e.g. 10.5).':'Enter a valid positive quantity (decimals allowed, e.g. 0.25 or 10).';
     if(market()&&!validTickerSymbol(quoteSymbol(),d.type)) errors.symbol='Choose a listing or enter a valid ticker symbol (letters/digits, e.g. AAPL, 7203.T, BTC-USD).';
-    if(currentType().mode==='quantity'&&!positiveDecimal(d.unitPrice)) errors.unitPrice='Enter a valid positive price.';
+    if(metals()){
+      if(!d.metal)errors.metal='Choose a metal.';
+      else if(!d.purity)errors.purity='Choose a purity.';
+    }
   }
   if(!Number.isFinite(amount())||!Number.isFinite(amount()*FX[d.currency])) errors[state.kind==='liability'||currentType().mode==='flat'?'amount':'quantity']='This value is too large for the demo.';
   return errors;
@@ -1120,7 +1195,8 @@ async function save() {
     id:original?original.id:state.nextId++,portfolio:state.portfolio,kind:state.kind,type:d.type,
     name:market()?(d.customName.trim()||d.quoteName||quoteSymbol()):d.name.trim(),
     amount:amount(),currency:d.currency,priced,symbol:market()?quoteSymbol():null,notes:original?(original.notes||''):d.notes.trim(),
-    quantity:d.quantity,unitPrice:d.unitPrice,price:d.price,quoteName:d.quoteName,customName:d.customName,exchange:d.exchange,isNew:original?!!original.isNew:true,notice:priced?'':d.quoteMessage,
+    quantity:d.quantity,price:d.price,quoteName:d.quoteName,customName:d.customName,exchange:d.exchange,isNew:original?!!original.isNew:true,
+    ...(metals()?{metal:d.metal,purity:d.purity}:{}),notice:priced?'':metals()?'The example metal price is unavailable.':d.quoteMessage,
     order:original&&original.type===d.type?original.order:Math.max(-1,...groupHoldings(state.kind,d.type).map(holding=>holding.order))+1
   };
   state.undoOriginal=original?{...original}:null;
@@ -1143,7 +1219,8 @@ async function refreshHoldings() {
   if(state.connection==='online'){
     for(const holding of state.holdings.filter(holding=>holding.portfolio===state.portfolio&&!holding.priced)){
       const quote=QUOTES.find(quote=>quote.symbol===holding.symbol&&quote.type===holding.type);
-      if(quote){holding.price=quote.price*FX[quote.currency]/FX[holding.currency];holding.amount=Number(holding.quantity)*holding.price;holding.priced=true;holding.notice='';updated++;}
+      const price=holding.type==='metals'?exampleMetalPrice(holding):quote?quote.price*FX[quote.currency]/FX[holding.currency]:null;
+      if(price!==null){holding.price=price;holding.amount=Number(holding.quantity)*price;holding.priced=true;holding.notice='';updated++;}
     }
     state.message=updated?`Updated ${updated} pending example price${updated===1?'':'s'}. Totals now include ${updated===1?'that asset':'those assets'}.`:'No pending price could be updated. This demo only has quotes for its example catalogue.';
   }else state.message=state.connection==='offline'?'Still offline. Pending prices and totals are unchanged.':'The quote service is unavailable. Pending prices and totals are unchanged.';
@@ -1158,7 +1235,12 @@ function fillSample() {
   const d=draft();
   if(market()){
     const quote=QUOTES.find(quote=>quote.type===d.type);d.symbol=quote.symbol;d.quoteName=quote.name;d.currency=quote.currency;if(quote.exchange)d.exchange=quote.exchange;d.quantity=d.type==='crypto'?'0.25':'10';d.price=null;d.quoteAttempted=false;d.searching=false;
-  }else{d.name=state.kind==='liability'?'Education loan':d.type==='gold'?'Family gold':'Emergency fund';d.amount=state.kind==='liability'?'25000':'10000';if(currentType().mode==='quantity'){d.quantity='10';d.unitPrice='7200';}}
+  }else if(metals()){
+    d.metal=d.metal||'gold';
+    const metal=METALS[d.metal];
+    d.purity=d.purity||(metal.karat?'22K':metal.purities[0][0]);
+    d.name=metal.example;d.quantity='10.5';d.price=state.connection==='online'?exampleMetalPrice(d):null;
+  }else{d.name=state.kind==='liability'?'Education loan':'Emergency fund';d.amount=state.kind==='liability'?'25000':'10000';}
   d.dirty=true;state.phase='details';state.screen='editor';state.errors={};render();if(market())void fetchQuote();
 }
 document.addEventListener('click',event=>{
@@ -1187,17 +1269,38 @@ document.addEventListener('click',event=>{
     if(holding){state.holdings=state.holdings.filter(holding=>holding.id!==id);state.message=holding.name+' deleted from this demo.';closeDialog();render(true);announce(state.message);}
   }
   else if(action==='type-picker')typePicker();
+  else if(action==='metal-picker')metalPicker();
+  else if(action==='purity-picker')purityPicker();
   else if(action==='currency-picker')currencyPicker();
   else if(action==='exchange-picker')exchangePicker();
   else if(action==='market-picker'||action==='change-market')marketPicker();
-  else if(action==='pick-type'){pickerConfig=null;changeType(value);closeDialog();render(true);document.getElementById('holding-type')?.focus({preventScroll:true});}
+  else if(action==='pick-type'){
+    pickerConfig=null;changeType(value);closeDialog();render(true);
+    if(metals())metalPicker();
+    else document.getElementById('holding-type')?.focus({preventScroll:true});
+  }
+  else if(action==='pick-metal'){
+    const d=draft(),focusTarget=pickerConfig.closeFocus;
+    if(d.metal!==value){d.metal=value;d.purity='';d.price=null;d.dirty=true;delete state.errors.metal;delete state.errors.purity;}
+    pickerConfig=null;closeDialog();render(true);
+    document.getElementById(focusTarget==='guide-metals'?focusTarget:'field-purity')?.focus();
+    announce(METALS[value].label+' selected. Choose its purity.');
+  }
+  else if(action==='pick-purity'){
+    const d=draft();d.purity=value;d.price=state.connection==='online'?exampleMetalPrice(d):null;d.dirty=true;delete state.errors.purity;
+    pickerConfig=null;closeDialog();render(true);document.getElementById('field-purity')?.focus();
+    announce(d.price===null?'Example price pending.':`Example price: ${metalMoney(d.price,d.currency)} per gram.`);
+  }
   else if(action==='pick-currency'){pickerConfig=null;setCurrency(value);closeDialog();render(true);document.getElementById('currency')?.focus({preventScroll:true});}
   else if(action==='pick-exchange'){pickerConfig=null;setExchange(value);closeDialog();render(true);document.getElementById('exchange')?.focus({preventScroll:true});}
   else if(action==='use-manual-ticker')useManualTicker(value);
   else if(action==='scenario'){const next=()=>begin(button.dataset.kind,button.dataset.type,true);if(state.screen==='editor'||state.screen==='review')confirmDiscard(next);else next();}
   else if(action==='kind'){if(value!==state.kind&&draft().id===null){state.request++;state.busy=false;state.kind=value;state.phase=state.variant==='B'?'type':'details';state.errors={};render();}}
-  else if(action==='type'){changeType(value);render();}
-  else if(action==='next-type'){state.phase='details';render();}
+  else if(action==='type'){changeType(value);render();if(metals())metalPicker();}
+  else if(action==='next-type'){
+    if(metals()&&!draft().metal)metalPicker();
+    else {state.phase='details';render();}
+  }
   else if(action==='quote')pickQuote(button.dataset.symbol);
   else if(action==='fetch')void fetchQuote();
   else if(action==='review'){if(validate()){state.screen='review';render();announce('Review your holding before saving.');}}
@@ -1241,7 +1344,7 @@ document.addEventListener('input',event=>{
     return;
   }
   const key=input.dataset.field;if(!key||input.tagName==='SELECT')return;
-  if(key==='quantity'||key==='unitPrice'||key==='amount'){
+  if(key==='quantity'||key==='amount'){
     const caret=input.selectionStart,cleaned=sanitizePositiveDecimal(input.value);
     if(cleaned!==input.value){
       const removed=input.value.length-cleaned.length;
@@ -1315,6 +1418,7 @@ document.addEventListener('change',event=>{
   else if(input.id==='connectivity'){
     state.connection=input.value;state.request++;state.busy=false;
     if(market())draft().quoteMessage=state.connection==='online'?'':quoteFailure();
+    if(metals()&&state.connection==='online'&&draft().price===null)draft().price=exampleMetalPrice(draft());
     render();announce(state.connection==='online'?'Simulated connection restored.':'Offline and error states are simulated. No network request was made.');
   }else if(input.id==='appearance'){document.body.dataset.theme=input.value;}
   else if(input.id==='text-size'){document.getElementById('device').dataset.large=String(input.value==='large');syncHomeClearance();}

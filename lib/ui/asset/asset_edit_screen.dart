@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show mapEquals;
 import '../../data/remote/stock/stock_search_service.dart';
 import '../../di/app_container.dart';
 import '../../domain/model/asset_type.dart';
+import '../../domain/model/precious_metal.dart';
 import '../../domain/model/stock_exchange.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
@@ -63,6 +64,10 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
         ValuationMode.market => <FocusNode, TextEditingController>{
           _quantityFocus: _quantity,
         },
+        ValuationMode.metal => <FocusNode, TextEditingController>{
+          _nameFocus: _name,
+          _quantityFocus: _quantity,
+        },
         ValuationMode.quantity => <FocusNode, TextEditingController>{
           _nameFocus: _name,
           _quantityFocus: _quantity,
@@ -103,6 +108,14 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
             ? ''
             : ' ${form.type.unitLabel}';
         return '$qty$unit × ${CurrencyUtil.format(unitPrice, form.currency)}';
+      case ValuationMode.metal:
+        final rate = form.lastPrice;
+        if (form.purity == null) {
+          return 'Choose a metal and purity for an estimate.'.tr(context);
+        }
+        return rate == null
+            ? '$qty g · ${'Price pending'.tr(context)}'
+            : '$qty g × ${CurrencyUtil.formatRate(rate, form.currency)}';
       case ValuationMode.flat:
         return 'Current value in {currency}'
             .tr(context)
@@ -264,7 +277,9 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                     asset: true,
                     amount: form.estimatedValue,
                     currency: form.currency,
-                    priced: !form.type.isMarketLinked || form.lastPrice != null,
+                    priced: form.type == AssetType.metals
+                        ? form.purity == null || form.lastPrice != null
+                        : !form.type.isMarketLinked || form.lastPrice != null,
                     calculation: _footerCalculation(context, form),
                     saving: form.isSaving,
                     ready: !form.isFetchingPrice && form.validate() == null,
@@ -321,22 +336,35 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                           dialogEyebrow: 'What you own'.tr(context),
                           dialogTitle: 'Choose a type'.tr(context),
                           searchPlaceholder:
-                              'e.g. Stock, Cash, Gold, Real estate'.tr(context),
-                          supportingText: 'e.g. Stock, Cash, Gold, Real estate'
-                              .tr(context),
+                              'e.g. Stock, Cash, Metals, Real estate'.tr(
+                                context,
+                              ),
+                          supportingText:
+                              'e.g. Stock, Cash, Metals, Real estate'.tr(
+                                context,
+                              ),
                           selected: form.type,
-                          options: AssetType.values,
+                          options: [
+                            for (final type in AssetType.values)
+                              if (type != AssetType.gold) type,
+                          ],
                           optionLabel: (AssetType type) =>
-                              type.displayName.tr(context),
+                              type.displayCategory.displayName.tr(context),
                           optionSubtitle: (AssetType type) =>
                               type.pickerHint.tr(context),
                           optionIcon: assetTypeIcon,
                           onSelected: (AssetType type) {
+                            FocusScope.of(context).unfocus();
                             viewModel.onTypeChange(type);
                             _name.text = viewModel.form.name;
                             _customName.text = viewModel.form.customName;
                             _symbol.text = viewModel.form.symbol;
-                            _focusNextRequired();
+                            _quantity.text = viewModel.form.quantity;
+                            if (type == AssetType.metals) {
+                              unawaited(_pickMetal());
+                            } else {
+                              _focusNextRequired();
+                            }
                           },
                           compact: true,
                         ),
@@ -364,6 +392,10 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                           },
                         ),
                       ],
+                      if (form.type == AssetType.metals) ...<Widget>[
+                        const SizedBox(height: 14),
+                        _metalSelectors(form),
+                      ],
                       if (!form.type.isMarketLinked) ...<Widget>[
                         const SizedBox(height: 14),
                         LabeledTextField(
@@ -376,7 +408,9 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                           ),
                           onSubmitted: (_) => _focusNextRequired(),
                           label: 'Name'.tr(context),
-                          placeholder: form.type.nameExample.tr(context),
+                          placeholder:
+                              (form.metal?.nameExample ?? form.type.nameExample)
+                                  .tr(context),
                           maxLength: 60,
                           onChanged: viewModel.onNameChange,
                         ),
@@ -587,9 +621,149 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
             ),
           ),
         ];
+      case ValuationMode.metal:
+        final rate = form.lastPrice;
+        final String rateText = form.isFetchingPrice
+            ? 'Fetching price…'.tr(context)
+            : rate != null
+            ? CurrencyUtil.formatRate(rate, form.currency)
+            : form.purity == null
+            ? '—'
+            : 'Price pending'.tr(context);
+        final theme = Theme.of(context);
+        return <Widget>[
+          FormFieldPair(
+            first: LabeledTextField(
+              canvas: true,
+              controller: _quantity,
+              focusNode: _quantityFocus,
+              textInputAction: TextInputAction.done,
+              label: 'Weight (grams)'.tr(context),
+              placeholder: 'e.g. {symbol}'
+                  .tr(context)
+                  .replaceAll('{symbol}', '10.5'),
+              supportingText: invalidQuantity
+                  ? 'Enter a positive weight'.tr(context)
+                  : 'Total weight in grams'.tr(context),
+              isError: invalidQuantity,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              onChanged: viewModel.onQuantityChange,
+            ),
+            second: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Price per gram'.tr(context),
+                  style: theme.textTheme.labelMedium,
+                ),
+                const SizedBox(height: 7),
+                Container(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 12,
+                  ),
+                  alignment: AlignmentDirectional.centerStart,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Text(rateText, style: theme.textTheme.bodyMedium),
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  (form.purity == null
+                          ? 'Shown after choosing purity.'
+                          : 'Indicative futures price, not a retail quote.')
+                      .tr(context),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (form.purity != null && rate == null && !form.isFetchingPrice)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                onPressed: viewModel.fetchMetalPrice,
+                icon: const Icon(Icons.refresh),
+                label: Text('Refresh price'.tr(context)),
+              ),
+            ),
+        ];
       case ValuationMode.flat:
         return const <Widget>[];
     }
+  }
+
+  Widget _metalSelectors(AssetFormState form) => FormFieldPair(
+    first: PickerChip(
+      fieldLabel: 'Metal'.tr(context),
+      label: form.metal?.label.tr(context) ?? 'Choose metal'.tr(context),
+      icon: form.metal == null
+          ? assetTypeIcon(AssetType.metals)
+          : metalIcon(form.metal!),
+      onPressed: _pickMetal,
+    ),
+    second: PickerChip(
+      fieldLabel: 'Purity'.tr(context),
+      label:
+          form.purity ??
+          (form.metal == null
+                  ? 'Not selected'
+                  : form.metal == PreciousMetal.gold
+                  ? 'Choose karat'
+                  : 'Choose grade')
+              .tr(context),
+      supportingText:
+          (form.metal == null
+                  ? 'Choose a metal first.'
+                  : form.metal == PreciousMetal.gold
+                  ? 'Measured in karats.'
+                  : 'Fineness in parts per thousand.')
+              .tr(context),
+      onPressed: form.metal == null ? null : _pickPurity,
+    ),
+  );
+
+  Future<void> _pickMetal() async {
+    final metal = await showSelectionPickerDialog<PreciousMetal>(
+      context,
+      eyebrow: 'Metals'.tr(context),
+      title: 'Choose a metal'.tr(context),
+      selected: _viewModel!.form.metal,
+      options: PreciousMetal.values,
+      optionLabel: (metal) => metal.label.tr(context),
+      optionIcon: metalIcon,
+      searchPlaceholder: 'e.g. Gold or Silver'.tr(context),
+    );
+    if (mounted && metal != null) _viewModel!.onMetalChange(metal);
+  }
+
+  Future<void> _pickPurity() async {
+    final form = _viewModel!.form;
+    final metal = form.metal!;
+    final purity = await showSelectionPickerDialog<String>(
+      context,
+      eyebrow: metal.label.tr(context),
+      title: (metal == PreciousMetal.gold ? 'Choose karat' : 'Choose fineness')
+          .tr(context),
+      selected: form.purity,
+      options: metal.grades.keys.toList(growable: false),
+      optionLabel: (grade) => grade,
+      optionSubtitle: (grade) => metal == PreciousMetal.silver && grade == '925'
+          ? 'Sterling silver'.tr(context)
+          : '${(metal.grades[grade]! * 100).toStringAsFixed(1)}%',
+      searchable: false,
+    );
+    if (mounted && purity != null) await _viewModel!.onPurityChange(purity);
   }
 
   Future<void> _pickCurrency(String current) async {

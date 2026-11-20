@@ -1,5 +1,6 @@
 import '../../data/local/entity/asset_entity.dart';
 import '../../domain/model/asset_type.dart';
+import '../../domain/model/precious_metal.dart';
 import '../../domain/model/stock_exchange.dart';
 
 /// Editable state of the asset form. Pure data + validation so it can be
@@ -15,6 +16,8 @@ class AssetFormState {
     this.currency = 'USD',
     this.quantity = '',
     this.pricePerUnit = '',
+    this.metal,
+    this.purity,
     this.symbol = '',
     this.exchange = StockExchange.us,
     this.manualValue = '',
@@ -35,6 +38,8 @@ class AssetFormState {
   final String currency;
   final String quantity;
   final String pricePerUnit;
+  final PreciousMetal? metal;
+  final String? purity;
   final String symbol;
   final StockExchange exchange;
   final String manualValue;
@@ -95,6 +100,7 @@ class AssetFormState {
   double get estimatedValue {
     switch (type.valuationMode) {
       case ValuationMode.market:
+      case ValuationMode.metal:
         return (double.tryParse(quantity) ?? 0.0) * (lastPrice ?? 0.0);
       case ValuationMode.quantity:
         return (double.tryParse(quantity) ?? 0.0) *
@@ -131,6 +137,13 @@ class AssetFormState {
           return 'Enter a price per unit';
         }
         return null;
+      case ValuationMode.metal:
+        if (metal == null) return 'Choose a metal';
+        if (metal!.grades[purity] == null) return 'Choose a purity';
+        if (!_isPositiveNumber(quantity) || !estimatedValue.isFinite) {
+          return 'Enter a positive weight';
+        }
+        return null;
       case ValuationMode.flat:
         final double? parsed = double.tryParse(manualValue);
         return parsed == null || !parsed.isFinite ? 'Enter a value' : null;
@@ -158,8 +171,12 @@ class AssetFormState {
           : null,
       currency: currency.trim().toUpperCase(),
       quantity: double.tryParse(quantity),
-      pricePerUnit: double.tryParse(pricePerUnit),
-      symbol: ticker.isEmpty ? null : ticker,
+      pricePerUnit: valuationMode == ValuationMode.quantity
+          ? double.tryParse(pricePerUnit)
+          : null,
+      metal: type == AssetType.metals ? metal : null,
+      purity: type == AssetType.metals ? purity : null,
+      symbol: type.isMarketLinked && ticker.isNotEmpty ? ticker : null,
       lastPrice: lastPrice,
       lastPriceTimestamp: lastPriceTimestamp,
       manualValue: double.tryParse(manualValue),
@@ -174,6 +191,8 @@ class AssetFormState {
     position: asset.position,
     portfolioId: asset.portfolioId,
     type: asset.type,
+    metal: asset.metal,
+    purity: asset.purity,
     name: asset.name,
     customName: asset.customName ?? '',
     currency: asset.currency,
@@ -201,6 +220,10 @@ class AssetFormState {
     String? currency,
     String? quantity,
     String? pricePerUnit,
+    PreciousMetal? metal,
+    String? purity,
+    bool clearMetal = false,
+    bool clearPurity = false,
     String? symbol,
     StockExchange? exchange,
     String? manualValue,
@@ -222,6 +245,8 @@ class AssetFormState {
       currency: currency ?? this.currency,
       quantity: quantity ?? this.quantity,
       pricePerUnit: pricePerUnit ?? this.pricePerUnit,
+      metal: clearMetal ? null : metal ?? this.metal,
+      purity: clearMetal || clearPurity ? null : purity ?? this.purity,
       symbol: symbol ?? this.symbol,
       exchange: exchange ?? this.exchange,
       manualValue: manualValue ?? this.manualValue,

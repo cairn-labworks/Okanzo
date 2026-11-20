@@ -221,8 +221,7 @@ class _HoldingSavedSummaryScreenState extends State<HoldingSavedSummaryScreen> {
     final String name = asset?.displayName ?? liability!.name;
     final String currency = asset?.currency ?? liability!.currency;
     final double rawValue = asset?.value ?? liability!.value;
-    final bool priced =
-        asset == null || !asset.type.isMarketLinked || asset.lastPrice != null;
+    final bool priced = asset?.isPriced ?? true;
     final String heading = switch ((widget.isAsset, widget.updated)) {
       (true, false) => 'Asset added.'.tr(context),
       (true, true) => 'Asset updated.'.tr(context),
@@ -479,9 +478,7 @@ class _HoldingSavedSummaryScreenState extends State<HoldingSavedSummaryScreen> {
                                     final bool hasUnpriced =
                                         assets != null &&
                                         assets.any(
-                                          (AssetEntity item) =>
-                                              item.type.isMarketLinked &&
-                                              item.lastPrice == null,
+                                          (AssetEntity item) => !item.isPriced,
                                         );
                                     final String netWorthText = summary == null
                                         ? '—'

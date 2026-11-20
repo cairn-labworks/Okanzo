@@ -1,4 +1,5 @@
 import '../../domain/model/asset_type.dart';
+import '../../domain/model/precious_metal.dart';
 import '../../util/result.dart';
 import '../local/dao/asset_dao.dart';
 import '../local/entity/asset_entity.dart';
@@ -102,9 +103,96 @@ class AssetRepository {
         to.trim().toUpperCase(),
       );
 
-  /// Refreshes the market price for a single asset (by symbol) and persists it.
+  Future<Result<double>> fetchMetalPrice(
+    PreciousMetal metal,
+    String purity, {
+    required String currency,
+  }) async {
+    final Result<StockQuote> raw = await _stockPriceService.fetchQuote(
+      metal.ticker,
+    );
+    if (raw.isFailure) {
+      return Result<double>.failure(
+        raw.errorMessage!,
+        isOffline: raw.isOffline,
+      );
+    }
+    return _metalPricePerGram(raw.value, metal, purity, currency);
+  }
+
+  Future<Result<double>> _metalPricePerGram(
+    StockQuote quote,
+    PreciousMetal metal,
+    String? purity,
+    String currency,
+  ) async {
+    final double? fraction = metal.grades[purity];
+    if (fraction == null ||
+        quote.currency != 'USD' ||
+        !quote.price.isFinite ||
+        quote.price <= 0) {
+      return Result<double>.failure('Metal price unavailable');
+    }
+    // These commodity futures are quoted in USD per troy ounce, not per contract.
+    final Result<double> rate = await convertPrice(
+      quote.price / 31.1034768 * fraction,
+      'USD',
+      currency,
+    );
+    if (rate.isSuccess && (!rate.value.isFinite || rate.value <= 0)) {
+      return Result<double>.failure('Metal price unavailable');
+    }
+    return rate;
+  }
+
+  static (String, bool)? _quoteKey(AssetEntity asset) {
+    if (asset.type == AssetType.metals) {
+      final PreciousMetal? metal = asset.metal;
+      return metal != null && metal.grades[asset.purity] != null
+          ? (metal.ticker, false)
+          : null;
+    }
+    final String symbol = asset.symbol?.trim().toUpperCase() ?? '';
+    return asset.type.isMarketLinked && symbol.isNotEmpty
+        ? (symbol, asset.type == AssetType.crypto)
+        : null;
+  }
+
+  /// Refreshes the market or metal price for a single asset and persists it.
   /// Returns the updated price on success.
   Future<Result<double>> refreshPrice(AssetEntity asset) async {
+    if (asset.type == AssetType.metals) {
+      final PreciousMetal? metal = asset.metal;
+      final String? purity = asset.purity;
+      if (metal == null ||
+          purity == null ||
+          !metal.grades.containsKey(purity)) {
+        return Result<double>.failure('Choose a metal and purity');
+      }
+      final Result<double> rate = await fetchMetalPrice(
+        metal,
+        purity,
+        currency: asset.currency,
+      );
+      if (rate.isSuccess) {
+        final int written = await _dao.updatePrices(
+          [
+            (
+              id: asset.id,
+              price: rate.value,
+              timestamp: DateTime.now().millisecondsSinceEpoch,
+              currency: asset.currency,
+              name: null,
+            ),
+          ],
+          expectedMetals: {asset.id: asset},
+        );
+        if (written == 0) {
+          return Result<double>.failure('Metal holding changed; refresh again');
+        }
+      }
+      return rate;
+    }
     final String symbol = asset.symbol?.trim() ?? '';
     if (!asset.type.isMarketLinked || symbol.isEmpty) {
       return Result<double>.failure('Asset has no market symbol');
@@ -153,12 +241,7 @@ class AssetRepository {
   /// transaction so watchers only rebuild once.
   Future<PriceRefreshResult> refreshAllPrices(int portfolioId) async {
     final List<AssetEntity> assets = (await _dao.getForPortfolio(portfolioId))
-        .where((AssetEntity asset) {
-          final String? symbol = asset.symbol;
-          return asset.type.isMarketLinked &&
-              symbol != null &&
-              symbol.trim().isNotEmpty;
-        })
+        .where((AssetEntity asset) => _quoteKey(asset) != null)
         .toList(growable: false);
     if (assets.isEmpty) {
       return const PriceRefreshResult(updated: 0, failed: 0, total: 0);
@@ -167,10 +250,7 @@ class AssetRepository {
     final List<(String, bool)> uniqueKeys = <(String, bool)>[];
     final Set<(String, bool)> seenKeys = <(String, bool)>{};
     for (final AssetEntity asset in assets) {
-      final (String, bool) key = (
-        asset.symbol!.trim().toUpperCase(),
-        asset.type == AssetType.crypto,
-      );
+      final (String, bool) key = _quoteKey(asset)!;
       if (seenKeys.add(key)) uniqueKeys.add(key);
     }
 
@@ -194,7 +274,6 @@ class AssetRepository {
       for (int i = 0; i < workerCount; i++) worker(),
     ]);
 
-    int updated = 0;
     int failed = 0;
     int offlineFailed = 0;
     final int now = DateTime.now().millisecondsSinceEpoch;
@@ -211,12 +290,10 @@ class AssetRepository {
             String? name,
           })
         >[];
+    final Map<int, AssetEntity> expectedMetals = {};
 
     for (final AssetEntity asset in assets) {
-      final (String, bool) key = (
-        asset.symbol!.trim().toUpperCase(),
-        asset.type == AssetType.crypto,
-      );
+      final (String, bool) key = _quoteKey(asset)!;
       final Result<StockQuote>? raw = rawQuotes[key];
       if (raw == null || raw.isFailure) {
         failed++;
@@ -229,11 +306,15 @@ class AssetRepository {
         failed++;
         continue;
       }
-      final Result<double> converted = await convertPrice(
-        quote.price,
-        source,
-        asset.currency,
-      );
+      final bool isMetal = asset.type == AssetType.metals;
+      final Result<double> converted = isMetal
+          ? await _metalPricePerGram(
+              quote,
+              asset.metal!,
+              asset.purity,
+              asset.currency,
+            )
+          : await convertPrice(quote.price, source, asset.currency);
       if (converted.isFailure) {
         failed++;
         if (converted.isOffline) offlineFailed++;
@@ -244,12 +325,16 @@ class AssetRepository {
         price: converted.value,
         timestamp: now,
         currency: asset.currency,
-        name: _backfillName(asset, quote),
+        name: isMetal ? null : _backfillName(asset, quote),
       ));
-      updated++;
+      if (isMetal) expectedMetals[asset.id] = asset;
     }
 
-    await _dao.updatePrices(updates);
+    final int updated = await _dao.updatePrices(
+      updates,
+      expectedMetals: expectedMetals,
+    );
+    failed += updates.length - updated;
     return PriceRefreshResult(
       updated: updated,
       failed: failed,

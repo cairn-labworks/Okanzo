@@ -95,7 +95,8 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 
 ### Global markets & multi-currency
 
-- Track **stocks, mutual funds/ETFs, crypto, gold, cash, bank deposits, real estate, vehicles, bonds**, plus **loans, mortgages, credit cards, pending payments and taxes**
+- Track **stocks, mutual funds/ETFs, crypto, precious metals, cash, bank deposits, real estate, vehicles, bonds**, plus **loans, mortgages, credit cards, pending payments and taxes**
+- **Metals**: choose Gold, Silver, Platinum or Palladium, select its purity, and enter the weight in grams. Okanzo estimates the value using a purity-adjusted futures quote, not a local retail or resale price. Save without a quote if offline, then refresh it from Home. Existing Gold holdings retain their manual price under Metals.
 - **International exchanges**: NYSE/Nasdaq, Shanghai, Tokyo, Hong Kong, BSE (India), and Euronext Paris, Amsterdam, Brussels, Lisbon, Dublin, Oslo and Milan — or **Other / full Yahoo ticker** (`000001.SZ`, `VOD.L`, `RELIANCE.NS`, `SHOP.TO`). Quotes in minor units (such as British pence) convert automatically; [Yahoo Finance coverage](https://help.yahoo.com/kb/finance/complete-list-markets-exchanges-yahoo-finance-sln2310.html) applies
 - **Preferred exchanges** shortlist starting with **US (NYSE / Nasdaq)**, customisable via **Select preferred exchanges...** (including an empty shortlist) while preserving existing holdings
 - **Company, coin or ticker search**: type at least two characters in the stock, fund or crypto search field for Yahoo Finance suggestions showing the name and ticker, plus the exchange for stocks/funds. Crypto suggestions show full trading pairs such as `BTC-USD`; explicit non-USD pairs are preserved. Select a listing to fill its symbol and use its fetched name automatically, or enter an optional **Custom name** to override it in lists. Manual ticker entry still works offline or when search is unavailable
@@ -196,7 +197,7 @@ Runs on **Android 8.0 (Oreo) and newer**.
 > Okanzo is **offline-first**, with no accounts, no analytics, no ads and no tracking. Your portfolio values, names and holdings never leave your device unless you export an encrypted backup yourself.
 >
 > Network access is used **only** for keyless public lookups:
-> 1. **Stock, fund & crypto prices** — sends only the ticker symbol to a public finance endpoint when you fetch, save (if not yet priced) or refresh market-linked holdings.
+> 1. **Stock, fund, crypto and metal prices** — sends only the ticker symbol to a public finance endpoint. Metal weight and purity are applied on-device and are not sent.
 > 2. **Exchange rates** — sends only a base currency code to a public rates endpoint (at most every 12 hours, or when refreshed manually).
 > 3. **Company/coin/ticker search** — sends only text typed into the stock, fund or crypto search field to Yahoo Finance after a short pause (at least two characters). Asset names, quantities and portfolio data are not included.
 
@@ -331,6 +332,9 @@ directly in a browser; no server or dependencies are needed. It preserves the
 approved **Canvas** design and the alternative **Guide** flow for future
 iterations, including Home, Add holding, and both asset/liability editors.
 Use `?variant=A&add=expand` for Canvas or `?variant=B` for Guide.
+Try **Add holding → Asset → Metals** to choose a metal and purity and
+estimate its value from a sample per-gram price. Expand **Metals** on Home
+to see each holding's metal icon.
 
 This is a design reference, not app code: all data is fictional, quotes and FX
 are simulated, and changes stay in memory. It is not bundled into the Flutter

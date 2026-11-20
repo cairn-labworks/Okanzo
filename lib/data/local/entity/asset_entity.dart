@@ -1,4 +1,5 @@
 import '../../../domain/model/asset_type.dart';
+import '../../../domain/model/precious_metal.dart';
 
 /// A single holding inside a portfolio.
 class AssetEntity {
@@ -11,6 +12,8 @@ class AssetEntity {
     required this.currency,
     this.quantity,
     this.pricePerUnit,
+    this.metal,
+    this.purity,
     this.symbol,
     this.lastPrice,
     this.lastPriceTimestamp,
@@ -30,6 +33,8 @@ class AssetEntity {
     currency: map['currency'] as String,
     quantity: (map['quantity'] as num?)?.toDouble(),
     pricePerUnit: (map['pricePerUnit'] as num?)?.toDouble(),
+    metal: PreciousMetal.fromName(map['metal']),
+    purity: map['purity'] as String?,
     symbol: map['symbol'] as String?,
     lastPrice: (map['lastPrice'] as num?)?.toDouble(),
     lastPriceTimestamp: map['lastPriceTimestamp'] as int?,
@@ -54,6 +59,8 @@ class AssetEntity {
 
   /// Manually entered price per unit (e.g. gold). Used by quantity valuation.
   final double? pricePerUnit;
+  final PreciousMetal? metal;
+  final String? purity;
 
   /// Ticker / market symbol (e.g. AAPL, BTC-USD). Used by market valuation.
   final String? symbol;
@@ -73,6 +80,17 @@ class AssetEntity {
   final int createdAt;
   final int updatedAt;
 
+  PreciousMetal? get displayedMetal => type == AssetType.gold
+      ? PreciousMetal.gold
+      : type == AssetType.metals
+      ? metal
+      : null;
+
+  bool get isPriced =>
+      !type.requiresQuote ||
+      (lastPrice != null &&
+          (type != AssetType.metals || metal?.grades[purity] != null));
+
   /// Name shown in lists: [customName] overrides [name] when set.
   String get displayName {
     final String? custom = _nonEmptyText(customName);
@@ -87,6 +105,8 @@ class AssetEntity {
     switch (type.valuationMode) {
       case ValuationMode.market:
         return (quantity ?? 0.0) * (lastPrice ?? 0.0);
+      case ValuationMode.metal:
+        return isPriced ? (quantity ?? 0.0) * lastPrice! : 0.0;
       case ValuationMode.quantity:
         return (quantity ?? 0.0) * (pricePerUnit ?? 0.0);
       case ValuationMode.flat:
@@ -103,6 +123,8 @@ class AssetEntity {
     'currency': currency,
     'quantity': quantity,
     'pricePerUnit': pricePerUnit,
+    'metal': metal?.name,
+    'purity': purity,
     'symbol': symbol,
     'lastPrice': lastPrice,
     'lastPriceTimestamp': lastPriceTimestamp,
@@ -140,6 +162,8 @@ class AssetEntity {
     currency: currency ?? this.currency,
     quantity: quantity ?? this.quantity,
     pricePerUnit: pricePerUnit ?? this.pricePerUnit,
+    metal: metal,
+    purity: purity,
     symbol: symbol ?? this.symbol,
     lastPrice: lastPrice ?? this.lastPrice,
     lastPriceTimestamp: lastPriceTimestamp ?? this.lastPriceTimestamp,

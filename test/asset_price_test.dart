@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -81,12 +82,13 @@ class _AssetDao implements AssetDao {
   }
 
   @override
-  Future<void> updatePrices(
+  Future<int> updatePrices(
     List<
       ({int id, double price, int timestamp, String? currency, String? name})
     >
-    updates,
-  ) async {
+    updates, {
+    Map<int, AssetEntity> expectedMetals = const {},
+  }) async {
     batchUpdateCalls++;
     for (final ({
           int id,
@@ -105,6 +107,7 @@ class _AssetDao implements AssetDao {
         name: update.name,
       );
     }
+    return updates.length;
   }
 
   @override
@@ -118,6 +121,12 @@ class _Database implements Database {
   int updates = 0;
 
   @override
+  Future<T> transaction<T>(
+    Future<T> Function(Transaction txn) action, {
+    bool? exclusive,
+  }) => action(_PriceTransaction(this));
+
+  @override
   Future<int> update(
     String table,
     Map<String, Object?> values, {
@@ -126,8 +135,23 @@ class _Database implements Database {
     ConflictAlgorithm? conflictAlgorithm,
   }) async {
     expect(table, Tables.assets);
-    expect(where, 'id = ?');
-    expect(whereArgs, <Object?>[row['id']]);
+    if (where == 'id = ?') {
+      expect(whereArgs, <Object?>[row['id']]);
+    } else {
+      expect(
+        where,
+        'id = ? AND type = ? AND metal = ? AND purity = ? AND currency = ?',
+      );
+      if (!listEquals<Object?>(whereArgs, [
+        row['id'],
+        row['type'],
+        row['metal'],
+        row['purity'],
+        row['currency'],
+      ])) {
+        return 0;
+      }
+    }
     row.addAll(values);
     updates++;
     return 1;
@@ -135,6 +159,25 @@ class _Database implements Database {
 
   @override
   Future<void> close() async {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _PriceTransaction implements Transaction {
+  _PriceTransaction(this.database);
+
+  @override
+  final _Database database;
+
+  @override
+  Future<int> update(
+    String table,
+    Map<String, Object?> values, {
+    String? where,
+    List<Object?>? whereArgs,
+    ConflictAlgorithm? conflictAlgorithm,
+  }) => database.update(table, values, where: where, whereArgs: whereArgs);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -183,6 +226,67 @@ void main() {
   late FxRepository fxRepository;
   late List<String> requestedSymbols;
 
+  test(
+    'a refresh for old gold purity cannot overwrite an edited holding',
+    () async {
+      final oldGold = AssetEntity.fromMap({
+        'id': 42,
+        'portfolioId': 1,
+        'type': 'METALS',
+        'metal': 'gold',
+        'purity': '24K',
+        'name': 'Family gold',
+        'currency': 'USD',
+        'quantity': 2.5,
+        'createdAt': 0,
+        'updatedAt': 0,
+      });
+      final storage = _Database(
+        oldGold.toMap()
+          ..['purity'] = '18K'
+          ..['lastPrice'] = 75,
+      );
+      final db = AppDatabase(storage);
+      addTearDown(db.close);
+      final quote = await AssetRepository(
+        AssetDao(db),
+        priceService,
+        fxRepository,
+      ).refreshPrice(oldGold);
+      expect(quote.isFailure, isTrue);
+      expect(storage.row['lastPrice'], 75);
+    },
+  );
+
+  test(
+    'refresh prices same metal once and values each purity per gram',
+    () async {
+      AssetEntity gold(int id, String purity) => AssetEntity.fromMap({
+        'id': id,
+        'portfolioId': 1,
+        'type': 'METALS',
+        'metal': 'gold',
+        'purity': purity,
+        'name': 'Family gold',
+        'currency': 'USD',
+        'quantity': 2.5,
+        'createdAt': 0,
+        'updatedAt': 0,
+      });
+      final metalDao = _AssetDao([gold(21, '24K'), gold(22, '18K')]);
+      final result = await AssetRepository(
+        metalDao,
+        priceService,
+        fxRepository,
+      ).refreshAllPrices(1);
+      expect(result.updated, 2);
+      expect(requestedSymbols, ['GC=F']);
+      expect((await metalDao.getById(21))!.value, closeTo(250, 1e-8));
+      expect((await metalDao.getById(22))!.value, closeTo(187.5, 1e-8));
+      expect((await metalDao.getById(22))!.name, 'Family gold');
+    },
+  );
+
   setUp(() {
     requestedSymbols = <String>[];
     dao = _AssetDao(<AssetEntity>[
@@ -207,6 +311,7 @@ void main() {
           final double price = switch (symbol) {
             'BTC-USD' => 90000,
             'BTC-EUR' => 80000,
+            'GC=F' => 3110.34768,
             _ => 36,
           };
           return http.Response(

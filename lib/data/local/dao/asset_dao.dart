@@ -95,14 +95,16 @@ class AssetDao {
   }
 
   /// Updates multiple asset prices in a single transaction and notifies once.
-  Future<void> updatePrices(
+  Future<int> updatePrices(
     List<
       ({int id, double price, int timestamp, String? currency, String? name})
     >
-    updates,
-  ) async {
-    if (updates.isEmpty) return;
-    await _db.transaction((Transaction txn) async {
+    updates, {
+    Map<int, AssetEntity> expectedMetals = const {},
+  }) async {
+    if (updates.isEmpty) return 0;
+    final int changed = await _db.transaction((Transaction txn) async {
+      int rows = 0;
       for (final ({
             int id,
             double price,
@@ -112,7 +114,8 @@ class AssetDao {
           })
           update
           in updates) {
-        await txn.update(
+        final AssetEntity? expected = expectedMetals[update.id];
+        rows += await txn.update(
           Tables.assets,
           <String, Object?>{
             'lastPrice': update.price,
@@ -123,20 +126,36 @@ class AssetDao {
             if (update.name != null && update.name!.trim().isNotEmpty)
               'name': update.name!.trim(),
           },
-          where: 'id = ?',
-          whereArgs: <Object?>[update.id],
+          where: expected == null ? 'id = ?' : 'id = ? AND type = ? AND metal = ? AND purity = ? AND currency = ?',
+          whereArgs: <Object?>[
+            update.id,
+            if (expected != null) ...[
+              expected.type.storageName,
+              expected.metal?.name,
+              expected.purity,
+              expected.currency,
+            ],
+          ],
         );
       }
+      return rows;
     });
-    _notify();
+    if (changed > 0) _notify();
+    return changed;
   }
 
   Future<int> maxPosition(int portfolioId, AssetType type) async =>
       Sqflite.firstIntValue(
         await _db.rawQuery(
           'SELECT COALESCE(MAX(position), -1) FROM ${Tables.assets} '
-          'WHERE portfolioId = ? AND type = ?',
-          <Object?>[portfolioId, type.storageName],
+          'WHERE portfolioId = ? AND type IN (?, ?)',
+          <Object?>[
+            portfolioId,
+            type.displayCategory.storageName,
+            type.displayCategory == AssetType.metals
+                ? AssetType.gold.storageName
+                : type.storageName,
+          ],
         ),
       ) ??
       -1;

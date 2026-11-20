@@ -120,6 +120,7 @@ String assetSubtitle(
   String baseCurrency, {
   String unitsLabel = 'units',
   bool hideBalances = false,
+  String Function(String) localize = _identityLabel,
 }) {
   String core;
   switch (asset.type.valuationMode) {
@@ -142,11 +143,18 @@ String assetSubtitle(
             : formatQuantity(asset.quantity!);
         core = '$qty ${asset.type.unitLabel ?? ''}'.trim();
       }
+    case ValuationMode.metal:
+      core = [
+        if (asset.metal != null) localize(asset.metal!.label),
+        if (asset.metal?.grades[asset.purity] != null) asset.purity!,
+      ].join(' · ');
     case ValuationMode.flat:
       core = '';
   }
   return (core + currencyNote(asset.currency, baseCurrency)).trim();
 }
+
+String _identityLabel(String label) => label;
 
 String currencyNote(String currency, String baseCurrency) =>
     currency != baseCurrency ? '  ·  $currency' : '';
