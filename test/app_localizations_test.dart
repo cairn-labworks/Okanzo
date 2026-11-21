@@ -110,6 +110,15 @@ void main() {
     );
   });
 
+  test('Undo failure is translated in every non-English locale', () {
+    const message = 'Could not undo this change.';
+    for (final locale in AppLocalizations.supportedLocales.skip(1)) {
+      final translated = AppLocalizations(locale).text(message);
+      expect(translated.trim(), isNotEmpty, reason: '$locale');
+      expect(translated, isNot(message), reason: '$locale');
+    }
+  });
+
   test('all catalogs provide messages and preserve every placeholder', () {
     final RegExp tokens = RegExp(r'\{\w+\}');
     List<String> placeholders(String text) =>

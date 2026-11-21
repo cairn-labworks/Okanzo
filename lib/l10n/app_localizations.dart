@@ -1119,6 +1119,28 @@ const List<String> _translationLanguages = <String>[
 ];
 
 const Map<String, List<String>> _sharedTranslations = <String, List<String>>{
+  'Could not undo this change.': <String>[
+    'No se pudo deshacer este cambio.',
+    'Não foi possível desfazer esta alteração.',
+    "Impossible d'annuler cette modification.",
+    'Diese Änderung konnte nicht rückgängig gemacht werden.',
+    'この変更を元に戻せませんでした。',
+    '이 변경 사항을 실행 취소할 수 없습니다.',
+    '无法撤销此更改。',
+    'Impossibile annullare questa modifica.',
+    'इस बदलाव को पूर्ववत नहीं किया जा सका।',
+    'تعذر التراجع عن هذا التغيير.',
+    'Tidak dapat membatalkan perubahan ini.',
+    'Bu değişiklik geri alınamadı.',
+    'Nie udało się cofnąć tej zmiany.',
+    'Deze wijziging kon niet ongedaan worden gemaakt.',
+    'Không thể hoàn tác thay đổi này.',
+    'ไม่สามารถเลิกทำการเปลี่ยนแปลงนี้ได้',
+    'Не удалось отменить это изменение.',
+    'Det gick inte att ångra ändringen.',
+    'Denne ændring kunne ikke fortrydes.',
+    'Kunne ikke angre denne endringen.',
+  ],
   'An asset': <String>[
     'Un activo',
     'Um ativo',
