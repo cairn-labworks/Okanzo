@@ -389,6 +389,7 @@ class PickerChip extends StatelessWidget {
     required this.label,
     this.icon,
     this.onPressed,
+    this.focusNode,
     this.fieldLabel,
     this.supportingText,
     super.key,
@@ -397,6 +398,7 @@ class PickerChip extends StatelessWidget {
   final String label;
   final IconData? icon;
   final VoidCallback? onPressed;
+  final FocusNode? focusNode;
   final String? fieldLabel;
   final String? supportingText;
 
@@ -421,6 +423,7 @@ class PickerChip extends StatelessWidget {
               side: BorderSide(color: canvasBoxBorderColor(theme.colorScheme)),
             ),
             child: InkWell(
+              focusNode: focusNode,
               borderRadius: BorderRadius.circular(10),
               onTap: onPressed,
               child: Padding(
@@ -468,6 +471,7 @@ class PickerChip extends StatelessWidget {
     return Material(
       type: MaterialType.transparency,
       child: InkWell(
+        focusNode: focusNode,
         onTap: onPressed,
         borderRadius: BorderRadius.circular(24),
         child: ConstrainedBox(

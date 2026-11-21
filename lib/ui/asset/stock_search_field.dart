@@ -126,7 +126,10 @@ class _StockSearchFieldState extends State<StockSearchField> {
   }
 
   void _onFocusChange() {
-    if (widget.canvas) return;
+    if (widget.canvas) {
+      setState(() {});
+      return;
+    }
     _blurReset?.cancel();
     if (_focus.hasFocus && _text.trim().length >= 2 && _result == null) {
       _debounce?.cancel();
@@ -216,7 +219,11 @@ class _StockSearchFieldState extends State<StockSearchField> {
         ),
       ),
     );
-    if (!mounted || pick == null) return;
+    if (!mounted) return;
+    if (pick == null) {
+      if (ModalRoute.isCurrentOf(context) == true) _focus.requestFocus();
+      return;
+    }
     switch (pick) {
       case _MarketListingPick(:final StockSearchResult result):
         widget.onSelected(result);
@@ -300,103 +307,96 @@ class _StockSearchFieldState extends State<StockSearchField> {
           ),
         ),
         const SizedBox(height: 7),
-        Focus(
-          focusNode: _focus,
-          child: Semantics(
-            button: true,
-            label: label,
-            child: Material(
-              key: hasSymbol
-                  ? const ValueKey<String>('selected-market-holding')
-                  : const ValueKey<String>('market-search-trigger'),
-              color: colors.surfaceContainerLow,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: BorderSide(
-                  color: hasError ? colors.error : canvasBoxBorderColor(colors),
-                ),
+        Semantics(
+          button: true,
+          label: label,
+          child: Material(
+            key: hasSymbol
+                ? const ValueKey<String>('selected-market-holding')
+                : const ValueKey<String>('market-search-trigger'),
+            color: colors.surfaceContainerLow,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: BorderSide(
+                color: hasError
+                    ? colors.error
+                    : _focus.hasFocus
+                    ? colors.primary
+                    : canvasBoxBorderColor(colors),
+                width: _focus.hasFocus ? 1.5 : 1,
               ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: _openMarketSearchDialog,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 54),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 11,
-                      vertical: hasSymbol ? 10 : 14,
-                    ),
-                    child: hasSymbol
-                        ? Row(
-                            children: <Widget>[
-                              _TickerBadge(code),
-                              const SizedBox(width: 11),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    Text(
-                                      name.isNotEmpty ? name : code,
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w500,
-                                            color: colors.onSurface,
-                                          ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      name.isNotEmpty
-                                          ? (currency.isEmpty
-                                                ? code
-                                                : '$code / $currency')
-                                          : <String>[
-                                              'Manual ticker'.tr(context),
-                                              if (currency.isNotEmpty) currency,
-                                            ].join(' · '),
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: colors.onSurfaceVariant,
-                                          ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                Icons.search,
-                                size: 18,
-                                color: colors.primary,
-                              ),
-                            ],
-                          )
-                        : Row(
-                            children: <Widget>[
-                              Icon(
-                                Icons.search,
-                                size: 19,
-                                color: colors.primary,
-                              ),
-                              const SizedBox(width: 9),
-                              Expanded(
-                                child: Text(
-                                  placeholder,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: colors.onSurfaceVariant,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              const Icon(Icons.expand_more, size: 16),
-                            ],
-                          ),
+            ),
+            child: InkWell(
+              focusNode: _focus,
+              borderRadius: BorderRadius.circular(10),
+              onTap: _openMarketSearchDialog,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 54),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: hasSymbol ? 10 : 14,
                   ),
+                  child: hasSymbol
+                      ? Row(
+                          children: <Widget>[
+                            _TickerBadge(code),
+                            const SizedBox(width: 11),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Text(
+                                    name.isNotEmpty ? name : code,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                      color: colors.onSurface,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    name.isNotEmpty
+                                        ? (currency.isEmpty
+                                              ? code
+                                              : '$code / $currency')
+                                        : <String>[
+                                            'Manual ticker'.tr(context),
+                                            if (currency.isNotEmpty) currency,
+                                          ].join(' · '),
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colors.onSurfaceVariant,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(Icons.search, size: 18, color: colors.primary),
+                          ],
+                        )
+                      : Row(
+                          children: <Widget>[
+                            Icon(Icons.search, size: 19, color: colors.primary),
+                            const SizedBox(width: 9),
+                            Expanded(
+                              child: Text(
+                                placeholder,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colors.onSurfaceVariant,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.expand_more, size: 16),
+                          ],
+                        ),
                 ),
               ),
             ),

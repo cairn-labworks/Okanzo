@@ -332,9 +332,13 @@ directly in a browser; no server or dependencies are needed. It preserves the
 approved **Canvas** design and the alternative **Guide** flow for future
 iterations, including Home, Add holding, and both asset/liability editors.
 Use `?variant=A&add=expand` for Canvas or `?variant=B` for Guide.
-Try **Add holding → Asset → Metals** to choose a metal and purity and
-estimate its value from a sample per-gram price. Expand **Metals** on Home
-to see each holding's metal icon.
+Try **Add holding → An asset**, then choose **Metals, gems & jewellery** as the
+type. Supported metals use weight, purity, and a sample per-gram rate.
+Diamonds, other gemstones, jewellery, and other precious items use a manual
+estimate or appraisal. Choosing a market-linked type focuses its search picker
+before Quantity. Use **Enter / Next** to move through the fields and **Save**
+to see a centered confirmation matching the holding glance on Home. The live
+estimate (or outstanding liability amount) stays above the editor action.
 
 This is a design reference, not app code: all data is fictional, quotes and FX
 are simulated, and changes stay in memory. It is not bundled into the Flutter

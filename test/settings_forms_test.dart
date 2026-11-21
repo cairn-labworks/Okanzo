@@ -2007,7 +2007,7 @@ void main() {
   );
 
   testWidgets(
-    'post-save confirmation summary shows added/updated state, supports Undo and Add another holding',
+    'post-save glance is centered over the previous screen and supports Undo and Add another',
     (WidgetTester tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(390, 844);
@@ -2028,9 +2028,21 @@ void main() {
 
       expect(find.byType(HoldingSavedSummaryScreen), findsOneWidget);
       expect(find.text('Asset added.'), findsOneWidget);
-      expect(find.text('Emergency buffer is now in Personal.'), findsOneWidget);
+      expect(find.text('Emergency buffer'), findsOneWidget);
+      expect(find.text('Personal'), findsOneWidget);
       expect(find.text('\$500'), findsOneWidget);
       expect(find.text('Undo this addition'), findsOneWidget);
+      expect(find.text('Open'), findsOneWidget);
+      expect(find.byType(HoldingEditorFooter), findsNothing);
+      final Rect glance = tester.getRect(
+        find.descendant(
+          of: find.byType(Dialog),
+          matching: find.byType(SingleChildScrollView),
+        ),
+      );
+      expect(glance.center, const Offset(195, 422));
+      expect(glance.width, lessThan(390));
+      expect(glance.height, lessThan(844 * 0.85));
 
       await _tap(
         tester,
@@ -2061,12 +2073,58 @@ void main() {
 
       await _tap(
         tester,
+        find.byKey(const ValueKey<String>('undo-saved-holding')),
+      );
+      expect(container.assetRepository.saved?.manualValue, 300);
+      expect(find.byType(HoldingSavedSummaryScreen), findsNothing);
+
+      await _tap(tester, find.text('Open'));
+      await tester.enterText(_textField('Value'), '750');
+      await _tap(tester, _saveButton);
+      await _tap(
+        tester,
         find.byKey(const ValueKey<String>('add-another-holding')),
       );
       expect(find.text('What would you like to add?'), findsOneWidget);
       await _tap(tester, find.text('A liability'));
       expect(find.byType(HoldingCreateScreen), findsOneWidget);
       expect(find.text('Add liability'), findsOneWidget);
+      await _tap(tester, find.byTooltip('Back'));
+      expect(find.text('Open'), findsOneWidget);
+      expect(find.byType(HoldingSavedSummaryScreen), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'liability save glance keeps balances private at large text sizes',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      await container.settingsRepository.setHideBalances(true);
+      await tester.pumpWidget(
+        _app(
+          container,
+          const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
+          textScale: 1.5,
+        ),
+      );
+      await _tap(tester, find.text('Open'));
+      await _tap(tester, _textField('Outstanding amount'));
+      await tester.enterText(_textField('Outstanding amount'), '271');
+      await _tap(tester, _textField('Name'));
+      await tester.enterText(_textField('Name'), 'Private loan');
+      await _tap(tester, _saveButton);
+      expect(find.text('Liability added.'), findsOneWidget);
+      expect(find.text('Private loan'), findsOneWidget);
+      expect(find.text(CurrencyUtil.masked('USD')), findsOneWidget);
+      expect(find.text('\$271'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pumpAndSettle();
+      expect(find.byType(HoldingSavedSummaryScreen), findsNothing);
+      expect(find.text('Open'), findsOneWidget);
     },
   );
 
@@ -2593,12 +2651,95 @@ void main() {
     );
   }
 
-  testWidgets(
-    'liability selectors skip filled amounts and keep Save explicit',
-    (WidgetTester tester) async {
+  for (final AssetType type in AssetType.values.where(
+    (AssetType type) => type.isMarketLinked,
+  )) {
+    testWidgets('${type.displayName} focuses the picker before quantity', (
+      WidgetTester tester,
+    ) async {
+      await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+      await _tap(tester, find.byType(DropdownSelector<AssetType>));
+      await _tap(tester, find.widgetWithText(ListTile, type.displayName));
+      final Finder market = find.byType(StockSearchField);
+      final FocusNode pickerFocus = tester
+          .widget<StockSearchField>(market)
+          .focusNode!;
+      expect(pickerFocus.hasPrimaryFocus, isTrue);
+      expect(_editableField(tester, 'Quantity').focusNode.hasFocus, isFalse);
+      expect(tester.testTextInput.isVisible, isFalse);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<EditableText>(
+              find.descendant(
+                of: _dialogSearchInput,
+                matching: find.byType(EditableText),
+              ),
+            )
+            .focusNode
+            .hasFocus,
+        isTrue,
+      );
+      await _tap(tester, find.widgetWithText(TextButton, 'Close'));
+      expect(pickerFocus.hasPrimaryFocus, isTrue);
+
+      await _tap(tester, find.byType(CurrencySelector));
+      await _tap(tester, find.text('EUR — Euro'));
+      expect(pickerFocus.hasPrimaryFocus, isTrue);
+      await _openMarketSearch(tester);
+      await tester.enterText(
+        _dialogSearchInput,
+        type == AssetType.crypto ? 'BTC-USD' : 'AAPL',
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      expect(_editableField(tester, 'Quantity').focusNode.hasFocus, isTrue);
+      expect(container.assetRepository.saved, isNull);
+    });
+  }
+
+  testWidgets('metals focus purity, then Name before weight', (
+    WidgetTester tester,
+  ) async {
+    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+    await _tap(tester, find.byType(DropdownSelector<AssetType>));
+    await _tap(tester, find.widgetWithText(ListTile, 'Metals'));
+    expect(find.text('Choose a metal'), findsOneWidget);
+    await _tap(tester, find.widgetWithText(ListTile, 'Gold'));
+    final PickerChip purity = tester.widget<PickerChip>(
+      find.widgetWithText(PickerChip, 'Choose karat'),
+    );
+    expect(purity.focusNode!.hasPrimaryFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    await _tap(tester, find.widgetWithText(ListTile, '22K'));
+    expect(_editableField(tester, 'Name').focusNode.hasFocus, isTrue);
+    await tester.enterText(_textField('Name'), 'Family gold');
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pumpAndSettle();
+    expect(_editableField(tester, 'Weight (grams)').focusNode.hasFocus, isTrue);
+  });
+
+  for (final LiabilityType type in LiabilityType.values) {
+    testWidgets('${type.displayName} focuses amount, then Name', (
+      WidgetTester tester,
+    ) async {
+      Future<void> selectType() async {
+        await _tap(tester, find.byType(DropdownSelector<LiabilityType>));
+        await tester.enterText(_dialogSearchInput, type.displayName);
+        await tester.pumpAndSettle();
+        await _tap(tester, find.widgetWithText(ListTile, type.displayName));
+      }
+
       await open(
         tester,
         const LiabilityEditScreen(portfolioId: 1, liabilityId: 0),
+      );
+      await selectType();
+      expect(
+        _editableField(tester, 'Outstanding amount').focusNode.hasFocus,
+        isTrue,
       );
       await tester.enterText(_textField('Outstanding amount'), '1200');
       await tester.testTextInput.receiveAction(TextInputAction.next);
@@ -2606,16 +2747,15 @@ void main() {
       expect(_editableField(tester, 'Name').focusNode.hasFocus, isTrue);
       FocusManager.instance.primaryFocus?.unfocus();
       await tester.pumpAndSettle();
-      await _tap(tester, find.byType(DropdownSelector<LiabilityType>));
-      await _tap(tester, find.text('Mortgage').last);
+      await selectType();
       expect(_editableField(tester, 'Name').focusNode.hasFocus, isTrue);
       await tester.enterText(_textField('Name'), 'Home loan');
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
       expect(tester.testTextInput.isVisible, isFalse);
       expect(container.liabilityRepository.saved, isNull);
-    },
-  );
+    });
+  }
 
   for (final bool dark in <bool>[false, true]) {
     testWidgets(
@@ -3077,10 +3217,12 @@ void main() {
   testWidgets('new flat assets focus the value with a blinking cursor', (
     WidgetTester tester,
   ) async {
-    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
     for (final AssetType type in AssetType.values.where(
       (AssetType type) => type.valuationMode == ValuationMode.flat,
     )) {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
       await _tap(tester, find.byType(DropdownSelector<AssetType>));
       await tester.enterText(
         find.descendant(
@@ -3103,6 +3245,10 @@ void main() {
       final bool cursorVisible = value.cursorCurrentlyVisible;
       await tester.pump(const Duration(milliseconds: 500));
       expect(value.cursorCurrentlyVisible, !cursorVisible);
+      await tester.enterText(_textField('Value'), '100');
+      await tester.testTextInput.receiveAction(TextInputAction.next);
+      await tester.pumpAndSettle();
+      expect(_editableField(tester, 'Name').focusNode.hasFocus, isTrue);
     }
   });
 

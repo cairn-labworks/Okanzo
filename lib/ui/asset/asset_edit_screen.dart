@@ -54,6 +54,8 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
   final FocusNode _quantityFocus = FocusNode();
   final FocusNode _pricePerUnitFocus = FocusNode();
   final FocusNode _manualValueFocus = FocusNode();
+  final FocusNode _metalFocus = FocusNode();
+  final FocusNode _purityFocus = FocusNode();
   bool _controllersPrimed = false;
   AssetFormState? _initialForm;
   final GlobalKey<HoldingEditorGuardState> _guard =
@@ -62,6 +64,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
   Map<FocusNode, TextEditingController> get _requiredFields =>
       switch (_viewModel!.form.valuationMode) {
         ValuationMode.market => <FocusNode, TextEditingController>{
+          _symbolFocus: _symbol,
           _quantityFocus: _quantity,
         },
         ValuationMode.metal => <FocusNode, TextEditingController>{
@@ -79,7 +82,20 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
         },
       };
 
-  void _focusNextRequired() => focusNextRequiredField(context, _requiredFields);
+  void _focusNextRequired() {
+    final form = _viewModel!.form;
+    if (form.type == AssetType.metals) {
+      if (form.metal == null) {
+        _metalFocus.requestFocus();
+        return;
+      }
+      if (form.purity == null) {
+        _purityFocus.requestFocus();
+        return;
+      }
+    }
+    focusNextRequiredField(context, _requiredFields);
+  }
 
   StockExchange? _activeExchange(
     AssetFormState form,
@@ -149,7 +165,8 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
         final saved = event.savedAsset ?? viewModel.form.toEntity();
         unawaited(
           _guard.currentState!.close(
-            replacement: MaterialPageRoute<void>(
+            confirmationAfterClose: holdingSavedSummaryRoute(
+              context,
               builder: (_) => HoldingSavedSummaryScreen(
                 portfolioId: widget.portfolioId,
                 updated: widget.assetId != 0,
@@ -205,6 +222,8 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     _quantityFocus.dispose();
     _pricePerUnitFocus.dispose();
     _manualValueFocus.dispose();
+    _metalFocus.dispose();
+    _purityFocus.dispose();
     super.dispose();
   }
 
@@ -360,7 +379,8 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                             _customName.text = viewModel.form.customName;
                             _symbol.text = viewModel.form.symbol;
                             _quantity.text = viewModel.form.quantity;
-                            if (type == AssetType.metals) {
+                            if (type == AssetType.metals &&
+                                viewModel.form.metal == null) {
                               unawaited(_pickMetal());
                             } else {
                               _focusNextRequired();
@@ -637,7 +657,11 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
               canvas: true,
               controller: _quantity,
               focusNode: _quantityFocus,
-              textInputAction: TextInputAction.done,
+              textInputAction: requiredFieldInputAction(
+                _requiredFields,
+                current: _quantityFocus,
+              ),
+              onSubmitted: (_) => _focusNextRequired(),
               label: 'Weight (grams)'.tr(context),
               placeholder: 'e.g. {symbol}'
                   .tr(context)
@@ -705,6 +729,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
 
   Widget _metalSelectors(AssetFormState form) => FormFieldPair(
     first: PickerChip(
+      focusNode: _metalFocus,
       fieldLabel: 'Metal'.tr(context),
       label: form.metal?.label.tr(context) ?? 'Choose metal'.tr(context),
       icon: form.metal == null
@@ -713,6 +738,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
       onPressed: _pickMetal,
     ),
     second: PickerChip(
+      focusNode: _purityFocus,
       fieldLabel: 'Purity'.tr(context),
       label:
           form.purity ??
@@ -744,7 +770,14 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
       optionIcon: metalIcon,
       searchPlaceholder: 'e.g. Gold or Silver'.tr(context),
     );
-    if (mounted && metal != null) _viewModel!.onMetalChange(metal);
+    if (!mounted || metal == null) return;
+    _viewModel!.onMetalChange(metal);
+    // The purity chip is disabled until the new metal is rendered.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ModalRoute.isCurrentOf(context) == true) {
+        _focusNextRequired();
+      }
+    });
   }
 
   Future<void> _pickPurity() async {
@@ -763,7 +796,10 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
           : '${(metal.grades[grade]! * 100).toStringAsFixed(1)}%',
       searchable: false,
     );
-    if (mounted && purity != null) await _viewModel!.onPurityChange(purity);
+    if (!mounted || purity == null) return;
+    final priceUpdate = _viewModel!.onPurityChange(purity);
+    _focusNextRequired();
+    await priceUpdate;
   }
 
   Future<void> _pickCurrency(String current) async {

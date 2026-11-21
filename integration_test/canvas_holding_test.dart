@@ -175,6 +175,19 @@ void main() {
     );
     expect(find.byType(HoldingSavedSummaryScreen), findsOneWidget);
     expect(find.text('Asset updated.'), findsOneWidget);
+    expect(find.byType(HoldingEditorFooter), findsNothing);
+    expect(find.byKey(const ValueKey<String>('add-holding')), findsOneWidget);
+    final Rect summaryBounds = tester.getRect(
+      find.descendant(
+        of: find.byType(Dialog),
+        matching: find.byType(SingleChildScrollView),
+      ),
+    );
+    final Size screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+    expect(summaryBounds.width, lessThan(screen.width));
+    expect(summaryBounds.height, lessThan(screen.height));
+    expect(summaryBounds.center.dx, closeTo(screen.width / 2, 1));
+    expect(summaryBounds.center.dy, closeTo(screen.height / 2, 24));
     await capture(tester, 'canvas-saved-summary');
     await tap(tester, find.byKey(const ValueKey<String>('back-to-portfolio')));
     expect(
