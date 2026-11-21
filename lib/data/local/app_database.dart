@@ -95,6 +95,7 @@ class AppDatabase {
       await db.transaction((Transaction txn) async {
         await txn.execute('ALTER TABLE assets ADD COLUMN metal TEXT');
         await txn.execute('ALTER TABLE assets ADD COLUMN purity TEXT');
+        await txn.execute('PRAGMA user_version = 4');
       });
     }
     if (currentVersion < 5) {

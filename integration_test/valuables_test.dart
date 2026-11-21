@@ -1,18 +1,52 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:okanzo/data/local/app_database.dart';
 import 'package:okanzo/data/local/entity/asset_entity.dart';
 import 'package:okanzo/data/repository/settings_repository.dart';
+import 'package:okanzo/data/repository/asset_repository.dart';
 import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/app_language.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
+import 'package:okanzo/domain/model/precious_metal.dart';
 import 'package:okanzo/domain/model/theme_mode.dart';
 import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/components/form_components.dart';
 import 'package:okanzo/ui/components/holding_editor_chrome.dart';
+import 'package:okanzo/ui/asset/asset_edit_screen.dart';
+import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
+import 'package:okanzo/util/result.dart';
+import 'package:path/path.dart' as p;
+import 'package:sqflite_sqlcipher/sqflite.dart' as sql;
+
+class _DelayedMetalQuote extends Fake implements AssetRepository {
+  _DelayedMetalQuote(this.delegate);
+
+  final AssetRepository delegate;
+  final quote = Completer<Result<double>>();
+
+  @override
+  Future<AssetEntity?> getById(int id) => delegate.getById(id);
+
+  @override
+  Future<int> save(AssetEntity asset) => delegate.save(asset);
+
+  @override
+  Future<Result<double>> fetchMetalPrice(
+    PreciousMetal metal,
+    String purity, {
+    required String currency,
+  }) {
+    expectSync(metal, PreciousMetal.gold);
+    expectSync(purity, '22K');
+    expectSync(currency, 'USD');
+    return quote.future;
+  }
+}
 
 Finder field(String label) => find.byWidgetPredicate(
   (widget) => widget is LabeledTextField && widget.label == label,
@@ -86,6 +120,79 @@ void main() {
     }
   }
 
+  testWidgets('schema-3 migration resumes after the schema-5 step fails', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      final path = p.join(
+        await sql.getDatabasesPath(),
+        'migration-regression-${DateTime.now().microsecondsSinceEpoch}.db',
+      );
+      const password = 'isolated-migration-test';
+      try {
+        final seed = await sql.openDatabase(path, password: password);
+        await seed.execute(
+          'CREATE TABLE assets ('
+          'id INTEGER PRIMARY KEY, portfolioId INTEGER, type TEXT, name TEXT, '
+          'customName TEXT, currency TEXT, quantity REAL, pricePerUnit REAL, '
+          'symbol TEXT, lastPrice REAL, lastPriceTimestamp INTEGER, '
+          'manualValue REAL, notes TEXT, position INTEGER, '
+          'createdAt INTEGER, updatedAt INTEGER, customPrice INTEGER DEFAULT 0)',
+        );
+        await seed.execute(
+          'CREATE TABLE liabilities ('
+          'id INTEGER PRIMARY KEY, portfolioId INTEGER, type TEXT, name TEXT, '
+          'currency TEXT, amount REAL, notes TEXT, position INTEGER, '
+          'createdAt INTEGER, updatedAt INTEGER)',
+        );
+        await seed.insert('assets', {
+          'id': 1,
+          'portfolioId': 1,
+          'type': 'GOLD',
+          'name': 'Legacy gold',
+          'currency': 'USD',
+          'quantity': 2.5,
+          'pricePerUnit': 80.0,
+          'position': 0,
+          'createdAt': 0,
+          'updatedAt': 0,
+        });
+        await seed.execute('PRAGMA user_version = 3');
+        await seed.close();
+
+        // A conflicting future column forces the schema-5 transaction to fail.
+        await expectLater(
+          AppDatabase.open(path: path, password: password),
+          throwsA(isA<sql.DatabaseException>()),
+        );
+        final recovery = await sql.openDatabase(path, password: password);
+        expect(
+          (await recovery.rawQuery('PRAGMA user_version')).single.values.single,
+          4,
+        );
+        await recovery.execute('ALTER TABLE assets DROP COLUMN customPrice');
+        await recovery.close();
+        final upgraded = await AppDatabase.open(path: path, password: password);
+        expect(
+          (await upgraded.db.rawQuery('PRAGMA user_version'))
+              .single
+              .values
+              .single,
+          5,
+        );
+        expect(
+          AssetEntity.fromMap((await upgraded.db.query('assets')).single).value,
+          200.0,
+        );
+        await upgraded.close();
+      } finally {
+        final remaining = await sql.openDatabase(path, password: password);
+        await remaining.close();
+        await sql.deleteDatabase(path);
+      }
+    });
+  });
+
   testWidgets('Valuables save and reopen manual rates and totals on Android', (
     tester,
   ) async {
@@ -125,6 +232,47 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      final delayed = _DelayedMetalQuote(container.assetRepository);
+      final quotedEditor = AssetEditViewModel(
+        assetRepository: delayed,
+        settingsRepository: container.settingsRepository,
+        portfolioId: portfolioId,
+        assetId: 0,
+      );
+      addTearDown(quotedEditor.dispose);
+      unawaited(
+        tester
+            .state<NavigatorState>(find.byType(Navigator).first)
+            .push<void>(
+              MaterialPageRoute<void>(
+                builder: (_) => AssetEditScreen(
+                  portfolioId: portfolioId,
+                  assetId: 0,
+                  viewModel: quotedEditor,
+                ),
+              ),
+            ),
+      );
+      await tester.pumpAndSettle();
+      await tap(tester, find.byType(DropdownSelector<AssetType>));
+      await tap(tester, find.widgetWithText(ListTile, 'Valuables'));
+      await tap(tester, find.widgetWithText(ListTile, 'Gold'));
+      await tap(tester, find.widgetWithText(ListTile, '22K'));
+      await enter(tester, 'Name', 'Quote focus probe');
+      await tap(tester, field('Price per gram'));
+      final rateInput = find.descendant(
+        of: field('Price per gram'),
+        matching: find.byType(EditableText),
+      );
+      expect(tester.widget<EditableText>(rateInput).focusNode.hasFocus, isTrue);
+      delayed.quote.complete(Result<double>.success(80.25));
+      await tester.pumpAndSettle();
+      expect(tester.widget<EditableText>(rateInput).controller.text, '80.25');
+      expect(tester.widget<EditableText>(rateInput).focusNode.hasFocus, isTrue);
+      await capture(tester, 'valuables-focused-quote');
+      await tap(tester, find.byTooltip('Back'));
+      await tap(tester, find.text('Discard'));
+
       Future<void> addItem(String item, {String? purity}) async {
         await tap(tester, find.text('Add holding'));
         await tap(tester, find.text('An asset'));
@@ -151,7 +299,9 @@ void main() {
         () => container.assetRepository.getForPortfolio(portfolioId),
       ))!.singleWhere((asset) => asset.name == name);
 
-      Future<void> saveAndReturn() async {
+      Future<void> saveAndReturn({
+        Future<void> Function()? beforeReturn,
+      }) async {
         await tap(tester, saveButton);
         final back = find.byKey(const ValueKey('back-to-portfolio'));
         for (
@@ -169,6 +319,9 @@ void main() {
           findsOneWidget,
           reason: 'Save confirmation did not appear',
         );
+        if (beforeReturn != null) {
+          await beforeReturn();
+        }
         await tap(tester, back);
       }
 
@@ -218,12 +371,62 @@ void main() {
       );
       expect(refresh!.total, 0);
       expect((await stored('Emulator gold')).value, 204.375);
+      await tap(tester, find.text('Emulator gold'));
+      await tap(tester, find.text('Edit asset'));
+      await tap(tester, find.text('Total value'));
+      expect(
+        tester
+            .widget<TextField>(
+              find.descendant(
+                of: field('Total value'),
+                matching: find.byType(TextField),
+              ),
+            )
+            .controller!
+            .text,
+        '600.5',
+      );
+      await capture(tester, 'valuables-retained-appraisal');
+      await tap(tester, find.byTooltip('Back'));
+      await tap(tester, find.text('Discard'));
 
       await addItem('Jewellery');
       expect(field('Weight (grams)'), findsNothing);
       await enter(tester, 'Name', 'Emulator ring');
       await enter(tester, 'Total value', '500.75');
-      await saveAndReturn();
+      await saveAndReturn(
+        beforeReturn: () async {
+          final ring = await stored('Emulator ring');
+          await tester.runAsync(() async {
+            await container.database.db.execute(
+              'CREATE TEMP TRIGGER valuables_undo_failure BEFORE DELETE ON assets '
+              'WHEN OLD.id = ${ring.id} BEGIN '
+              "SELECT RAISE(ABORT, 'controlled Undo failure'); END",
+            );
+            await container.settingsRepository.setLanguage(AppLanguage.spanish);
+          });
+          try {
+            await tester.pumpAndSettle();
+            await tap(tester, find.byKey(const ValueKey('undo-saved-holding')));
+            expect(
+              find.text('No se pudo deshacer este cambio.'),
+              findsOneWidget,
+            );
+            await capture(tester, 'valuables-undo-error-es');
+            expect((await stored('Emulator ring')).value, 500.75);
+          } finally {
+            await tester.runAsync(() async {
+              await container.database.db.execute(
+                'DROP TRIGGER temp.valuables_undo_failure',
+              );
+              await container.settingsRepository.setLanguage(
+                AppLanguage.english,
+              );
+            });
+            await tester.pumpAndSettle();
+          }
+        },
+      );
       expect((await stored('Emulator ring')).value, 500.75);
 
       await addItem('Diamond');

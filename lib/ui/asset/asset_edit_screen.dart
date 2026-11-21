@@ -167,7 +167,6 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
     final AssetEditViewModel viewModel = _viewModel!;
     if (mounted &&
         viewModel.form.type == AssetType.metals &&
-        !_pricePerUnitFocus.hasFocus &&
         _pricePerUnit.text != viewModel.form.pricePerUnit) {
       _pricePerUnit.text = viewModel.form.pricePerUnit;
     }

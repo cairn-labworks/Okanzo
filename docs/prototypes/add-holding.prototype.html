@@ -1208,7 +1208,7 @@ function editHolding(id) {
   const type=(holding.kind==='asset'?ASSETS:LIABILITIES).find(type=>type.id===holding.type),linked=type.mode==='market';
   state.drafts[state.kind]={...initialDraft(state.kind),id:holding.id,type:holding.type,currency:holding.currency,
     exchange:holding.exchange||'us',name:linked?'':holding.name,customName:holding.customName||'',customNameOpen:Boolean((holding.customName||'').trim()),symbol:holding.symbol||'',
-    quantity:holding.quantity||'',metal:holding.metal||'',purity:holding.purity||'',amount:String(holding.amount),notes:holding.notes||'',
+    quantity:holding.quantity||'',metal:holding.metal||'',purity:holding.purity||'',amount:holding.totalValueInput??String(holding.amount),notes:holding.notes||'',
     price:holding.price??null,pricePerGram:holding.pricePerGram??(holding.price===null||holding.price===undefined?'':String(holding.price)),customPrice:holding.customPrice||false,
     useTotalValue:holding.useTotalValue??(type.mode==='metal'&&!Object.hasOwn(METALS,holding.metal)),quoteName:holding.quoteName||'',quoteAttempted:linked,dirty:false};
   state.errors={};state.screen='editor';state.phase='details';render();focusEditorStart();announce('Editing '+holding.name);
@@ -1327,7 +1327,7 @@ async function save() {
     name:market()?(d.customName.trim()||d.quoteName||quoteSymbol()):d.name.trim(),
     amount:amount(),currency:d.currency,priced,symbol:market()?quoteSymbol():null,notes:original?(original.notes||''):d.notes.trim(),
     quantity:d.quantity,price:d.price,quoteName:d.quoteName,customName:d.customName,exchange:d.exchange,isNew:original?!!original.isNew:true,
-    ...(metals()?{metal:d.metal,purity:d.purity,pricePerGram:d.pricePerGram,customPrice:d.customPrice,useTotalValue:d.useTotalValue}:{}),
+    ...(metals()?{metal:d.metal,purity:d.purity,pricePerGram:d.pricePerGram,customPrice:d.customPrice,useTotalValue:d.useTotalValue,totalValueInput:d.amount}:{}),
     order:original&&original.type===d.type?original.order:Math.max(-1,...groupHoldings(state.kind,d.type).map(holding=>holding.order))+1
   };
   state.undoOriginal=original?{...original}:null;

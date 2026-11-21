@@ -458,6 +458,24 @@ void main() {
     expect(viewModel.form.toEntity().toMap()['customPrice'], 1);
   });
 
+  testWidgets('accepted quotes populate a focused unedited metal rate', (
+    WidgetTester tester,
+  ) async {
+    final quote = Completer<Result<double>>();
+    container.assetRepository.pendingMetalPrice = quote.future;
+    await open(tester, const AssetEditScreen(portfolioId: 1, assetId: 0));
+    await _tap(tester, find.byType(DropdownSelector<AssetType>));
+    await _tap(tester, find.widgetWithText(ListTile, 'Valuables'));
+    await _tap(tester, find.widgetWithText(ListTile, 'Gold'));
+    await _tap(tester, find.widgetWithText(ListTile, '22K'));
+    await _tap(tester, _field('Price per gram'));
+    expect(_editableField(tester, 'Price per gram').focusNode.hasFocus, isTrue);
+    quote.complete(Result<double>.success(80.25));
+    await tester.pumpAndSettle();
+    expect(_editableField(tester, 'Price per gram').controller.text, '80.25');
+    expect(_editableField(tester, 'Price per gram').focusNode.hasFocus, isTrue);
+  });
+
   testWidgets('choosing Metals opens the picker and saves fractional silver', (
     WidgetTester tester,
   ) async {

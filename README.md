@@ -400,6 +400,9 @@ in-place database upgrade, chained item/purity pickers, decimal custom rates,
 total-value switching, save/edit round-trips, and manual-price refresh protection.
 It removes only its temporary verification portfolio and restores preferences,
 checking that existing asset rows are unchanged.
+Fault probes use a separate encrypted database and a temporary trigger scoped
+to a test holding. They cover interrupted migration recovery, quote updates
+while the rate field is focused, and translated Undo-failure feedback.
 
 Use an equal-or-higher build number than any installed debug build, preflight
 with `adb install -r`, and restore a normal `lib/main.dart` build after testing,
