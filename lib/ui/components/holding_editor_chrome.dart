@@ -208,86 +208,85 @@ class HoldingEditorFooter extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              if (asset) ...<Widget>[
-                Container(
-                  padding: const EdgeInsets.only(top: 2, bottom: 13),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: colors.outlineVariant),
-                    ),
+              Container(
+                padding: const EdgeInsets.only(top: 2, bottom: 13),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(color: colors.outlineVariant),
                   ),
-                  child: LayoutBuilder(
-                    builder:
-                        (
-                          BuildContext context,
-                          BoxConstraints constraints,
-                        ) => Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: <Widget>[
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
+                ),
+                child: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) =>
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Text(
+                                  (asset
+                                          ? 'Estimated value'
+                                          : 'Outstanding amount')
+                                      .tr(context),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colors.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.25,
+                                  ),
+                                ),
+                                if (effectiveCalculation != null &&
+                                    effectiveCalculation
+                                        .isNotEmpty) ...<Widget>[
+                                  const SizedBox(height: 4),
                                   Text(
-                                    'Estimated value'.tr(context),
-                                    style: theme.textTheme.bodySmall?.copyWith(
+                                    effectiveCalculation,
+                                    key: ValueKey<String>(
+                                      priced
+                                          ? 'asset-valuation-caption'
+                                          : 'asset-valuation-pending-caption',
+                                    ),
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      fontSize: 11.5,
+                                      height: 1.35,
                                       color: colors.onSurfaceVariant,
-                                      fontWeight: FontWeight.w500,
-                                      height: 1.25,
                                     ),
                                   ),
-                                  if (effectiveCalculation != null &&
-                                      effectiveCalculation
-                                          .isNotEmpty) ...<Widget>[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      effectiveCalculation,
-                                      key: ValueKey<String>(
-                                        priced
-                                            ? 'asset-valuation-caption'
-                                            : 'asset-valuation-pending-caption',
-                                      ),
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                            fontSize: 11.5,
-                                            height: 1.35,
-                                            color: colors.onSurfaceVariant,
-                                          ),
-                                    ),
-                                  ],
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: constraints.maxWidth * 0.52,
+                            ),
+                            child: Text(
+                              CurrencyUtil.format(amount, currency),
+                              key: ValueKey<String>(
+                                asset
+                                    ? 'asset-estimated-value'
+                                    : 'liability-outstanding-amount',
+                              ),
+                              textAlign: TextAlign.end,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontSize: 26,
+                                height: 1.1,
+                                letterSpacing: -0.65,
+                                fontWeight: FontWeight.w600,
+                                color: colors.primary,
+                                fontFeatures: const <FontFeature>[
+                                  FontFeature.tabularFigures(),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 14),
-                            ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: constraints.maxWidth * 0.52,
-                              ),
-                              child: Text(
-                                CurrencyUtil.format(amount, currency),
-                                key: const ValueKey<String>(
-                                  'asset-estimated-value',
-                                ),
-                                textAlign: TextAlign.end,
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  fontSize: 26,
-                                  height: 1.1,
-                                  letterSpacing: -0.65,
-                                  fontWeight: FontWeight.w600,
-                                  color: colors.primary,
-                                  fontFeatures: const <FontFeature>[
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                  ),
+                          ),
+                        ],
+                      ),
                 ),
-                const SizedBox(height: 12),
-              ],
+              ),
+              const SizedBox(height: 12),
               FilledButton(
                 onPressed: !ready || saving ? null : onSave,
                 style: FilledButton.styleFrom(

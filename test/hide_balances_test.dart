@@ -544,6 +544,16 @@ void main({bool deviceViewport = false, CaptureScreenshot? capture}) {
       await tester.pumpAndSettle();
       expect(find.byType(LiabilityEditScreen), findsOneWidget);
       expect(find.text('4375'), findsOneWidget);
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(
+                const ValueKey<String>('liability-outstanding-amount'),
+              ),
+            )
+            .data,
+        CurrencyUtil.format(4375, 'USD'),
+      );
       await tester.pageBack();
       await tester.pumpAndSettle();
 

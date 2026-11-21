@@ -2741,10 +2741,29 @@ void main() {
         _editableField(tester, 'Outstanding amount').focusNode.hasFocus,
         isTrue,
       );
+      final Finder preview = find.byKey(
+        const ValueKey<String>('liability-outstanding-amount'),
+      );
+      expect(
+        find.descendant(
+          of: find.byType(HoldingEditorFooter),
+          matching: find.text('Outstanding amount'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.widget<Text>(preview).data, CurrencyUtil.format(0, 'USD'));
+      expect(
+        tester.getBottomRight(preview).dy,
+        lessThan(tester.getTopRight(_saveButton).dy),
+      );
       await tester.enterText(_textField('Outstanding amount'), '1200');
       await tester.testTextInput.receiveAction(TextInputAction.next);
       await tester.pumpAndSettle();
       expect(_editableField(tester, 'Name').focusNode.hasFocus, isTrue);
+      expect(
+        tester.widget<Text>(preview).data,
+        CurrencyUtil.format(1200, 'USD'),
+      );
       FocusManager.instance.primaryFocus?.unfocus();
       await tester.pumpAndSettle();
       await selectType();
@@ -3409,6 +3428,13 @@ void main() {
       );
       expect(_field('Outstanding amount'), findsOneWidget);
       expect(
+        find.descendant(
+          of: find.byType(HoldingEditorFooter),
+          matching: find.text(CurrencyUtil.format(500, 'EUR')),
+        ),
+        findsOneWidget,
+      );
+      expect(
         tester
             .widget<EditableText>(
               find.descendant(
@@ -3476,6 +3502,13 @@ void main() {
     await _tap(tester, find.byType(CurrencySelector));
     await tester.tap(find.text('EUR — Euro'));
     await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(HoldingEditorFooter),
+        matching: find.text(CurrencyUtil.format(42, 'EUR')),
+      ),
+      findsOneWidget,
+    );
     await _tap(tester, _saveButton);
     expect(container.liabilityRepository.saved?.amount, 42);
     expect(container.liabilityRepository.saved?.currency, 'EUR');
@@ -3489,6 +3522,7 @@ void main() {
     tester.view.physicalSize = const Size(320, 640);
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetViewInsets);
     for (final Widget page in <Widget>[
       SettingsScreen(onClose: () {}),
       const AssetEditScreen(portfolioId: 1, assetId: 0),
@@ -3514,6 +3548,24 @@ void main() {
         }
       } else {
         expect(find.text('Notes (optional)'), findsNothing);
+        if (page is LiabilityEditScreen) {
+          const double keyboardHeight = 250;
+          tester.view.viewInsets = const FakeViewPadding(
+            bottom: keyboardHeight,
+          );
+          await tester.pumpAndSettle();
+          final Finder preview = find.byKey(
+            const ValueKey<String>('liability-outstanding-amount'),
+          );
+          expect(
+            tester.getBottomRight(preview).dy,
+            lessThan(tester.getTopRight(_saveButton).dy),
+          );
+          expect(
+            tester.getBottomRight(_saveButton).dy,
+            lessThan(640 - keyboardHeight),
+          );
+        }
       }
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
