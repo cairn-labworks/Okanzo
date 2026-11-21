@@ -18,6 +18,8 @@ class AssetFormState {
     this.pricePerUnit = '',
     this.metal,
     this.purity,
+    this.customPrice = false,
+    this.useTotalValue = false,
     this.symbol = '',
     this.exchange = StockExchange.us,
     this.manualValue = '',
@@ -40,6 +42,8 @@ class AssetFormState {
   final String pricePerUnit;
   final PreciousMetal? metal;
   final String? purity;
+  final bool customPrice;
+  final bool useTotalValue;
   final String symbol;
   final StockExchange exchange;
   final String manualValue;
@@ -56,6 +60,9 @@ class AssetFormState {
 
   bool get usesStockExchange =>
       type == AssetType.stock || type == AssetType.mutualFund;
+
+  double? get metalRate =>
+      customPrice ? double.tryParse(pricePerUnit) : lastPrice;
 
   String get quoteSymbol => usesStockExchange
       ? exchange.qualify(symbol)
@@ -100,8 +107,11 @@ class AssetFormState {
   double get estimatedValue {
     switch (type.valuationMode) {
       case ValuationMode.market:
-      case ValuationMode.metal:
         return (double.tryParse(quantity) ?? 0.0) * (lastPrice ?? 0.0);
+      case ValuationMode.metal:
+        return useTotalValue
+            ? (double.tryParse(manualValue) ?? 0.0)
+            : (double.tryParse(quantity) ?? 0.0) * (metalRate ?? 0.0);
       case ValuationMode.quantity:
         return (double.tryParse(quantity) ?? 0.0) *
             (double.tryParse(pricePerUnit) ?? 0.0);
@@ -138,10 +148,22 @@ class AssetFormState {
         }
         return null;
       case ValuationMode.metal:
-        if (metal == null) return 'Choose a metal';
-        if (metal!.grades[purity] == null) return 'Choose a purity';
+        if (metal == null) return 'Choose a precious item';
+        if (useTotalValue) {
+          return !isPositiveDecimal(manualValue) || !estimatedValue.isFinite
+              ? 'Enter a positive total value'
+              : null;
+        }
+        if (metal!.hasPurity && metal!.grades[purity] == null) {
+          return 'Choose a purity';
+        }
         if (!_isPositiveNumber(quantity) || !estimatedValue.isFinite) {
           return 'Enter a positive weight';
+        }
+        if (customPrice
+            ? !isPositiveDecimal(pricePerUnit)
+            : metalRate == null || !metalRate!.isFinite || metalRate! <= 0) {
+          return 'Enter a positive price per gram';
         }
         return null;
       case ValuationMode.flat:
@@ -170,16 +192,20 @@ class AssetFormState {
           ? trimmedCustom
           : null,
       currency: currency.trim().toUpperCase(),
-      quantity: double.tryParse(quantity),
-      pricePerUnit: valuationMode == ValuationMode.quantity
-          ? double.tryParse(pricePerUnit)
+      quantity: _finiteInput(quantity),
+      pricePerUnit:
+          valuationMode == ValuationMode.quantity ||
+              valuationMode == ValuationMode.metal
+          ? _finiteInput(pricePerUnit)
           : null,
       metal: type == AssetType.metals ? metal : null,
       purity: type == AssetType.metals ? purity : null,
+      customPrice: type == AssetType.metals && customPrice,
+      useTotalValue: type == AssetType.metals && useTotalValue,
       symbol: type.isMarketLinked && ticker.isNotEmpty ? ticker : null,
       lastPrice: lastPrice,
       lastPriceTimestamp: lastPriceTimestamp,
-      manualValue: double.tryParse(manualValue),
+      manualValue: _finiteInput(manualValue),
       notes: notes.trim().isEmpty ? null : notes.trim(),
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -193,11 +219,17 @@ class AssetFormState {
     type: asset.type,
     metal: asset.metal,
     purity: asset.purity,
+    customPrice: asset.customPrice,
+    useTotalValue: asset.useTotalValue,
     name: asset.name,
     customName: asset.customName ?? '',
     currency: asset.currency,
     quantity: asset.quantity == null ? '' : formatInput(asset.quantity!),
-    pricePerUnit: asset.pricePerUnit == null
+    pricePerUnit: asset.type == AssetType.metals && !asset.customPrice
+        ? asset.lastPrice == null
+              ? ''
+              : formatInput(asset.lastPrice!)
+        : asset.pricePerUnit == null
         ? ''
         : formatInput(asset.pricePerUnit!),
     symbol: asset.symbol ?? '',
@@ -224,6 +256,8 @@ class AssetFormState {
     String? purity,
     bool clearMetal = false,
     bool clearPurity = false,
+    bool? customPrice,
+    bool? useTotalValue,
     String? symbol,
     StockExchange? exchange,
     String? manualValue,
@@ -247,6 +281,8 @@ class AssetFormState {
       pricePerUnit: pricePerUnit ?? this.pricePerUnit,
       metal: clearMetal ? null : metal ?? this.metal,
       purity: clearMetal || clearPurity ? null : purity ?? this.purity,
+      customPrice: customPrice ?? this.customPrice,
+      useTotalValue: useTotalValue ?? this.useTotalValue,
       symbol: symbol ?? this.symbol,
       exchange: exchange ?? this.exchange,
       manualValue: manualValue ?? this.manualValue,
@@ -279,13 +315,40 @@ String filterDecimal(String input) {
 }
 
 /// Renders a stored double back into the text field, dropping a trailing `.0`.
-String formatInput(double value) =>
-    value % 1.0 == 0.0 ? value.truncate().toString() : value.toString();
+String formatInput(double value) {
+  final sign = value < 0 ? '-' : '';
+  final parts = value.abs().toString().split('e');
+  final mantissa = parts.first.endsWith('.0')
+      ? parts.first.substring(0, parts.first.length - 2)
+      : parts.first;
+  if (parts.length == 1) return '$sign$mantissa';
+  final point = mantissa.contains('.')
+      ? mantissa.indexOf('.')
+      : mantissa.length;
+  final digits = mantissa.replaceAll('.', '');
+  final position = point + int.parse(parts.last);
+  if (position <= 0) {
+    return '${sign}0.${'0' * -position}$digits';
+  }
+  if (position >= digits.length) {
+    return '$sign$digits${'0' * (position - digits.length)}';
+  }
+  return '$sign${digits.substring(0, position)}.${digits.substring(position)}';
+}
 
 bool _isPositiveNumber(String raw) {
   final double? parsed = double.tryParse(raw.trim());
   return parsed != null && parsed.isFinite && parsed > 0.0;
 }
+
+double? _finiteInput(String raw) {
+  final value = double.tryParse(raw);
+  return value != null && value.isFinite ? value : null;
+}
+
+bool isPositiveDecimal(String raw) =>
+    RegExp(r'^(?:\d+(?:\.\d*)?|\.\d+)$').hasMatch(raw) &&
+    _isPositiveNumber(raw);
 
 final RegExp _disallowedMarketQueryChars = RegExp(
   r'[^\p{L}\p{N}\s.&/\-]',

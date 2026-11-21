@@ -75,7 +75,7 @@ class HoldingGlanceDialog extends StatelessWidget {
       ('Type'.tr(context), typeLabel),
       ('Currency'.tr(context), currency),
       if (asset?.displayedMetal != null)
-        ('Metal'.tr(context), asset!.displayedMetal!.label.tr(context)),
+        ('Precious item'.tr(context), asset!.displayedMetal!.label.tr(context)),
       if (asset?.type == AssetType.metals && asset?.purity != null)
         ('Purity'.tr(context), asset!.purity!),
       if (isAsset && asset.symbol != null && asset.symbol!.trim().isNotEmpty)
@@ -91,7 +91,7 @@ class HoldingGlanceDialog extends StatelessWidget {
         ),
       if (isAsset &&
           (asset.type.valuationMode == ValuationMode.quantity ||
-              asset.type == AssetType.metals) &&
+              asset.type == AssetType.metals && !asset.useTotalValue) &&
           asset.quantity != null)
         (
           'Weight'.tr(context),
@@ -99,22 +99,34 @@ class HoldingGlanceDialog extends StatelessWidget {
               ? CurrencyUtil.maskShort
               : '${formatQuantity(asset.quantity!)}${asset.type.unitLabel == null ? '' : ' ${asset.type.unitLabel}'}',
         ),
-      if (isAsset && asset.pricePerUnit != null)
+      if (isAsset &&
+          asset.type != AssetType.metals &&
+          asset.pricePerUnit != null)
         (
           'Price per {unit}'
               .tr(context)
               .replaceAll('{unit}', asset.type.unitLabel ?? 'unit'),
           money(asset.pricePerUnit!),
         ),
-      if (isAsset && asset.type == AssetType.metals)
+      if (isAsset && asset.type == AssetType.metals && !asset.useTotalValue)
         (
           'Price per gram'.tr(context),
           !asset.isPriced
               ? 'Pending'.tr(context)
               : hideBalances
               ? CurrencyUtil.maskShort
-              : CurrencyUtil.formatRate(asset.lastPrice!, currency),
+              : CurrencyUtil.formatRate(asset.metalRate!, currency),
         ),
+      if (isAsset && asset.type == AssetType.metals)
+        (
+          'Valuation method'.tr(context),
+          (asset.useTotalValue ? 'Total value' : 'By weight').tr(context),
+        ),
+      if (isAsset &&
+          asset.type == AssetType.metals &&
+          asset.customPrice &&
+          !asset.useTotalValue)
+        ('Price'.tr(context), 'Custom rate'.tr(context)),
       if ((asset?.notes ?? liability?.notes)?.trim().isNotEmpty ?? false)
         ('Notes'.tr(context), (asset?.notes ?? liability!.notes)!.trim()),
     ];

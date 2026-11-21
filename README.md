@@ -96,7 +96,7 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 ### Global markets & multi-currency
 
 - Track **stocks, mutual funds/ETFs, crypto, precious metals, cash, bank deposits, real estate, vehicles, bonds**, plus **loans, mortgages, credit cards, pending payments and taxes**
-- **Metals**: choose Gold, Silver, Platinum or Palladium, select its purity, and enter the weight in grams. Okanzo estimates the value using a purity-adjusted futures quote, not a local retail or resale price. Save without a quote if offline, then refresh it from Home. Existing Gold holdings retain their manual price under Metals.
+- **Valuables**: track metals, diamonds, other gemstones, jewellery and other precious items. Choosing Gold, Silver, Platinum or Palladium opens its purity picker directly. **By weight** multiplies grams by an editable price per gram: available purity-adjusted futures quotes prefill it, or enter a custom rate. **Total value** hides weight/rate and uses your estimate or appraisal; gems and jewellery start in this mode. Both modes retain their inputs when switching and editing. Rates and totals accept finite positive decimals; offline, enter a custom rate or total. Automatic refresh never overwrites custom rates or total valuations. Existing Gold holdings keep their legacy manual price under Valuables.
 - **International exchanges**: NYSE/Nasdaq, Shanghai, Tokyo, Hong Kong, BSE (India), and Euronext Paris, Amsterdam, Brussels, Lisbon, Dublin, Oslo and Milan — or **Other / full Yahoo ticker** (`000001.SZ`, `VOD.L`, `RELIANCE.NS`, `SHOP.TO`). Quotes in minor units (such as British pence) convert automatically; [Yahoo Finance coverage](https://help.yahoo.com/kb/finance/complete-list-markets-exchanges-yahoo-finance-sln2310.html) applies
 - **Preferred exchanges** shortlist starting with **US (NYSE / Nasdaq)**, customisable via **Select preferred exchanges...** (including an empty shortlist) while preserving existing holdings
 - **Company, coin or ticker search**: type at least two characters in the stock, fund or crypto search field for Yahoo Finance suggestions showing the name and ticker, plus the exchange for stocks/funds. Crypto suggestions show full trading pairs such as `BTC-USD`; explicit non-USD pairs are preserved. Select a listing to fill its symbol and use its fetched name automatically, or enter an optional **Custom name** to override it in lists. Manual ticker entry still works offline or when search is unavailable
@@ -332,10 +332,21 @@ directly in a browser; no server or dependencies are needed. It preserves the
 approved **Canvas** design and the alternative **Guide** flow for future
 iterations, including Home, Add holding, and both asset/liability editors.
 Use `?variant=A&add=expand` for Canvas or `?variant=B` for Guide.
-Try **Add holding → An asset**, then choose **Metals, gems & jewellery** as the
-type. Supported metals use weight, purity, and a sample per-gram rate.
-Diamonds, other gemstones, jewellery, and other precious items use a manual
-estimate or appraisal. Choosing a market-linked type focuses its search picker
+Try **Add holding → An asset**, then choose **Valuables** as the type.
+The type picker opens the precious-item picker directly after choosing Valuables.
+Choosing a supported metal then opens its purity picker before returning to the form.
+Supported metals use weight, purity, and an editable sample per-gram rate.
+Enter your own positive decimal rate, or select **Total value**
+to hide weight and rate and enter a total estimate or appraisal.
+The **Valuation method** selector offers **By weight** and **Total value**.
+To revert to the previous checkbox, choose **Valuation control → Checkbox
+(original)** in the prototype side panel, or use `?valuation=checkbox`.
+The original checkbox keeps weight and rate visible but disabled.
+Switching controls or methods preserves all draft values.
+Diamonds, other gemstones, jewellery, and other precious items start in
+total-value mode but also support a custom weight and rate. Custom rates and
+totals must be finite decimal numbers; saving requires a positive valuation.
+Choosing a market-linked type focuses its search picker
 before Quantity. Use **Enter / Next** to move through the fields and **Save**
 to see a centered confirmation matching the holding glance on Home. The live
 estimate (or outstanding liability amount) stays above the editor action.
@@ -382,6 +393,13 @@ flutter build apk --debug --target integration_test/canvas_holding_test.dart --b
 flutter drive -d <emulator-id> --use-application-binary build/app/outputs/flutter-apk/app-debug.apk \
   --driver test_driver/canvas_holding.dart --keep-app-running
 ```
+
+The Valuables regression uses the same driver and `CANVAS_EVIDENCE`, with
+`--target integration_test/valuables_test.dart` when building. It verifies the
+in-place database upgrade, chained item/purity pickers, decimal custom rates,
+total-value switching, save/edit round-trips, and manual-price refresh protection.
+It removes only its temporary verification portfolio and restores preferences,
+checking that existing asset rows are unchanged.
 
 Use an equal-or-higher build number than any installed debug build, preflight
 with `adb install -r`, and restore a normal `lib/main.dart` build after testing,

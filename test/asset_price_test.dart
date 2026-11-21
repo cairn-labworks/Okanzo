@@ -140,7 +140,7 @@ class _Database implements Database {
     } else {
       expect(
         where,
-        'id = ? AND type = ? AND metal = ? AND purity = ? AND currency = ?',
+        'id = ? AND type = ? AND metal = ? AND purity = ? AND currency = ? AND customPrice = ? AND useTotalValue = ?',
       );
       if (!listEquals<Object?>(whereArgs, [
         row['id'],
@@ -148,6 +148,8 @@ class _Database implements Database {
         row['metal'],
         row['purity'],
         row['currency'],
+        row['customPrice'],
+        row['useTotalValue'],
       ])) {
         return 0;
       }
@@ -225,6 +227,37 @@ void main() {
   late StockPriceService priceService;
   late FxRepository fxRepository;
   late List<String> requestedSymbols;
+
+  test('manual Valuables are excluded from automatic refresh', () async {
+    final holdings = <AssetEntity>[
+      for (final flags in [(1, 0), (0, 1)])
+        AssetEntity.fromMap({
+          'id': flags.$1 + 10,
+          'portfolioId': 1,
+          'type': 'METALS',
+          'name': 'Gold',
+          'currency': 'USD',
+          'metal': 'gold',
+          'purity': '24K',
+          'quantity': 2.5,
+          'pricePerUnit': 80.0,
+          'lastPrice': 100.0,
+          'manualValue': 500.0,
+          'customPrice': flags.$1,
+          'useTotalValue': flags.$2,
+          'createdAt': 0,
+          'updatedAt': 0,
+        }),
+    ];
+    final result = await AssetRepository(
+      _AssetDao(holdings),
+      priceService,
+      fxRepository,
+    ).refreshAllPrices(1);
+    expect(result.total, 0);
+    expect(requestedSymbols, isEmpty);
+    expect(holdings.map((asset) => asset.value), [200.0, 500.0]);
+  });
 
   test(
     'a refresh for old gold purity cannot overwrite an edited holding',

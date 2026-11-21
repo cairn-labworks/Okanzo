@@ -186,8 +186,14 @@ body[data-theme=dark] [data-metal=diamond]{--metal-tone:#a8d7e9}
 body[data-theme=dark] [data-metal=gemstone]{--metal-tone:#a9d8bd}
 body[data-theme=dark] [data-metal=jewellery]{--metal-tone:#e4b7ca}
 .holding-open .metal-icon{margin-inline-start:4px}
-.metal-price .rate{display:flex;align-items:center;min-height:54px;padding:8px 11px;background:var(--soft);border-radius:10px;font-size:.84em;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.metal-price .rate[data-pending]{color:var(--muted);font-weight:500}
+.valuation-toggle{border:0;margin:0 0 12px;cursor:pointer}
+.valuation-toggle input{flex-shrink:0}
+.valuation-method{border:0;padding:0;margin:0 0 18px;min-width:0}
+.valuation-method legend{font-size:.68em;color:var(--muted);font-weight:500;margin-bottom:7px}
+.valuation-options{display:flex;gap:4px;padding:4px;border-radius:13px;background:var(--soft)}
+.valuation-choice{position:relative;flex:1;min-width:0;min-height:44px;display:flex;align-items:center;justify-content:center;padding:8px;border-radius:10px;cursor:pointer;font-size:.75em;color:var(--muted);text-align:center}
+.valuation-choice:has(input:checked){background:var(--tint);color:var(--ink);font-weight:600}
+.valuation-choice:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
 .field-meta{display:flex;justify-content:space-between;gap:12px;font-size:.62em;color:var(--muted);margin-top:5px}
 .field-meta .at-limit{color:var(--warm)}
 .save-hint{font-size:.61em;color:var(--muted);margin:8px 0 0;line-height:1.5}
@@ -246,6 +252,7 @@ body[data-theme=dark] [data-metal=jewellery]{--metal-tone:#e4b7ca}
 .estimated.pending{font-size:1.55em}
 .calculation{font-size:.68em;color:var(--muted);display:block;min-height:18px}
 .fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fields-grid[hidden]{display:none}
 .fields-grid>*{min-width:0}
 .field{display:block;margin:0 0 18px;position:relative}
 .field>span:first-child{display:block;font-size:.68em;color:var(--muted);font-weight:500;margin-bottom:7px}
@@ -253,6 +260,7 @@ body[data-theme=dark] [data-metal=jewellery]{--metal-tone:#e4b7ca}
 .field input::placeholder,.field textarea::placeholder{font:inherit;letter-spacing:inherit;line-height:inherit;color:var(--muted);opacity:1}
 .field textarea{resize:vertical;min-height:90px}
 .field input[aria-invalid=true]{border-color:var(--danger);background:var(--danger-bg)}
+.field input:disabled{background:var(--soft);color:var(--muted);opacity:.65;cursor:not-allowed}
 .prominent-wrap{display:flex;align-items:baseline;gap:6px;border-bottom:1px solid var(--line);padding:4px 0 14px;min-height:62px}
 .prominent-wrap:focus-within{border-bottom-color:var(--accent);box-shadow:0 1px 0 0 var(--accent)}
 .prominent-wrap[data-invalid=true]{border-bottom-color:var(--danger);box-shadow:0 1px 0 0 var(--danger)}
@@ -431,6 +439,7 @@ button{touch-action:manipulation}
     <section class="rail-section">
       <h2>Try a different condition</h2>
       <label class="control">Add holding action<select id="add-layout" class="lab-select"><option value="expand">Expanding button</option><option value="dialog">Dialog (original)</option></select></label>
+      <label class="control">Valuation control<select id="valuation-control" class="lab-select"><option value="selector">Two-option selector</option><option value="checkbox">Checkbox (original)</option></select></label>
       <label class="control">Connectivity<select id="connectivity" class="lab-select"><option value="online">Online (simulated)</option><option value="offline">Offline</option><option value="error">Quote service error</option></select></label>
       <label class="control">Appearance<select id="appearance" class="lab-select"><option value="dark">Midnight</option><option value="light">Classic</option></select></label>
       <label class="control">Text size<select id="text-size" class="lab-select"><option value="normal">Default</option><option value="large">Large preview</option></select></label>
@@ -448,7 +457,7 @@ button{touch-action:manipulation}
         <button class="scenario" data-action="scenario" data-kind="asset" data-type="metals" data-material="diamond"><svg aria-hidden="true"><use href="#i-diamond"/></svg>Diamond asset</button>
       </div>
       <p>Or begin with <strong>Add holding</strong>. On Home, open a type group, sort its holdings, and tap one for details, edit, or delete.</p>
-      <p>In <strong>Metals, gems &amp; jewellery</strong>, gold, silver, platinum and palladium use weight, purity and a sample rate. Diamonds, other gems, jewellery and other precious items use your own total estimate or appraisal.</p>
+      <p>In <strong>Valuables</strong>, gold, silver, platinum and palladium start with a sample per-gram rate that you can edit. Choose <strong>Total value</strong> for an appraisal or total estimate. Compare the selector with <strong>Checkbox (original)</strong> under Valuation control; your draft is preserved. Diamonds, other gems and jewellery start in total-value mode; you can also enter your own weight and rate.</p>
       <p>Try <strong>Enter / Next</strong> in a form, then save to see a centered confirmation in the same layout as the holding glance on Home.</p>
       <button class="text-link" data-action="sample">Fill this draft with example data</button><br>
       <button class="text-link" data-action="reset">Reset all demo data</button>
@@ -470,7 +479,7 @@ const ASSETS = [
   {id:'stock',label:'Stock',icon:'trend',mode:'market',hint:'Company shares'},
   {id:'mutualFund',label:'Mutual fund / ETF',icon:'grid',mode:'market',hint:'Funds and indexes'},
   {id:'crypto',label:'Cryptocurrency',icon:'coin',mode:'market',hint:'Coins and tokens'},
-  {id:'metals',label:'Metals, gems & jewellery',icon:'metals',mode:'metal',hint:'Gold, silver, platinum, diamonds and more'},
+  {id:'metals',label:'Valuables',icon:'metals',mode:'metal',hint:'Gold, silver, gemstones & jewellery'},
   {id:'cash',label:'Cash',icon:'wallet',mode:'flat',hint:'Money on hand'},
   {id:'bankDeposit',label:'Bank / deposit',icon:'bank',mode:'flat',hint:'Savings and deposits'},
   {id:'realEstate',label:'Real estate',icon:'home',mode:'flat',hint:'Property value'},
@@ -543,12 +552,14 @@ function exampleMetalPrice({metal,purity,currency}) {
   const entry=METALS[metal],grade=entry?.purities.find(([id])=>id===purity);
   return grade?Math.round(entry.rate*grade[1]/FX[currency]*100)/100:null;
 }
-const metalDescription = ({metal,purity}) => `${PRECIOUS_ITEMS[metal].label} · ${purity||'Manual value'}`;
+const metalDescription = ({metal,purity,useTotalValue}) => `${PRECIOUS_ITEMS[metal].label} · ${useTotalValue?'Total value':purity||'Custom rate'}`;
 function preciousDetails(holding,hidden=false) {
   const {metal,purity,quantity,price,currency}=holding;
+  const totalValue=holding.useTotalValue??!Object.hasOwn(METALS,metal);
   const rows=[['Item',PRECIOUS_ITEMS[metal].label]];
-  if(purity) rows.push(['Purity',purity],['Weight',hidden?'******':quantity+' g'],['Example price per gram',price===null?'Pending':hidden?'******':metalMoney(price,currency)]);
-  else rows.push(['Valuation','Manual estimate or appraisal']);
+  if(purity)rows.push(['Purity',purity]);
+  if(totalValue)rows.push(['Valuation','Total value supplied']);
+  else rows.push(['Weight',hidden?'******':quantity+' g'],['Price per gram',price===null?'Pending':hidden?'******':metalMoney(price,currency)],['Rate source',holding.customPrice?'Custom rate':'Example quote']);
   return rows;
 }
 const numeric = value => value !== '' && /^\d+(\.\d*)?$|^\.\d+$/.test(value) && Number.isFinite(Number(value));
@@ -573,7 +584,7 @@ const NAME_LIMIT = 60;
 const nameSegmenter = new Intl.Segmenter(undefined,{granularity:'grapheme'});
 const nameCharacters = value => Array.from(nameSegmenter.segment(value),part=>part.segment);
 const currencyGlyph = code => escapeHTML(new Intl.NumberFormat('en',{style:'currency',currency:code,currencyDisplay:'narrowSymbol'}).formatToParts(0).find(part=>part.type==='currency').value);
-const initialDraft = kind => ({id:null,kind,type:kind==='asset'?'stock':'loan',currency:'INR',exchange:'us',name:'',customName:'',customNameOpen:false,symbol:'',quantity:'',metal:'',purity:'',amount:'',notes:'',price:null,quoteName:'',quoteMessage:'',quoteAttempted:false,searching:false,dirty:false});
+const initialDraft = kind => ({id:null,kind,type:kind==='asset'?'stock':'loan',currency:'INR',exchange:'us',name:'',customName:'',customNameOpen:false,symbol:'',quantity:'',metal:'',purity:'',amount:'',notes:'',price:null,pricePerGram:'',customPrice:false,useTotalValue:false,quoteName:'',quoteMessage:'',quoteAttempted:false,searching:false,dirty:false});
 const seed = () => [
   {id:1,portfolio:'Personal',kind:'asset',type:'stock',name:'Apple Inc.',quoteName:'Apple Inc.',symbol:'AAPL',exchange:'us',quantity:'100',price:17869.9,amount:1786990,currency:'INR',priced:true,order:0},
   {id:7,portfolio:'Personal',kind:'asset',type:'stock',name:'Microsoft Corporation',quoteName:'Microsoft Corporation',symbol:'MSFT',exchange:'us',quantity:'50',price:31220.38,amount:1561019,currency:'INR',priced:true,order:1},
@@ -592,6 +603,7 @@ const state = {
   screen:'home',kind:'asset',phase:'type',portfolio:'Personal',homeTab:'asset',
   connection:'online',hidden:false,errors:{},message:'',
   addLayout:new URLSearchParams(location.search).get('add')==='dialog'?'dialog':'expand',addOpen:false,
+  valuationControl:new URLSearchParams(location.search).get('valuation')==='checkbox'?'checkbox':'selector',
   busy:false,request:0,preferred:['us','bse'],holdings:seed(),
   drafts:{asset:initialDraft('asset'),liability:initialDraft('liability')},saved:null,
   expanded:{},sorts:{},undoOriginal:null,nextId:100,quoteFetches:0
@@ -606,7 +618,20 @@ const currentType = () => types().find(type=>type.id===draft().type);
 const market = () => state.kind==='asset'&&currentType().mode==='market';
 const metals = () => state.kind==='asset'&&currentType().mode==='metal';
 const manualPrecious = () => metals()&&Boolean(PRECIOUS_ITEMS[draft().metal])&&!Object.hasOwn(METALS,draft().metal);
-const usesAmount = () => state.kind==='liability'||currentType().mode==='flat'||manualPrecious();
+const usesAmount = () => state.kind==='liability'||currentType().mode==='flat'||(metals()&&draft().useTotalValue);
+function loadMetalRate() {
+  const d=draft();
+  d.price=state.connection==='online'?exampleMetalPrice(d):null;
+  d.pricePerGram=d.price===null?'':String(d.price);
+  d.customPrice=false;
+}
+function metalRateHint() {
+  const d=draft();
+  if(d.useTotalValue)return 'Not used with a total value.';
+  if(d.customPrice)return `Your custom rate in ${d.currency}. Decimals allowed.`;
+  if(d.price!==null)return `Example quote in ${d.currency}, not live. You can edit it.`;
+  return METALS[d.metal]?'Enter your own rate, or choose purity for an example quote.':'Enter your own per-gram rate. No automatic quote.';
+}
 const usesExchange = () => market()&&draft().type!=='crypto';
 const amount = () => {
   const d=draft();
@@ -632,7 +657,7 @@ const announce = text => { document.getElementById('announcer').textContent=text
 function exposeState() {
   document.getElementById('state-output').textContent=JSON.stringify({
     variant:state.variant,screen:state.screen,phase:state.phase,portfolio:state.portfolio,connection:state.connection,
-    addLayout:state.addLayout,addOpen:state.addOpen,
+    addLayout:state.addLayout,addOpen:state.addOpen,valuationControl:state.valuationControl,
     kind:state.kind,draft:draft(),errors:state.errors,busy:state.busy,totals:totals(),
     savedHoldings:state.holdings.filter(holding=>holding.isNew),preferredExchanges:state.preferred,
     holdings:state.holdings,expanded:state.expanded,sorts:state.sorts,quoteFetches:state.quoteFetches
@@ -643,7 +668,7 @@ function appHeader(back=true) {
     ${back?`<span class="header-brand">OKANZO</span><span class="header-sub">${escapeHTML(state.portfolio)}</span>`:`<div class="row"><button class="icon-button" data-action="refresh-holdings" aria-label="Refresh pending example prices"${state.busy?' disabled':''}>${icon('refresh')}</button><button class="icon-button" data-action="hide" aria-label="${state.hidden?'Show':'Hide'} balances" aria-pressed="${state.hidden}">${icon('eye')}</button><button class="icon-button" data-action="settings" aria-label="Settings">${icon('settings')}</button></div>`}</header>`;
 }
 function offlineBanner() {
-  return state.connection==='online'?'':`<div class="banner warning">${icon(state.connection==='offline'?'offline':'info')}<span><strong>${state.connection==='offline'?"You're offline. Keep going.":'Quote service is unavailable.'}</strong>${usesAmount()?'Manual values can still be saved in this demo.':'You can save the holding without a price, then refresh later.'}</span></div>`;
+  return state.connection==='online'?'':`<div class="banner warning">${icon(state.connection==='offline'?'offline':'info')}<span><strong>${state.connection==='offline'?"You're offline. Keep going.":'Quote service is unavailable.'}</strong>${usesAmount()?'Manual values can still be saved in this demo.':metals()?'Enter your own price per gram, or use a total value.':'You can save the holding without a price, then refresh later.'}</span></div>`;
 }
 function addHoldingControl() {
   if(state.addLayout==='dialog')return `<button class="primary" data-action="add">${icon('plus')}Add holding</button>`;
@@ -758,7 +783,7 @@ const NAME_EXAMPLES = {
   liability:{loan:'e.g. Personal loan',mortgage:'e.g. Home loan',creditCard:'e.g. Travel card',pendingPayment:'e.g. Contractor invoice',tax:'e.g. Income tax FY26',other:'e.g. Family borrowing'}
 };
 function typeExampleHint() {
-  return state.kind==='asset'?'e.g. Stock, Cash, Metals':'e.g. Loan, Mortgage, Credit card';
+  return state.kind==='asset'?'e.g. Stock, Cash, Valuables':'e.g. Loan, Mortgage, Credit card';
 }
 function currencyExampleHint() {
   return 'e.g. INR, USD, EUR, GBP';
@@ -790,7 +815,7 @@ function currencySelect() {
 }
 function field(key,label,placeholder='',options={}) {
   const error=state.errors[key],hint=options.hint||'',limited=key==='name'||key==='customName';
-  const input=`<input id="field-${key}" data-field="${key}" enterkeyhint="next" value="${escapeHTML(draft()[key])}" placeholder="${escapeHTML(placeholder)}" ${options.number?'inputmode="decimal"':''} ${options.prominent?'class="prominent"':''} autocomplete="off" ${error?'aria-invalid="true"':''} aria-describedby="hint-${key} error-${key}${limited?' count-'+key:''}">`;
+  const input=`<input id="field-${key}" data-field="${key}" enterkeyhint="next" value="${escapeHTML(draft()[key])}" placeholder="${escapeHTML(placeholder)}" ${options.number?'inputmode="decimal" pattern="[0-9]+([.][0-9]*)?|[.][0-9]+"':''} ${options.disabled?'disabled':''} ${options.prominent?'class="prominent"':''} autocomplete="off" ${error?'aria-invalid="true"':''} aria-describedby="hint-${key} error-${key}${limited?' count-'+key:''}">`;
   return `<label class="field"><span>${label}</span>${options.prominent?`<span class="prominent-wrap"${error?' data-invalid="true"':''}><span class="prominent-prefix" aria-hidden="true">${currencyGlyph(draft().currency)}</span>${input}</span>`:input}<small class="hint" id="hint-${key}">${hint}</small>${limited?`<span class="field-meta"><span>Up to ${NAME_LIMIT} characters</span><span id="count-${key}">${nameCharacters(draft()[key]).length}/${NAME_LIMIT}</span></span>`:''}<small class="error" id="error-${key}">${error||''}</small></label>`;
 }
 const activeExchange = () => {
@@ -808,8 +833,8 @@ function footerEstimate() {
 function calculation() {
   const d=draft();
   if(market()) return !d.symbol?'Choose a listing to get an estimate.':d.price===null?'An example quote is needed to calculate the value.':`${escapeHTML(d.quantity||'0')} × ${money(d.price,d.currency,2)} · example quote`;
-  if(manualPrecious())return `Your appraisal or estimate in ${escapeHTML(d.currency)}`;
-  if(metals()) return !d.metal?'Choose a precious item.':!d.purity?'Choose purity and enter weight.':d.price===null?'An example rate is needed to calculate the value.':`${escapeHTML(d.quantity||'0')} g × ${metalMoney(d.price,d.currency)} per gram`;
+  if(metals()&&d.useTotalValue)return `Your total estimate or appraisal in ${escapeHTML(d.currency)}`;
+  if(metals()) return !d.metal?'Choose a precious item.':METALS[d.metal]&&!d.purity?'Choose purity and enter weight.':d.price===null?'Enter a valid price per gram to calculate the value.':`${escapeHTML(d.quantity||'0')} g × ${metalMoney(d.price,d.currency)} per gram${d.customPrice?' · custom rate':''}`;
   return state.kind==='liability'?`Remaining balance in ${escapeHTML(d.currency)}`:`Current value in ${escapeHTML(d.currency)}`;
 }
 function quoteMatches(query) {
@@ -857,18 +882,25 @@ function metalSelect(key,label,value,leading,hint='',disabled=false) {
   const error=state.errors[key];
   return `<div class="field"><span id="${key}-label">${label}</span><button class="picker" id="field-${key}" type="button" data-action="${key}-picker" data-entry-step aria-haspopup="dialog" aria-labelledby="${key}-label ${key}-value" aria-describedby="hint-${key} error-${key}"${error?' aria-invalid="true"':''}${disabled?' disabled':''}>${leading}<span class="picker-value" id="${key}-value">${value}</span>${icon('next')}</button><small class="hint" id="hint-${key}">${hint}</small><small class="error" id="error-${key}">${error||''}</small></div>`;
 }
+function valuationModeControl() {
+  const total=draft().useTotalValue;
+  if(state.valuationControl==='checkbox')return `<label class="check-row valuation-toggle"><input id="use-total-value" type="checkbox"${total?' checked':''} aria-controls="field-quantity field-pricePerGram total-value-field">Use Total Value Instead</label>`;
+  return `<fieldset class="valuation-method"><legend>Valuation method</legend><div class="valuation-options">
+    <label class="valuation-choice"><input class="live-region" id="value-by-weight" type="radio" name="valuation-method" value="weight"${total?'':' checked'} aria-controls="field-quantity field-pricePerGram"><span>By weight</span></label>
+    <label class="valuation-choice"><input class="live-region" id="value-by-total" type="radio" name="valuation-method" value="total"${total?' checked':''} aria-controls="total-value-field"><span>Total value</span></label>
+  </div></fieldset>`;
+}
 function metalFields() {
   const d=draft(),item=PRECIOUS_ITEMS[d.metal],metal=METALS[d.metal],karat=metal?.karat;
   const itemSelect=metalSelect('metal','Precious item',item?.label||'Choose an item',metalIcon(d.metal));
   if(!item)return itemSelect;
-  const name=field('name','Name','e.g. '+item.example);
-  if(manualPrecious())return itemSelect+name+field('amount','Appraised or estimated value','0.00',{number:true,hint:'Enter the total value in your selected currency. No automatic quote.'});
-  const rate=d.price!==null?metalMoney(d.price,d.currency):d.purity?'Price pending':'—';
-  return `<div class="fields-grid">${itemSelect}${metalSelect('purity','Purity',d.purity||(karat?'Choose karat':'Choose grade'),'',karat?'Measured in karats.':'Fineness in parts per thousand.')}</div>
-    ${name}
-    <div class="fields-grid">${field('quantity','Weight (grams)','e.g. 10.5',{number:true,hint:'Total weight in grams.'})}
-      <div class="field metal-price"><span id="metal-price-label">Price per gram</span><output class="rate" aria-labelledby="metal-price-label" aria-describedby="metal-price-hint"${d.price===null?' data-pending':''}>${rate}</output><small class="hint" id="metal-price-hint">${d.price!==null?`Example rate in ${d.currency}, not live.`:d.purity?'Refresh when back online.':'Shown after choosing purity.'}</small></div>
-    </div>`;
+  return `${metal?`<div class="fields-grid">${itemSelect}${metalSelect('purity','Purity',d.purity||(karat?'Choose karat':'Choose grade'),'',karat?'Measured in karats.':'Fineness in parts per thousand.')}</div>`:itemSelect}
+    ${field('name','Name','e.g. '+item.example)}
+    ${valuationModeControl()}
+    <div class="fields-grid"${d.useTotalValue&&state.valuationControl==='selector'?' hidden':''}>${field('quantity','Weight (grams)','e.g. 10.5',{number:true,disabled:d.useTotalValue,hint:d.useTotalValue?'Not used with a total value.':'Total weight in grams.'})}
+      ${field('pricePerGram','Price per gram','e.g. 9026.50',{number:true,disabled:d.useTotalValue,hint:metalRateHint()})}
+    </div>
+    ${d.useTotalValue?`<div id="total-value-field">${field('amount','Total value','0.00',{number:true,hint:`Your total estimate or appraisal in ${d.currency}. Decimals allowed.`})}</div>`:metal?`<button class="inline-button" type="button" data-action="metal-rate"${!d.purity||state.connection!=='online'?' disabled':''}>${icon('refresh')}Use example rate</button>`:''}`;
 }
 function detailFields({canvas=false}={}) {
   const type=currentType(),flat=state.kind==='liability'||type.mode==='flat';
@@ -934,11 +966,12 @@ function render(keepScroll=false) {
   document.getElementById('tradeoff').textContent=CONCEPTS[state.variant].tradeoff;
   document.getElementById('connectivity').value=state.connection;
   document.getElementById('add-layout').value=state.addLayout;
+  document.getElementById('valuation-control').value=state.valuationControl;
   const nextScroll=document.querySelector('.app-scroll');
   homeActionObserver.disconnect();
   const homeAction=document.querySelector('.home-bottom .add-trigger,.home-bottom>.primary');
   if(homeAction){setAddOpen(state.addOpen);homeActionObserver.observe(homeAction);}
-  if(restoreFocus){const replacement=document.getElementById(active.id);if(replacement){replacement.focus({preventScroll:true});replacement.setSelectionRange(...selection);}}
+  if(restoreFocus){const replacement=document.getElementById(active.id);if(replacement){replacement.focus({preventScroll:true});if(selection[0]!==null)replacement.setSelectionRange(...selection);}}
   if((state.busy||keepScroll)&&nextScroll) nextScroll.scrollTop=previousScroll;
   exposeState();
 }
@@ -949,6 +982,8 @@ function updateLive() {
   document.querySelectorAll('#app [data-action="save"],#app [data-action="review"]').forEach(button=>{button.disabled=state.busy||invalid;});
   const saveHelp=document.getElementById('save-help');
   if(saveHelp)saveHelp.textContent=saveHint(invalid);
+  const rateHint=document.getElementById('hint-pricePerGram');
+  if(rateHint)rateHint.textContent=metalRateHint();
   const fetchButton=document.querySelector('#app [data-action="fetch"]');
   if(fetchButton){
     fetchButton.disabled=!draft().symbol.trim();
@@ -978,14 +1013,14 @@ function changeType(value) {
   if(value===draft().type)return;
   const previousMarket=market(),previousMetals=metals();invalidateQuote();draft().type=value;
   if(previousMarket||market()){draft().symbol='';draft().customName='';draft().customNameOpen=false;}
-  if(previousMetals||metals()){draft().metal='';draft().purity='';draft().quantity='';draft().amount='';}
+  if(previousMetals||metals()){draft().metal='';draft().purity='';draft().quantity='';draft().amount='';draft().pricePerGram='';draft().customPrice=false;draft().useTotalValue=false;}
   state.errors={};draft().dirty=true;
 }
 function begin(kind,type,clear=false,material='') {
   state.request++;state.busy=false;state.addOpen=false;state.kind=kind;
   if(clear) state.drafts[kind]=initialDraft(kind);
   if(type) draft().type=type;
-  if(material)draft().metal=material;
+  if(material){draft().metal=material;draft().useTotalValue=manualPrecious();}
   state.screen='editor';state.phase=state.variant==='B'?'type':'details';
   state.errors={};state.message='';render();if(innerWidth<=700)document.getElementById('device').scrollIntoView({block:'center'});announce('Add '+kind+'. '+CONCEPTS[state.variant].name);
   focusEditorStart();
@@ -1141,7 +1176,10 @@ function setExchange(value) {
 function setCurrency(value) {
   if(value===draft().currency)return;
   const previous=draft().currency;draft().currency=value;
-  if(metals()&&!manualPrecious()&&draft().price!==null) draft().price=exampleMetalPrice(draft());
+  if(metals()&&draft().price!==null){
+    if(!draft().customPrice&&!manualPrecious())loadMetalRate();
+    else {draft().price=Math.round(draft().price*FX[previous]/FX[value]*100)/100;draft().pricePerGram=String(draft().price);}
+  }
   else if(draft().price!==null){draft().price=draft().price*FX[previous]/FX[value];draft().quoteMessage='Example price converted with fixed demo FX rates.';}
   state.request++;state.busy=false;draft().dirty=true;
 }
@@ -1171,7 +1209,8 @@ function editHolding(id) {
   state.drafts[state.kind]={...initialDraft(state.kind),id:holding.id,type:holding.type,currency:holding.currency,
     exchange:holding.exchange||'us',name:linked?'':holding.name,customName:holding.customName||'',customNameOpen:Boolean((holding.customName||'').trim()),symbol:holding.symbol||'',
     quantity:holding.quantity||'',metal:holding.metal||'',purity:holding.purity||'',amount:String(holding.amount),notes:holding.notes||'',
-    price:holding.price??null,quoteName:holding.quoteName||'',quoteAttempted:linked,dirty:false};
+    price:holding.price??null,pricePerGram:holding.pricePerGram??(holding.price===null||holding.price===undefined?'':String(holding.price)),customPrice:holding.customPrice||false,
+    useTotalValue:holding.useTotalValue??(type.mode==='metal'&&!Object.hasOwn(METALS,holding.metal)),quoteName:holding.quoteName||'',quoteAttempted:linked,dirty:false};
   state.errors={};state.screen='editor';state.phase='details';render();focusEditorStart();announce('Editing '+holding.name);
 }
 function requestDelete(id) {
@@ -1220,10 +1259,14 @@ function draftErrors() {
   if(market()&&nameCharacters(d.customName).length>NAME_LIMIT)errors.customName=`Use no more than ${NAME_LIMIT} characters.`;
   if(usesAmount()){
     if(!numeric(d.amount)) errors.amount='Enter a valid amount, zero or greater.';
+    else if(metals()&&!positiveDecimal(d.amount))errors.amount='Enter a total value greater than zero.';
   }else if(market()||d.metal){
     if(!positiveDecimal(d.quantity)) errors.quantity=market()?'Enter a valid positive quantity (decimals allowed, e.g. 0.25 or 10).':'Enter a valid positive weight (decimals allowed, e.g. 10.5).';
     if(market()&&!validTickerSymbol(quoteSymbol(),d.type)) errors.symbol='Choose a listing or enter a valid ticker symbol (letters/digits, e.g. AAPL, 7203.T, BTC-USD).';
-    if(metals()&&!d.purity)errors.purity='Choose a purity.';
+    if(metals()){
+      if(METALS[d.metal]&&!d.purity)errors.purity='Choose a purity.';
+      if(!positiveDecimal(d.pricePerGram))errors.pricePerGram='Enter a valid positive price per gram (decimals allowed).';
+    }
   }
   if(!Number.isFinite(amount())||!Number.isFinite(amount()*FX[d.currency])) errors[usesAmount()?'amount':'quantity']='This value is too large for the demo.';
   return errors;
@@ -1284,7 +1327,7 @@ async function save() {
     name:market()?(d.customName.trim()||d.quoteName||quoteSymbol()):d.name.trim(),
     amount:amount(),currency:d.currency,priced,symbol:market()?quoteSymbol():null,notes:original?(original.notes||''):d.notes.trim(),
     quantity:d.quantity,price:d.price,quoteName:d.quoteName,customName:d.customName,exchange:d.exchange,isNew:original?!!original.isNew:true,
-    ...(metals()?{metal:d.metal,purity:d.purity}:{}),
+    ...(metals()?{metal:d.metal,purity:d.purity,pricePerGram:d.pricePerGram,customPrice:d.customPrice,useTotalValue:d.useTotalValue}:{}),
     order:original&&original.type===d.type?original.order:Math.max(-1,...groupHoldings(state.kind,d.type).map(holding=>holding.order))+1
   };
   state.undoOriginal=original?{...original}:null;
@@ -1326,11 +1369,11 @@ function fillSample() {
   }else if(metals()){
     d.metal=d.metal||'gold';
     d.name=PRECIOUS_ITEMS[d.metal].example;
-    if(manualPrecious())d.amount=d.metal==='diamond'?'68000':'42000';
-    else {
+    if(d.useTotalValue)d.amount=d.metal==='diamond'?'68000':'42000';
+    else if(METALS[d.metal]){
       const metal=METALS[d.metal];
-      d.purity=d.purity||(metal.karat?'22K':metal.purities[0][0]);d.quantity='10.5';d.price=state.connection==='online'?exampleMetalPrice(d):null;
-    }
+      d.purity=d.purity||(metal.karat?'22K':metal.purities[0][0]);d.quantity='10.5';loadMetalRate();
+    }else{d.quantity='10.5';d.pricePerGram='4000';d.price=4000;d.customPrice=true;}
   }else{d.name=state.kind==='liability'?'Education loan':'Emergency fund';d.amount=state.kind==='liability'?'25000':'10000';}
   d.dirty=true;state.phase='details';state.screen='editor';state.errors={};render();if(market())void fetchQuote();
 }
@@ -1372,20 +1415,20 @@ document.addEventListener('click',event=>{
   else if(action==='market-picker'||action==='change-market')marketPicker();
   else if(action==='pick-type'){
     pickerConfig=null;changeType(value);closeDialog();render(true);
-    focusEditorStart();
+    if(metals())metalPicker();else focusEditorStart();
   }
   else if(action==='pick-metal'){
     const d=draft();
     if(d.metal!==value){
-      d.metal=value;d.purity='';d.price=null;d.quantity='';d.amount='';d.dirty=true;
-      for(const field of ['metal','purity','quantity','amount'])delete state.errors[field];
+      d.metal=value;d.purity='';d.price=null;d.pricePerGram='';d.customPrice=false;d.useTotalValue=manualPrecious();d.quantity='';d.amount='';d.dirty=true;
+      for(const field of ['metal','purity','quantity','pricePerGram','amount'])delete state.errors[field];
     }
     pickerConfig=null;closeDialog();render(true);
-    focusNextField('field-metal');
-    announce(PRECIOUS_ITEMS[value].label+(manualPrecious()?' selected. Enter a manual value.':' selected. Choose its purity.'));
+    if(METALS[d.metal])purityPicker();else focusNextField('field-metal');
+    announce(PRECIOUS_ITEMS[value].label+(manualPrecious()?' selected. Enter a total value or your own weight and rate.':' selected. Choose its purity.'));
   }
   else if(action==='pick-purity'){
-    const d=draft();d.purity=value;d.price=state.connection==='online'?exampleMetalPrice(d):null;d.dirty=true;delete state.errors.purity;
+    const d=draft();d.purity=value;if(!d.customPrice)loadMetalRate();d.dirty=true;delete state.errors.purity;
     pickerConfig=null;closeDialog();render(true);focusNextField('field-purity');
     announce(d.price===null?'Example price pending.':`Example price: ${metalMoney(d.price,d.currency)} per gram.`);
   }
@@ -1398,6 +1441,7 @@ document.addEventListener('click',event=>{
   else if(action==='next-type'){state.phase='details';render();focusEditorStart();}
   else if(action==='quote')pickQuote(button.dataset.symbol);
   else if(action==='fetch')void fetchQuote();
+  else if(action==='metal-rate'){loadMetalRate();delete state.errors.pricePerGram;draft().dirty=true;render(true);document.getElementById('field-pricePerGram')?.focus();announce('Example rate loaded. You can edit it.');}
   else if(action==='review'){if(validate()){state.screen='review';render();focusEditorStart();}}
   else if(action==='save')void save();
   else if(action==='back'||action==='previous-step')previousStep();
@@ -1438,8 +1482,8 @@ document.addEventListener('input',event=>{
     document.getElementById('picker-list').innerHTML=renderPickerItems(input.value);
     return;
   }
-  const key=input.dataset.field;if(!key||input.tagName==='SELECT')return;
-  if(key==='quantity'||key==='amount'){
+  const key=input.dataset.field;if(!key||input.tagName==='SELECT'||input.disabled)return;
+  if(key==='quantity'||(key==='amount'&&!metals())){
     const caret=input.selectionStart,cleaned=sanitizePositiveDecimal(input.value);
     if(cleaned!==input.value){
       const removed=input.value.length-cleaned.length;
@@ -1458,6 +1502,10 @@ document.addEventListener('input',event=>{
   }
   const previousExchange=key==='symbol'?activeExchange()?.id:null;
   draft()[key]=input.value;draft().dirty=true;
+  if(key==='pricePerGram'){
+    draft().customPrice=true;
+    draft().price=numeric(input.value)?Number(input.value):null;
+  }
   if(key==='symbol'){
     const wasBusy=state.busy,caret=input.selectionStart;
     draft().searching=false;
@@ -1479,6 +1527,7 @@ document.addEventListener('input',event=>{
     document.getElementById('field-customName')?.setAttribute('placeholder','e.g. Long-term shares');
     document.querySelectorAll('.selected-quote').forEach(node=>node.remove());
   }
+  if(key==='pricePerGram'||(key==='amount'&&metals()))showFieldError(input);
   if(state.errors[key]){
     const message=draftErrors()[key];
     if(!message){delete state.errors[key];input.removeAttribute('aria-invalid');input.closest('.prominent-wrap')?.removeAttribute('data-invalid');}
@@ -1509,14 +1558,24 @@ document.addEventListener('focusout',event=>{
 });
 document.addEventListener('change',event=>{
   const input=event.target;
-  if(input.id==='add-layout'){
+  if(input.id==='use-total-value'||input.name==='valuation-method'){
+    const total=input.id==='use-total-value'?input.checked:input.value==='total';
+    draft().useTotalValue=total;draft().dirty=true;
+    for(const key of ['amount','quantity','pricePerGram','purity'])delete state.errors[key];
+    render(true);document.getElementById(input.name==='valuation-method'?input.id:total?'field-amount':'use-total-value')?.focus({preventScroll:true});
+    announce(total?`Total value enabled. Weight and price per gram are ${state.valuationControl==='selector'?'hidden':'disabled'}.`:'Weight and price per gram enabled. Your previous entries are preserved.');
+  }else if(input.id==='valuation-control'){
+    state.valuationControl=input.value;
+    const url=new URL(location.href);url.searchParams.set('valuation',state.valuationControl);history.replaceState(null,'',url);render(true);
+    announce(input.value==='checkbox'?'Original checkbox restored. Your draft is preserved.':'Two-option selector enabled. Your draft is preserved.');
+  }else if(input.id==='add-layout'){
     state.addOpen=false;state.addLayout=input.value;
     const url=new URL(location.href);url.searchParams.set('add',state.addLayout);history.replaceState(null,'',url);render(true);
   }else if(input.id==='portfolio'){state.portfolio=input.value;state.addOpen=false;render();}
   else if(input.id==='connectivity'){
     state.connection=input.value;state.request++;state.busy=false;
     if(market())draft().quoteMessage=state.connection==='online'?'':quoteFailure();
-    if(metals()&&!manualPrecious()&&state.connection==='online'&&draft().price===null)draft().price=exampleMetalPrice(draft());
+    if(metals()&&!manualPrecious()&&!draft().customPrice&&state.connection==='online'&&draft().price===null)loadMetalRate();
     render();announce(state.connection==='online'?'Simulated connection restored.':'Offline and error states are simulated. No network request was made.');
   }else if(input.id==='appearance'){document.body.dataset.theme=input.value;}
   else if(input.id==='text-size'){document.getElementById('device').dataset.large=String(input.value==='large');syncHomeClearance();}
@@ -1560,7 +1619,7 @@ document.addEventListener('keydown',event=>{
 document.addEventListener('focusin',event=>{if(state.addOpen&&!event.target.closest('.add-launcher'))setAddOpen(false);});
 document.addEventListener('wheel',event=>{if(state.addOpen&&event.target.closest('#app'))event.preventDefault();},{passive:false});
 window.addEventListener('popstate',()=>{
-  const params=new URLSearchParams(location.search);state.variant=Object.hasOwn(CONCEPTS,params.get('variant'))?params.get('variant'):'A';state.addLayout=params.get('add')==='dialog'?'dialog':'expand';state.addOpen=false;
+  const params=new URLSearchParams(location.search);state.variant=Object.hasOwn(CONCEPTS,params.get('variant'))?params.get('variant'):'A';state.addLayout=params.get('add')==='dialog'?'dialog':'expand';state.valuationControl=params.get('valuation')==='checkbox'?'checkbox':'selector';state.addOpen=false;
   if(state.screen==='editor')state.phase=state.variant==='B'?'type':'details';
   render();
 });

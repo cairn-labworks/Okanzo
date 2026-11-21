@@ -319,9 +319,9 @@ void main({bool deviceViewport = false, CaptureScreenshot? capture}) {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Stock'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Metals'));
+      await tester.ensureVisible(find.text('Valuables'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Metals'));
+      await tester.tap(find.text('Valuables'));
       await tester.pumpAndSettle();
 
       expect(find.text('1.25 × BTC-USD'), findsOneWidget);

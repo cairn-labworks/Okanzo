@@ -108,9 +108,11 @@ class AssetRepository {
     String purity, {
     required String currency,
   }) async {
-    final Result<StockQuote> raw = await _stockPriceService.fetchQuote(
-      metal.ticker,
-    );
+    final ticker = metal.ticker;
+    if (ticker == null) {
+      return Result<double>.failure('No automatic quote for this item');
+    }
+    final Result<StockQuote> raw = await _stockPriceService.fetchQuote(ticker);
     if (raw.isFailure) {
       return Result<double>.failure(
         raw.errorMessage!,
@@ -147,9 +149,9 @@ class AssetRepository {
 
   static (String, bool)? _quoteKey(AssetEntity asset) {
     if (asset.type == AssetType.metals) {
-      final PreciousMetal? metal = asset.metal;
-      return metal != null && metal.grades[asset.purity] != null
-          ? (metal.ticker, false)
+      final ticker = asset.metal?.ticker;
+      return asset.canRefreshMetalPrice && ticker != null
+          ? (ticker, false)
           : null;
     }
     final String symbol = asset.symbol?.trim().toUpperCase() ?? '';
@@ -162,6 +164,11 @@ class AssetRepository {
   /// Returns the updated price on success.
   Future<Result<double>> refreshPrice(AssetEntity asset) async {
     if (asset.type == AssetType.metals) {
+      if (!asset.canRefreshMetalPrice) {
+        return Result<double>.failure(
+          'Manual valuation is not refreshed automatically',
+        );
+      }
       final PreciousMetal? metal = asset.metal;
       final String? purity = asset.purity;
       if (metal == null ||

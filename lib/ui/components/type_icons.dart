@@ -39,6 +39,10 @@ IconData metalIcon(PreciousMetal metal) => switch (metal) {
   PreciousMetal.silver => Icons.toll_outlined,
   PreciousMetal.platinum => Icons.view_in_ar_outlined,
   PreciousMetal.palladium => Icons.hexagon_outlined,
+  PreciousMetal.diamond => Icons.diamond_outlined,
+  PreciousMetal.gemstone => Icons.auto_awesome_outlined,
+  PreciousMetal.jewellery => Icons.watch_outlined,
+  PreciousMetal.otherPrecious => Icons.category_outlined,
 };
 
 IconData liabilityTypeIcon(LiabilityType type) {

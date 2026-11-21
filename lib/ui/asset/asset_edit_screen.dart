@@ -67,9 +67,15 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
           _symbolFocus: _symbol,
           _quantityFocus: _quantity,
         },
+        ValuationMode.metal when _viewModel!.form.useTotalValue =>
+          <FocusNode, TextEditingController>{
+            _nameFocus: _name,
+            _manualValueFocus: _manualValue,
+          },
         ValuationMode.metal => <FocusNode, TextEditingController>{
           _nameFocus: _name,
           _quantityFocus: _quantity,
+          _pricePerUnitFocus: _pricePerUnit,
         },
         ValuationMode.quantity => <FocusNode, TextEditingController>{
           _nameFocus: _name,
@@ -89,7 +95,7 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
         _metalFocus.requestFocus();
         return;
       }
-      if (form.purity == null) {
+      if (form.metal!.hasPurity && !form.useTotalValue && form.purity == null) {
         _purityFocus.requestFocus();
         return;
       }
@@ -125,13 +131,15 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
             : ' ${form.type.unitLabel}';
         return '$qty$unit × ${CurrencyUtil.format(unitPrice, form.currency)}';
       case ValuationMode.metal:
-        final rate = form.lastPrice;
-        if (form.purity == null) {
+        if (form.useTotalValue) return 'Total value'.tr(context);
+        final rate = form.metalRate;
+        if (form.metal?.hasPurity == true && form.purity == null) {
           return 'Choose a metal and purity for an estimate.'.tr(context);
         }
         return rate == null
             ? '$qty g · ${'Price pending'.tr(context)}'
-            : '$qty g × ${CurrencyUtil.formatRate(rate, form.currency)}';
+            : '$qty g × ${CurrencyUtil.formatRate(rate, form.currency)}'
+                  '${form.customPrice ? ' · ${'Custom rate'.tr(context)}' : ''}';
       case ValuationMode.flat:
         return 'Current value in {currency}'
             .tr(context)
@@ -157,6 +165,12 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
 
   void _onChanged() {
     final AssetEditViewModel viewModel = _viewModel!;
+    if (mounted &&
+        viewModel.form.type == AssetType.metals &&
+        !_pricePerUnitFocus.hasFocus &&
+        _pricePerUnit.text != viewModel.form.pricePerUnit) {
+      _pricePerUnit.text = viewModel.form.pricePerUnit;
+    }
     final AssetEditEvent? event = viewModel.event;
     if (event == null || !mounted) return;
     viewModel.consumeEvent();
@@ -297,7 +311,9 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                     amount: form.estimatedValue,
                     currency: form.currency,
                     priced: form.type == AssetType.metals
-                        ? form.purity == null || form.lastPrice != null
+                        ? form.useTotalValue ||
+                              form.metal == null ||
+                              form.metalRate != null
                         : !form.type.isMarketLinked || form.lastPrice != null,
                     calculation: _footerCalculation(context, form),
                     saving: form.isSaving,
@@ -355,11 +371,11 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                           dialogEyebrow: 'What you own'.tr(context),
                           dialogTitle: 'Choose a type'.tr(context),
                           searchPlaceholder:
-                              'e.g. Stock, Cash, Metals, Real estate'.tr(
+                              'e.g. Stock, Cash, Valuables, Real estate'.tr(
                                 context,
                               ),
                           supportingText:
-                              'e.g. Stock, Cash, Metals, Real estate'.tr(
+                              'e.g. Stock, Cash, Valuables, Real estate'.tr(
                                 context,
                               ),
                           selected: form.type,
@@ -379,8 +395,9 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                             _customName.text = viewModel.form.customName;
                             _symbol.text = viewModel.form.symbol;
                             _quantity.text = viewModel.form.quantity;
-                            if (type == AssetType.metals &&
-                                viewModel.form.metal == null) {
+                            _pricePerUnit.text = viewModel.form.pricePerUnit;
+                            _manualValue.text = viewModel.form.manualValue;
+                            if (type == AssetType.metals) {
                               unawaited(_pickMetal());
                             } else {
                               _focusNextRequired();
@@ -642,147 +659,209 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
           ),
         ];
       case ValuationMode.metal:
-        final rate = form.lastPrice;
-        final String rateText = form.isFetchingPrice
-            ? 'Fetching price…'.tr(context)
-            : rate != null
-            ? CurrencyUtil.formatRate(rate, form.currency)
-            : form.purity == null
-            ? '—'
-            : 'Price pending'.tr(context);
         final theme = Theme.of(context);
+        final invalidRate =
+            form.customPrice && !isPositiveDecimal(form.pricePerUnit);
+        final invalidTotal =
+            form.manualValue.isNotEmpty && !isPositiveDecimal(form.manualValue);
         return <Widget>[
-          FormFieldPair(
-            first: LabeledTextField(
-              canvas: true,
-              controller: _quantity,
-              focusNode: _quantityFocus,
-              textInputAction: requiredFieldInputAction(
-                _requiredFields,
-                current: _quantityFocus,
+          Text(
+            'Valuation method'.tr(context),
+            style: theme.textTheme.labelMedium,
+          ),
+          const SizedBox(height: 7),
+          SegmentedButton<bool>(
+            segments: [
+              ButtonSegment(value: false, label: Text('By weight'.tr(context))),
+              ButtonSegment(
+                value: true,
+                label: Text('Total value'.tr(context)),
               ),
-              onSubmitted: (_) => _focusNextRequired(),
-              label: 'Weight (grams)'.tr(context),
-              placeholder: 'e.g. {symbol}'
-                  .tr(context)
-                  .replaceAll('{symbol}', '10.5'),
-              supportingText: invalidQuantity
-                  ? 'Enter a positive weight'.tr(context)
-                  : 'Total weight in grams'.tr(context),
-              isError: invalidQuantity,
+            ],
+            selected: {form.useTotalValue},
+            showSelectedIcon: false,
+            expandedInsets: EdgeInsets.zero,
+            style: SegmentedButton.styleFrom(
+              selectedBackgroundColor: theme.colorScheme.primaryContainer,
+              selectedForegroundColor: theme.colorScheme.onPrimaryContainer,
+              backgroundColor: theme.colorScheme.surfaceContainerLow,
+              foregroundColor: theme.colorScheme.onSurfaceVariant,
+              minimumSize: const Size(0, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(13),
+              ),
+              side: BorderSide(color: theme.colorScheme.outlineVariant),
+            ),
+            onSelectionChanged: (selection) {
+              FocusScope.of(context).unfocus();
+              viewModel.onTotalValueChange(selection.single);
+            },
+          ),
+          const SizedBox(height: 18),
+          if (form.useTotalValue)
+            LabeledTextField(
+              canvas: true,
+              controller: _manualValue,
+              focusNode: _manualValueFocus,
+              label: 'Total value'.tr(context),
+              placeholder: '0.00',
+              supportingText: invalidTotal
+                  ? 'Enter a positive total value'.tr(context)
+                  : null,
+              isError: invalidTotal,
+              prefix: CurrencyUtil.symbol(form.currency),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              onChanged: viewModel.onQuantityChange,
-            ),
-            second: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Price per gram'.tr(context),
-                  style: theme.textTheme.labelMedium,
+              inputFormatters: const [],
+              textInputAction: requiredFieldInputAction(
+                _requiredFields,
+                current: _manualValueFocus,
+              ),
+              onSubmitted: (_) => _focusNextRequired(),
+              onChanged: viewModel.onManualValueChange,
+            )
+          else ...[
+            FormFieldPair(
+              first: LabeledTextField(
+                canvas: true,
+                controller: _quantity,
+                focusNode: _quantityFocus,
+                textInputAction: requiredFieldInputAction(
+                  _requiredFields,
+                  current: _quantityFocus,
                 ),
-                const SizedBox(height: 7),
-                Container(
-                  constraints: const BoxConstraints(minHeight: 48),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 11,
-                    vertical: 12,
-                  ),
-                  alignment: AlignmentDirectional.centerStart,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Semantics(
-                    liveRegion: true,
-                    child: Text(rateText, style: theme.textTheme.bodyMedium),
-                  ),
+                onSubmitted: (_) => _focusNextRequired(),
+                label: 'Weight (grams)'.tr(context),
+                placeholder: 'e.g. {symbol}'
+                    .tr(context)
+                    .replaceAll('{symbol}', '10.5'),
+                supportingText: invalidQuantity
+                    ? 'Enter a positive weight'.tr(context)
+                    : 'Total weight in grams'.tr(context),
+                isError: invalidQuantity,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
                 ),
-                const SizedBox(height: 7),
-                Text(
-                  (form.purity == null
-                          ? 'Shown after choosing purity.'
-                          : 'Indicative futures price, not a retail quote.')
-                      .tr(context),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                onChanged: viewModel.onQuantityChange,
+              ),
+              second: LabeledTextField(
+                canvas: true,
+                controller: _pricePerUnit,
+                focusNode: _pricePerUnitFocus,
+                label: 'Price per gram'.tr(context),
+                placeholder: '0.00',
+                prefix: CurrencyUtil.symbol(form.currency),
+                supportingText: invalidRate
+                    ? 'Enter a positive price per gram'.tr(context)
+                    : form.customPrice
+                    ? 'Your custom rate'.tr(context)
+                    : form.isFetchingPrice
+                    ? 'Fetching price…'.tr(context)
+                    : form.metal?.ticker == null
+                    ? 'No automatic quote for this item'.tr(context)
+                    : 'Indicative futures price, not a retail quote.'.tr(
+                        context,
+                      ),
+                isError: invalidRate,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
                 ),
-              ],
-            ),
-          ),
-          if (form.purity != null && rate == null && !form.isFetchingPrice)
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: TextButton.icon(
-                onPressed: viewModel.fetchMetalPrice,
-                icon: const Icon(Icons.refresh),
-                label: Text('Refresh price'.tr(context)),
+                inputFormatters: const [],
+                textInputAction: requiredFieldInputAction(
+                  _requiredFields,
+                  current: _pricePerUnitFocus,
+                ),
+                onSubmitted: (_) => _focusNextRequired(),
+                onChanged: viewModel.onPricePerUnitChange,
               ),
             ),
+            if (form.metal?.hasPurity == true && form.purity != null)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  onPressed: form.isFetchingPrice
+                      ? null
+                      : viewModel.fetchMetalPrice,
+                  icon: const Icon(Icons.refresh),
+                  label: Text('Refresh price'.tr(context)),
+                ),
+              ),
+          ],
         ];
       case ValuationMode.flat:
         return const <Widget>[];
     }
   }
 
-  Widget _metalSelectors(AssetFormState form) => FormFieldPair(
-    first: PickerChip(
+  Widget _metalSelectors(AssetFormState form) {
+    final item = PickerChip(
       focusNode: _metalFocus,
-      fieldLabel: 'Metal'.tr(context),
-      label: form.metal?.label.tr(context) ?? 'Choose metal'.tr(context),
+      fieldLabel: 'Precious item'.tr(context),
+      label:
+          form.metal?.label.tr(context) ?? 'Choose a precious item'.tr(context),
       icon: form.metal == null
           ? assetTypeIcon(AssetType.metals)
           : metalIcon(form.metal!),
       onPressed: _pickMetal,
-    ),
-    second: PickerChip(
-      focusNode: _purityFocus,
-      fieldLabel: 'Purity'.tr(context),
-      label:
-          form.purity ??
-          (form.metal == null
-                  ? 'Not selected'
-                  : form.metal == PreciousMetal.gold
-                  ? 'Choose karat'
-                  : 'Choose grade')
-              .tr(context),
-      supportingText:
-          (form.metal == null
-                  ? 'Choose a metal first.'
-                  : form.metal == PreciousMetal.gold
-                  ? 'Measured in karats.'
-                  : 'Fineness in parts per thousand.')
-              .tr(context),
-      onPressed: form.metal == null ? null : _pickPurity,
-    ),
-  );
+    );
+    if (form.metal?.hasPurity != true) return item;
+    return FormFieldPair(
+      first: item,
+      second: PickerChip(
+        focusNode: _purityFocus,
+        fieldLabel: 'Purity'.tr(context),
+        label:
+            form.purity ??
+            (form.metal == null
+                    ? 'Not selected'
+                    : form.metal == PreciousMetal.gold
+                    ? 'Choose karat'
+                    : 'Choose grade')
+                .tr(context),
+        supportingText:
+            (form.metal == null
+                    ? 'Choose a metal first.'
+                    : form.metal == PreciousMetal.gold
+                    ? 'Measured in karats.'
+                    : 'Fineness in parts per thousand.')
+                .tr(context),
+        onPressed: form.metal == null ? null : _pickPurity,
+      ),
+    );
+  }
 
   Future<void> _pickMetal() async {
     final metal = await showSelectionPickerDialog<PreciousMetal>(
       context,
-      eyebrow: 'Metals'.tr(context),
-      title: 'Choose a metal'.tr(context),
+      eyebrow: 'Valuables'.tr(context),
+      title: 'Choose a precious item'.tr(context),
       selected: _viewModel!.form.metal,
       options: PreciousMetal.values,
       optionLabel: (metal) => metal.label.tr(context),
       optionIcon: metalIcon,
-      searchPlaceholder: 'e.g. Gold or Silver'.tr(context),
+      searchPlaceholder: 'e.g. Gold, Diamond, Jewellery'.tr(context),
     );
     if (!mounted || metal == null) return;
     _viewModel!.onMetalChange(metal);
+    _quantity.text = _viewModel!.form.quantity;
+    _manualValue.text = _viewModel!.form.manualValue;
     // The purity chip is disabled until the new metal is rendered.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && ModalRoute.isCurrentOf(context) == true) {
-        _focusNextRequired();
+        if (metal.hasPurity) {
+          unawaited(_pickPurity());
+        } else {
+          _focusNextRequired();
+        }
       }
     });
   }
 
   Future<void> _pickPurity() async {
     final form = _viewModel!.form;
-    final metal = form.metal!;
+    final metal = form.metal;
+    if (metal == null || !metal.hasPurity) return;
     final purity = await showSelectionPickerDialog<String>(
       context,
       eyebrow: metal.label.tr(context),
