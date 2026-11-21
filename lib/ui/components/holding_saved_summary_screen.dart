@@ -5,18 +5,25 @@ import 'package:flutter/material.dart';
 
 import '../../data/local/entity/asset_entity.dart';
 import '../../data/local/entity/liability_entity.dart';
-import '../../data/repository/currency_converter.dart';
-import '../../data/repository/net_worth_calculator.dart';
 import '../../di/app_container.dart';
-import '../../domain/model/net_worth_summary.dart';
 import '../../l10n/app_localizations.dart';
-import '../../util/currency_util.dart';
 import 'form_components.dart';
 import 'holding_create_screen.dart';
-import 'holding_editor_chrome.dart';
+import 'holding_glance_dialog.dart';
 
-/// Post-save confirmation summary matching the Canvas prototype's `success`
-/// screen when an asset or liability is added or updated.
+DialogRoute<void> holdingSavedSummaryRoute(
+  BuildContext context, {
+  required WidgetBuilder builder,
+}) => DialogRoute<void>(
+  context: context,
+  builder: builder,
+  barrierColor: holdingGlanceBarrierColor(context),
+  themes: InheritedTheme.capture(
+    from: context,
+    to: Navigator.of(context).context,
+  ),
+);
+
 class HoldingSavedSummaryScreen extends StatefulWidget {
   const HoldingSavedSummaryScreen({
     required this.portfolioId,
@@ -37,103 +44,79 @@ class HoldingSavedSummaryScreen extends StatefulWidget {
   final LiabilityEntity? previousLiability;
   final String? notice;
 
-  bool get isAsset => savedAsset != null;
-
   @override
   State<HoldingSavedSummaryScreen> createState() =>
       _HoldingSavedSummaryScreenState();
 }
 
 class _HoldingSavedSummaryScreenState extends State<HoldingSavedSummaryScreen> {
-  Stream<List<AssetEntity>>? _assets;
-  Stream<List<LiabilityEntity>>? _liabilities;
-  Stream<CurrencyConverter>? _converter;
   bool _busy = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final AppContainer container = AppScope.of(context);
-    _assets ??= container.assetRepository.observeForPortfolio(
-      widget.portfolioId,
-    );
-    _liabilities ??= container.liabilityRepository.observeForPortfolio(
-      widget.portfolioId,
-    );
-    _converter ??= container.fxRepository.converter;
-  }
+  bool _undoFailed = false;
 
   Future<void> _undo() async {
     if (_busy) return;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _undoFailed = false;
+    });
     final AppContainer container = AppScope.of(context);
     try {
-      if (widget.isAsset) {
-        final AssetEntity saved = widget.savedAsset!;
-        if (widget.previousAsset != null) {
-          await container.assetRepository.save(widget.previousAsset!);
+      if (widget.savedAsset case final AssetEntity saved) {
+        if (widget.previousAsset case final AssetEntity previous) {
+          await container.assetRepository.save(previous);
         } else {
           await container.assetRepository.delete(saved.id);
         }
       } else {
-        final LiabilityEntity saved = widget.savedLiability!;
-        if (widget.previousLiability != null) {
-          await container.liabilityRepository.save(widget.previousLiability!);
+        if (widget.previousLiability case final LiabilityEntity previous) {
+          await container.liabilityRepository.save(previous);
         } else {
-          await container.liabilityRepository.delete(saved.id);
+          await container.liabilityRepository.delete(widget.savedLiability!.id);
         }
       }
+    } on Exception {
       if (!mounted) return;
-      final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
-      Navigator.of(context).pop();
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              (widget.updated ? 'Update undone.' : 'Addition undone.').tr(
-                context,
-              ),
-            ),
-          ),
-        );
-    } on Object {
-      if (!mounted) return;
-      setState(() => _busy = false);
+      setState(() {
+        _busy = false;
+        _undoFailed = true;
+      });
+      return;
     }
+    if (!mounted) return;
+    final String message =
+        (widget.updated ? 'Update undone.' : 'Addition undone.').tr(context);
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop();
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _addAnotherHolding() async {
     if (_busy) return;
-    final bool dark = Theme.of(context).brightness == Brightness.dark;
     final bool? asset = await showDialog<bool>(
       context: context,
-      barrierColor: dark ? const Color(0xAA10231B) : const Color(0x7310231B),
+      barrierColor: holdingGlanceBarrierColor(context),
       builder: (BuildContext context) {
         final ThemeData theme = Theme.of(context);
         final ColorScheme colors = theme.colorScheme;
-        final Color boxBorder = canvasBoxBorderColor(colors);
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
           child: AlertDialog(
+            scrollable: true,
             backgroundColor: colors.surface,
             surfaceTintColor: Colors.transparent,
             elevation: 0,
-            insetPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 20,
-            ),
+            insetPadding: const EdgeInsets.all(20),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
-              side: BorderSide(color: boxBorder),
+              side: BorderSide(color: canvasBoxBorderColor(colors)),
             ),
             titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 8),
             contentPadding: const EdgeInsets.symmetric(horizontal: 24),
             actionsPadding: const EdgeInsets.fromLTRB(24, 8, 24, 14),
-            actionsAlignment: MainAxisAlignment.center,
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Text(
                   'Add holding'.tr(context).toUpperCase(),
@@ -152,7 +135,6 @@ class _HoldingSavedSummaryScreenState extends State<HoldingSavedSummaryScreen> {
                     fontWeight: FontWeight.w500,
                     letterSpacing: -0.6,
                     height: 1.25,
-                    color: colors.onSurface,
                   ),
                 ),
               ],
@@ -160,7 +142,6 @@ class _HoldingSavedSummaryScreenState extends State<HoldingSavedSummaryScreen> {
             content: SizedBox(
               width: 375,
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   _HoldingKindChoiceCard(
                     icon: Icons.trending_up,
@@ -179,16 +160,13 @@ class _HoldingSavedSummaryScreenState extends State<HoldingSavedSummaryScreen> {
               ),
             ),
             actions: <Widget>[
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: TextButton.styleFrom(
-                    foregroundColor: colors.onSurfaceVariant,
-                    minimumSize: const Size(double.infinity, 44),
-                  ),
-                  child: Text('Close'.tr(context)),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  foregroundColor: colors.onSurfaceVariant,
+                  minimumSize: const Size(double.infinity, 44),
                 ),
+                child: Text('Close'.tr(context)),
               ),
             ],
           ),
@@ -196,13 +174,12 @@ class _HoldingSavedSummaryScreenState extends State<HoldingSavedSummaryScreen> {
       },
     );
     if (!mounted || asset == null) return;
+    final int portfolioId = widget.portfolioId;
     unawaited(
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => HoldingCreateScreen(
-            portfolioId: widget.portfolioId,
-            asset: asset,
-          ),
+          builder: (_) =>
+              HoldingCreateScreen(portfolioId: portfolioId, asset: asset),
         ),
       ),
     );
@@ -212,323 +189,68 @@ class _HoldingSavedSummaryScreenState extends State<HoldingSavedSummaryScreen> {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
-    final AppContainer container = AppScope.of(context);
-    final bool hideBalances = container.settingsRepository.current.hideBalances;
-    final String baseCurrency =
-        container.settingsRepository.current.baseCurrency;
-    final AssetEntity? asset = widget.savedAsset;
-    final LiabilityEntity? liability = widget.savedLiability;
-    final String name = asset?.displayName ?? liability!.name;
-    final String currency = asset?.currency ?? liability!.currency;
-    final double rawValue = asset?.value ?? liability!.value;
-    final bool priced = asset?.isPriced ?? true;
-    final String heading = switch ((widget.isAsset, widget.updated)) {
-      (true, false) => 'Asset added.'.tr(context),
-      (true, true) => 'Asset updated.'.tr(context),
-      (false, false) => 'Liability added.'.tr(context),
-      (false, true) => 'Liability updated.'.tr(context),
+    final bool hideBalances = AppScope.of(context)
+        .settingsRepository
+        .current
+        .hideBalances;
+    final bool priced = widget.savedAsset?.isPriced ?? true;
+    final String status = switch ((widget.savedAsset != null, widget.updated)) {
+      (true, false) => 'Asset added.',
+      (true, true) => 'Asset updated.',
+      (false, false) => 'Liability added.',
+      (false, true) => 'Liability updated.',
     };
-    final String displayAmount = !priced
-        ? 'Price pending'.tr(context)
-        : hideBalances
-        ? CurrencyUtil.masked(currency)
-        : CurrencyUtil.format(rawValue, currency);
-    final String? localizedNotice =
-        widget.notice != null && widget.notice!.trim().isNotEmpty
-        ? widget.notice!.tr(context)
-        : null;
-
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        toolbarHeight: 54,
-        titleSpacing: 24,
-        title: HoldingPortfolioLabel(
-          portfolioId: widget.portfolioId,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: colors.onSurface,
-          ),
-        ),
+    final String? notice = widget.notice?.trim();
+    return PopScope<void>(
+      canPop: !_busy,
+      child: HoldingGlanceDialog(
+        asset: widget.savedAsset,
+        liability: widget.savedLiability,
+        hideBalances: hideBalances,
+        status: status.tr(context),
+        notice: !priced || (notice?.isNotEmpty ?? false)
+            ? DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colors.outlineVariant),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Saved without a latest price.'.tr(context),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        (notice == null || notice.isEmpty
+                                ? 'This asset is excluded until it has a price.'
+                                : notice)
+                            .tr(context),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : null,
+        canClose: !_busy,
+        closeKey: const ValueKey<String>('close-saved-holding'),
+        primaryKey: const ValueKey<String>('back-to-portfolio'),
+        primaryLabel: 'Back to portfolio'.tr(context),
+        onPrimary: _busy ? null : () => Navigator.of(context).pop(),
         actions: <Widget>[
-          Padding(
-            padding: const EdgeInsetsDirectional.only(end: 24),
-            child: Center(
-              child: Text(
-                'OKANZO',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  letterSpacing: 2,
-                  fontWeight: FontWeight.w600,
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          border: Border(top: BorderSide(color: colors.outlineVariant)),
-        ),
-        child: SafeArea(
-          top: false,
-          minimum: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-          child: FilledButton(
-            key: const ValueKey<String>('back-to-portfolio'),
-            onPressed: _busy ? null : () => Navigator.of(context).pop(),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(48, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(13),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Flexible(child: Text('Back to portfolio'.tr(context))),
-                const SizedBox(width: 8),
-                const Icon(Icons.chevron_right_rounded, size: 19),
-              ],
-            ),
-          ),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-        children: <Widget>[
-          const SizedBox(height: 18),
-          Center(
-            child: Container(
-              width: 74,
-              height: 74,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: colors.primaryContainer,
-              ),
-              alignment: Alignment.center,
-              child: Icon(Icons.check_rounded, size: 32, color: colors.primary),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            heading,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontSize: 28,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.7,
-              height: 1.2,
-              color: colors.onSurface,
-            ),
-          ),
           const SizedBox(height: 10),
-          Center(
-            child: HoldingPortfolioLabel(
-              portfolioId: widget.portfolioId,
-              template: '{name} is now in {portfolio}.'
-                  .tr(context)
-                  .replaceAll('{name}', name),
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontSize: 13,
-                color: colors.onSurfaceVariant,
-                height: 1.55,
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            displayAmount,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.displaySmall?.copyWith(
-              fontSize: 34,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.8,
-              height: 1.35,
-              color: colors.primary,
-              fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
-            ),
-          ),
-          if (!priced || localizedNotice != null) ...<Widget>[
-            const SizedBox(height: 16),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: colors.outlineVariant),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(top: 2, end: 9),
-                      child: Icon(
-                        Icons.cloud_off_outlined,
-                        size: 17,
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            'Saved without a latest price.'.tr(context),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: colors.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            localizedNotice ??
-                                'This asset is excluded until it has a price.'
-                                    .tr(context),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colors.onSurfaceVariant,
-                              height: 1.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 22),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: colors.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(17),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-              child: Column(
-                children: <Widget>[
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: colors.outlineVariant),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
-                      child: Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              'Portfolio'.tr(context),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                fontSize: 13,
-                                color: colors.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Flexible(
-                            fit: FlexFit.tight,
-                            child: HoldingPortfolioLabel(
-                              portfolioId: widget.portfolioId,
-                              alignmentEnd: true,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: colors.onSurface,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    child: StreamBuilder<List<AssetEntity>>(
-                      stream: _assets,
-                      builder: (context, assetsSnap) =>
-                          StreamBuilder<List<LiabilityEntity>>(
-                            stream: _liabilities,
-                            builder: (context, liabilitiesSnap) =>
-                                StreamBuilder<CurrencyConverter>(
-                                  stream: _converter,
-                                  builder: (context, converterSnap) {
-                                    final List<AssetEntity>? assets =
-                                        assetsSnap.data;
-                                    final List<LiabilityEntity>? liabilities =
-                                        liabilitiesSnap.data;
-                                    final CurrencyConverter rates =
-                                        converterSnap.data ??
-                                        const CurrencyConverter.empty();
-                                    final NetWorthSummary? summary =
-                                        assets != null && liabilities != null
-                                        ? const NetWorthCalculator().calculate(
-                                            assets: assets,
-                                            liabilities: liabilities,
-                                            baseCurrency: baseCurrency,
-                                            converter: rates,
-                                          )
-                                        : null;
-                                    final bool hasUnpriced =
-                                        assets != null &&
-                                        assets.any(
-                                          (AssetEntity item) => !item.isPriced,
-                                        );
-                                    final String netWorthText = summary == null
-                                        ? '—'
-                                        : hideBalances
-                                        ? CurrencyUtil.masked(baseCurrency)
-                                        : CurrencyUtil.format(
-                                            summary.netWorth,
-                                            baseCurrency,
-                                          );
-                                    return Row(
-                                      children: <Widget>[
-                                        Expanded(
-                                          child: Text(
-                                            (hasUnpriced
-                                                    ? 'Net worth (priced holdings)'
-                                                    : 'Net worth')
-                                                .tr(context),
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                                  fontSize: 13,
-                                                  color:
-                                                      colors.onSurfaceVariant,
-                                                ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Text(
-                                          netWorthText,
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w500,
-                                                color: colors.onSurface,
-                                                fontFeatures: const <FontFeature>[
-                                                  FontFeature.tabularFigures(),
-                                                ],
-                                              ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 22),
           OutlinedButton.icon(
             key: const ValueKey<String>('add-another-holding'),
             onPressed: _busy ? null : _addAnotherHolding,
@@ -558,6 +280,14 @@ class _HoldingSavedSummaryScreenState extends State<HoldingSavedSummaryScreen> {
               ),
             ),
           ),
+          if (_undoFailed)
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                'Could not undo this change.'.tr(context),
+                style: theme.textTheme.bodySmall?.copyWith(color: colors.error),
+              ),
+            ),
         ],
       ),
     );

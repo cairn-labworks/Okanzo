@@ -126,7 +126,7 @@ class AssetDao {
             if (update.name != null && update.name!.trim().isNotEmpty)
               'name': update.name!.trim(),
           },
-          where: expected == null ? 'id = ?' : 'id = ? AND type = ? AND metal = ? AND purity = ? AND currency = ?',
+          where: expected == null ? 'id = ?' : 'id = ? AND type = ? AND metal = ? AND purity = ? AND currency = ? AND customPrice = ? AND useTotalValue = ?',
           whereArgs: <Object?>[
             update.id,
             if (expected != null) ...[
@@ -134,6 +134,8 @@ class AssetDao {
               expected.metal?.name,
               expected.purity,
               expected.currency,
+              expected.customPrice ? 1 : 0,
+              expected.useTotalValue ? 1 : 0,
             ],
           ],
         );

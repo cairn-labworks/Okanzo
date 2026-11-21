@@ -150,7 +150,7 @@ class HoldingEditorGuardState extends State<HoldingEditorGuard> {
   bool _confirming = false;
   DialogRoute<bool>? _confirmationRoute;
 
-  Future<void> close({Route<void>? replacement}) async {
+  Future<void> close({DialogRoute<void>? confirmationAfterClose}) async {
     if (_leaving) return;
     final DialogRoute<bool>? confirmation = _confirmationRoute;
     if (confirmation != null && confirmation.isActive) {
@@ -159,13 +159,18 @@ class HoldingEditorGuardState extends State<HoldingEditorGuard> {
         rootNavigator: true,
       ).removeRoute(confirmation, false);
     }
+    if (confirmationAfterClose != null) FocusScope.of(context).unfocus();
     setState(() => _leaving = true);
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
-    if (replacement != null) {
-      unawaited(Navigator.of(context).pushReplacement(replacement));
+    final NavigatorState navigator = Navigator.of(context);
+    if (confirmationAfterClose != null) {
+      final ModalRoute<void> editor = ModalRoute.of<void>(context)!;
+      unawaited(navigator.push(confirmationAfterClose));
+      // Remove the editor before the translucent confirmation is painted.
+      navigator.removeRoute(editor);
     } else {
-      Navigator.of(context).pop();
+      navigator.pop();
     }
   }
 

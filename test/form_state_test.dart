@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:okanzo/data/backup/backup_mapper.dart';
 import 'package:okanzo/data/local/entity/asset_entity.dart';
 import 'package:okanzo/data/local/entity/liability_entity.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
@@ -8,6 +11,129 @@ import 'package:okanzo/ui/liability/liability_form_state.dart';
 import 'package:test/test.dart';
 
 void main() {
+  group('Valuables valuation', () {
+    AssetEntity holding({bool total = false, String item = 'gold'}) =>
+        AssetEntity.fromMap({
+          'id': 42,
+          'portfolioId': 1,
+          'type': 'METALS',
+          'name': 'Valuable',
+          'currency': 'USD',
+          'metal': item,
+          'purity': item == 'gold' ? '22K' : null,
+          'quantity': 10.5,
+          'pricePerUnit': 8750.25,
+          'lastPrice': 10000.0,
+          'manualValue': 98000.5,
+          'customPrice': 1,
+          'useTotalValue': total ? 1 : 0,
+          'createdAt': 0,
+          'updatedAt': 0,
+        });
+
+    test('custom rate takes precedence over fetched rate after editing', () {
+      final form = AssetFormState.fromEntity(holding());
+      expect(form.validate(), isNull);
+      expect(form.estimatedValue, 91877.625);
+      expect(form.toEntity().value, 91877.625);
+      expect(form.toEntity().toMap()['customPrice'], 1);
+    });
+
+    test('total replaces multiplication and retains inactive inputs', () {
+      final form = AssetFormState.fromEntity(holding(total: true));
+      expect(form.validate(), isNull);
+      expect(form.estimatedValue, 98000.5);
+      final restored = AssetFormState.fromEntity(
+        AssetEntity.fromMap(form.toEntity().copyWith(id: 42).toMap()),
+      );
+      expect(restored.estimatedValue, 98000.5);
+      expect(restored.quantity, '10.5');
+      expect(restored.pricePerUnit, '8750.25');
+      expect(restored.toEntity().toMap()['useTotalValue'], 1);
+    });
+
+    test('invalid custom decimals cannot fall back to an old quote', () {
+      final form = AssetFormState.fromEntity(holding());
+      for (final input in ['', '-5', '0', 'NaN', 'Infinity', '1e3', '1.2.3']) {
+        expect(
+          form.copyWith(pricePerUnit: input).validate(),
+          isNotNull,
+          reason: input,
+        );
+      }
+      expect(form.copyWith(pricePerUnit: '.5').estimatedValue, 5.25);
+      expect(form.copyWith(pricePerUnit: '.5').validate(), isNull);
+    });
+
+    test('gemstones and jewellery use total values without purity', () {
+      for (final item in [
+        'diamond',
+        'gemstone',
+        'jewellery',
+        'otherPrecious',
+      ]) {
+        final form = AssetFormState.fromEntity(
+          holding(total: true, item: item),
+        );
+        expect(form.validate(), isNull, reason: item);
+        expect(form.toEntity().value, 98000.5);
+        expect(form.toEntity().toMap()['metal'], item);
+      }
+    });
+    test(
+      'small fractional rates and large totals reopen as valid decimals',
+      () {
+        final tiny = AssetFormState.fromEntity(
+          holding().copyWith(pricePerUnit: 1e-9),
+        );
+        expect(tiny.pricePerUnit, '0.000000001');
+        expect(tiny.validate(), isNull);
+        final large = AssetFormState.fromEntity(
+          holding(total: true).copyWith(manualValue: 1e20),
+        );
+        expect(large.manualValue, '100000000000000000000');
+        expect(large.toEntity().value, 1e20);
+      },
+    );
+    test('nonfinite inactive inputs cannot poison a valid backup', () {
+      final total = AssetFormState.fromEntity(holding(total: true))
+          .copyWith(pricePerUnit: 'Infinity');
+      final weighted = AssetFormState.fromEntity(holding())
+          .copyWith(manualValue: 'Infinity');
+      expect(total.validate(), isNull);
+      expect(weighted.validate(), isNull);
+      expect(total.toEntity().pricePerUnit, isNull);
+      expect(weighted.toEntity().manualValue, isNull);
+      for (final form in [total, weighted]) {
+        expect(
+          () => jsonEncode(assetToBackup(form.toEntity()).toJson()),
+          returnsNormally,
+        );
+      }
+    });
+
+    test(
+      'automatic holdings reopen with refreshed rate rather than cached input',
+      () {
+        final automatic = holding().copyWith(
+          customPrice: false,
+          quantity: 2,
+          pricePerUnit: 80,
+          lastPrice: 100,
+        );
+        final form = AssetFormState.fromEntity(automatic);
+        expect(form.pricePerUnit, '100');
+        expect(form.estimatedValue, 200);
+        expect(
+          form
+              .copyWith(customPrice: true, pricePerUnit: '100.0')
+              .toEntity()
+              .value,
+          200,
+        );
+      },
+    );
+  });
   test('editing a holding preserves its saved custom arrangement', () {
     const AssetEntity asset = AssetEntity(
       id: 1,

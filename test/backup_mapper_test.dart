@@ -27,6 +27,30 @@ void main() {
 
   group('backup mapping', () {
     test(
+      'Valuables modes and retained rates survive encrypted backup mapping',
+      () {
+        final original = BackupAsset.fromJson({
+          'type': 'METALS',
+          'name': 'Ring',
+          'currency': 'USD',
+          'metal': 'jewellery',
+          'quantity': 2.5,
+          'pricePerUnit': 1200.5,
+          'manualValue': 42000.75,
+          'customPrice': true,
+          'useTotalValue': true,
+        });
+        final asset = backupToAsset(original, 1, 0);
+        expect(asset.value, 42000.75);
+        final json = assetToBackup(asset).toJson();
+        expect(json['customPrice'], true);
+        expect(json['useTotalValue'], true);
+        expect(json['metal'], 'jewellery');
+        expect(json['quantity'], 2.5);
+        expect(json['pricePerUnit'], 1200.5);
+      },
+    );
+    test(
       'silver metadata and per-gram value survive database and backup maps',
       () {
         final AssetEntity asset = AssetEntity.fromMap(<String, Object?>{

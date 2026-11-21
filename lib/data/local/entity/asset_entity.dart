@@ -14,6 +14,8 @@ class AssetEntity {
     this.pricePerUnit,
     this.metal,
     this.purity,
+    this.customPrice = false,
+    this.useTotalValue = false,
     this.symbol,
     this.lastPrice,
     this.lastPriceTimestamp,
@@ -35,6 +37,8 @@ class AssetEntity {
     pricePerUnit: (map['pricePerUnit'] as num?)?.toDouble(),
     metal: PreciousMetal.fromName(map['metal']),
     purity: map['purity'] as String?,
+    customPrice: map['customPrice'] == 1,
+    useTotalValue: map['useTotalValue'] == 1,
     symbol: map['symbol'] as String?,
     lastPrice: (map['lastPrice'] as num?)?.toDouble(),
     lastPriceTimestamp: map['lastPriceTimestamp'] as int?,
@@ -61,6 +65,8 @@ class AssetEntity {
   final double? pricePerUnit;
   final PreciousMetal? metal;
   final String? purity;
+  final bool customPrice;
+  final bool useTotalValue;
 
   /// Ticker / market symbol (e.g. AAPL, BTC-USD). Used by market valuation.
   final String? symbol;
@@ -86,10 +92,29 @@ class AssetEntity {
       ? metal
       : null;
 
-  bool get isPriced =>
-      !type.requiresQuote ||
-      (lastPrice != null &&
-          (type != AssetType.metals || metal?.grades[purity] != null));
+  double? get metalRate => customPrice ? pricePerUnit : lastPrice;
+
+  bool get canRefreshMetalPrice =>
+      type == AssetType.metals &&
+      !customPrice &&
+      !useTotalValue &&
+      metal?.ticker != null &&
+      metal?.grades[purity] != null;
+
+  bool get isPriced {
+    if (type != AssetType.metals) {
+      return !type.requiresQuote || lastPrice != null;
+    }
+    if (useTotalValue) {
+      return manualValue != null && manualValue!.isFinite && manualValue! > 0;
+    }
+    final rate = metalRate;
+    return metal != null &&
+        (!metal!.hasPurity || metal!.grades[purity] != null) &&
+        rate != null &&
+        rate.isFinite &&
+        rate > 0;
+  }
 
   /// Name shown in lists: [customName] overrides [name] when set.
   String get displayName {
@@ -106,7 +131,11 @@ class AssetEntity {
       case ValuationMode.market:
         return (quantity ?? 0.0) * (lastPrice ?? 0.0);
       case ValuationMode.metal:
-        return isPriced ? (quantity ?? 0.0) * lastPrice! : 0.0;
+        return !isPriced
+            ? 0.0
+            : useTotalValue
+            ? manualValue!
+            : (quantity ?? 0.0) * metalRate!;
       case ValuationMode.quantity:
         return (quantity ?? 0.0) * (pricePerUnit ?? 0.0);
       case ValuationMode.flat:
@@ -125,6 +154,8 @@ class AssetEntity {
     'pricePerUnit': pricePerUnit,
     'metal': metal?.name,
     'purity': purity,
+    'customPrice': customPrice ? 1 : 0,
+    'useTotalValue': useTotalValue ? 1 : 0,
     'symbol': symbol,
     'lastPrice': lastPrice,
     'lastPriceTimestamp': lastPriceTimestamp,
@@ -145,6 +176,8 @@ class AssetEntity {
     String? currency,
     double? quantity,
     double? pricePerUnit,
+    bool? customPrice,
+    bool? useTotalValue,
     String? symbol,
     double? lastPrice,
     int? lastPriceTimestamp,
@@ -164,6 +197,8 @@ class AssetEntity {
     pricePerUnit: pricePerUnit ?? this.pricePerUnit,
     metal: metal,
     purity: purity,
+    customPrice: customPrice ?? this.customPrice,
+    useTotalValue: useTotalValue ?? this.useTotalValue,
     symbol: symbol ?? this.symbol,
     lastPrice: lastPrice ?? this.lastPrice,
     lastPriceTimestamp: lastPriceTimestamp ?? this.lastPriceTimestamp,

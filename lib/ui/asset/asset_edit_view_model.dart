@@ -128,6 +128,14 @@ class AssetEditViewModel extends ChangeNotifier {
         name: nextName,
         customName: nextCustomName,
         clearMetal: true,
+        customPrice: false,
+        useTotalValue: false,
+        pricePerUnit: type == AssetType.metals || _form.type == AssetType.metals
+            ? ''
+            : null,
+        manualValue: type == AssetType.metals || _form.type == AssetType.metals
+            ? ''
+            : null,
         quantity:
             type == AssetType.metals && _form.type != AssetType.gold ||
                 _form.type == AssetType.metals
@@ -148,8 +156,14 @@ class AssetEditViewModel extends ChangeNotifier {
 
   Future<void> onCurrencyChange(String value) async {
     if (_form.type == AssetType.metals && value != _form.currency) {
-      _updateQuoteInput(_form.copyWith(currency: value, clearLastPrice: true));
-      await fetchMetalPrice();
+      _updateQuoteInput(
+        _form.copyWith(
+          currency: value,
+          clearLastPrice: true,
+          pricePerUnit: _form.customPrice ? null : '',
+        ),
+      );
+      if (!_form.customPrice && !_form.useTotalValue) await fetchMetalPrice();
       return;
     }
     if (value == _form.currency) {
@@ -209,26 +223,52 @@ class AssetEditViewModel extends ChangeNotifier {
   void onMetalChange(PreciousMetal metal) {
     if (metal == _form.metal) return;
     _updateQuoteInput(
-      _form.copyWith(metal: metal, clearPurity: true, clearLastPrice: true),
+      _form.copyWith(
+        metal: metal,
+        clearPurity: true,
+        clearLastPrice: true,
+        pricePerUnit: '',
+        customPrice: false,
+        useTotalValue: !metal.hasPurity,
+        quantity: '',
+        manualValue: '',
+      ),
     );
   }
 
   Future<void> onPurityChange(String purity) async {
     if (_form.metal?.grades[purity] == null || purity == _form.purity) return;
-    _updateQuoteInput(_form.copyWith(purity: purity, clearLastPrice: true));
-    await fetchMetalPrice();
+    _updateQuoteInput(
+      _form.copyWith(
+        purity: purity,
+        clearLastPrice: !_form.customPrice,
+        pricePerUnit: _form.customPrice ? null : '',
+      ),
+    );
+    if (!_form.customPrice && !_form.useTotalValue) await fetchMetalPrice();
+  }
+
+  void onTotalValueChange(bool value) {
+    if (_form.useTotalValue == value) return;
+    _updateQuoteInput(_form.copyWith(useTotalValue: value));
+    if (!value && !_form.customPrice && _form.lastPrice == null) {
+      unawaited(fetchMetalPrice());
+    }
   }
 
   Future<void> fetchMetalPrice() async {
     final metal = _form.metal;
     final purity = _form.purity;
-    if (_form.type != AssetType.metals || metal == null || purity == null) {
+    if (_form.type != AssetType.metals ||
+        _form.useTotalValue ||
+        metal?.ticker == null ||
+        purity == null) {
       return;
     }
     final int request = ++_priceRequest;
     _update(_form.copyWith(isFetchingPrice: true));
     final Result<double> result = await _assetRepository.fetchMetalPrice(
-      metal,
+      metal!,
       purity,
       currency: _form.currency,
     );
@@ -237,16 +277,31 @@ class AssetEditViewModel extends ChangeNotifier {
     _update(
       _form.copyWith(
         lastPrice: result.isSuccess ? result.value : null,
+        pricePerUnit: result.isSuccess ? formatInput(result.value) : null,
+        customPrice: result.isSuccess ? false : null,
         lastPriceTimestamp: result.isSuccess
             ? DateTime.now().millisecondsSinceEpoch
             : null,
         isFetchingPrice: false,
       ),
     );
+    if (result.isFailure) {
+      _emit(
+        AssetEditEvent(
+          AssetEditEventType.error,
+          "Couldn't fetch price: ${result.errorMessage}",
+        ),
+      );
+    }
   }
 
-  void onPricePerUnitChange(String value) =>
+  void onPricePerUnitChange(String value) {
+    if (_form.type == AssetType.metals) {
+      _updateQuoteInput(_form.copyWith(pricePerUnit: value, customPrice: true));
+    } else {
       _update(_form.copyWith(pricePerUnit: filterDecimal(value)));
+    }
+  }
 
   void onSymbolChange(String value) =>
       _updateQuoteInput(_form.withSymbol(value));
@@ -270,8 +325,13 @@ class AssetEditViewModel extends ChangeNotifier {
     );
   }
 
-  void onManualValueChange(String value) =>
-      _update(_form.copyWith(manualValue: filterDecimal(value)));
+  void onManualValueChange(String value) => _update(
+    _form.copyWith(
+      manualValue: _form.type == AssetType.metals
+          ? value
+          : filterDecimal(value),
+    ),
+  );
 
   void onNotesChange(String value) => _update(_form.copyWith(notes: value));
 
@@ -355,7 +415,7 @@ class AssetEditViewModel extends ChangeNotifier {
     }
     _update(_form.copyWith(isSaving: true));
     String? notice;
-    if (_form.type == AssetType.metals && _form.lastPrice == null) {
+    if (_form.type == AssetType.metals && !_form.toEntity().isPriced) {
       notice = _metalOffline
           ? 'No internet connection. Saved without latest price — refresh when online.'
           : 'Saved without a metal price. Refresh when available.';

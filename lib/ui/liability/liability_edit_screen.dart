@@ -82,7 +82,8 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
         final saved = event.savedLiability ?? viewModel.form.toEntity();
         unawaited(
           _guard.currentState!.close(
-            replacement: MaterialPageRoute<void>(
+            confirmationAfterClose: holdingSavedSummaryRoute(
+              context,
               builder: (_) => HoldingSavedSummaryScreen(
                 portfolioId: widget.portfolioId,
                 updated: widget.liabilityId != 0,

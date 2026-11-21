@@ -7,7 +7,7 @@
 <meta name="description" content="Canvas and Guide holding-entry concepts with expandable and dialog add actions. Fictional data, simulated quotes, no persistence, no connection to the app.">
 <title>Okanzo / The holding experience</title>
 <style>
-:root{color-scheme:light;--lab-bg:#f5f4ef;--lab-ink:#26392f;--lab-muted:#617268;--lab-line:#d8ded4;--lab-sage:#dfe8d8}
+:root{color-scheme:light;--lab-bg:#f5f4ef;--lab-ink:#26392f;--lab-muted:#617268;--lab-line:#d8ded4;--lab-sage:#dfe8d8;--quick:140ms;--move:240ms;--ease-out:cubic-bezier(.2,.7,.25,1)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--lab-bg);color:var(--lab-ink);font:14px/1.5 "Segoe UI",Arial,sans-serif}
 button,input,select,textarea{font:inherit}
@@ -59,7 +59,7 @@ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke
 body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--surface:#1d2c26;--soft:#20302A;--panel:#293e32;--ink:#e8f0e9;--muted:#a3b8aa;--line:#2d4036;--box-line:#3b5446;--accent:#c1e1bd;--on-accent:#1e3025;--tint:#2d4635;--danger:#ffb4ab;--danger-bg:#432b29;--warm:#e8c48a;--warm-bg:#3c3425;color-scheme:dark}
 .device-wrap{width:min(100%,max(280px,calc((100dvh - 230px)*.45)));justify-self:center}
 .device{width:390px;zoom:var(--preview-scale,1);aspect-ratio:9/20;border:7px solid #243b2e;border-radius:39px;background:var(--bg);box-shadow:0 18px 55px #253c2b17,0 2px 6px #253c2b0d;display:flex;flex-direction:column;position:relative;overflow:hidden;isolation:isolate}
-.device[data-large=true]{font-size:25px}
+.device[data-large=true],body:has(.device[data-large=true]) .app-dialog{font-size:25px}
 .status-bar{height:30px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:5px 22px 0;font-size:10px;font-weight:650;letter-spacing:.3px}
 .status-bar>span:last-child{display:flex;align-items:center;gap:5px}
 .status-bar svg{width:13px;height:13px}
@@ -175,13 +175,25 @@ body[data-theme=dark] .device,body[data-theme=dark] .app-dialog{--bg:#172220;--s
 [data-metal=silver]{--metal-tone:#526578}
 [data-metal=platinum]{--metal-tone:#635687}
 [data-metal=palladium]{--metal-tone:#366967}
+[data-metal=diamond]{--metal-tone:#39708a}
+[data-metal=gemstone]{--metal-tone:#386c58}
+[data-metal=jewellery]{--metal-tone:#8a596c}
 body[data-theme=dark] [data-metal=gold]{--metal-tone:#ecc37f}
 body[data-theme=dark] [data-metal=silver]{--metal-tone:#c3d3e2}
 body[data-theme=dark] [data-metal=platinum]{--metal-tone:#cbbce8}
 body[data-theme=dark] [data-metal=palladium]{--metal-tone:#a2d0cb}
+body[data-theme=dark] [data-metal=diamond]{--metal-tone:#a8d7e9}
+body[data-theme=dark] [data-metal=gemstone]{--metal-tone:#a9d8bd}
+body[data-theme=dark] [data-metal=jewellery]{--metal-tone:#e4b7ca}
 .holding-open .metal-icon{margin-inline-start:4px}
-.metal-price .rate{display:flex;align-items:center;min-height:54px;padding:8px 11px;background:var(--soft);border-radius:10px;font-size:.84em;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.metal-price .rate[data-pending]{color:var(--muted);font-weight:500}
+.valuation-toggle{border:0;margin:0 0 12px;cursor:pointer}
+.valuation-toggle input{flex-shrink:0}
+.valuation-method{border:0;padding:0;margin:0 0 18px;min-width:0}
+.valuation-method legend{font-size:.68em;color:var(--muted);font-weight:500;margin-bottom:7px}
+.valuation-options{display:flex;gap:4px;padding:4px;border-radius:13px;background:var(--soft)}
+.valuation-choice{position:relative;flex:1;min-width:0;min-height:44px;display:flex;align-items:center;justify-content:center;padding:8px;border-radius:10px;cursor:pointer;font-size:.75em;color:var(--muted);text-align:center}
+.valuation-choice:has(input:checked){background:var(--tint);color:var(--ink);font-weight:600}
+.valuation-choice:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
 .field-meta{display:flex;justify-content:space-between;gap:12px;font-size:.62em;color:var(--muted);margin-top:5px}
 .field-meta .at-limit{color:var(--warm)}
 .save-hint{font-size:.61em;color:var(--muted);margin:8px 0 0;line-height:1.5}
@@ -203,16 +215,14 @@ body[data-theme=dark] [data-metal=palladium]{--metal-tone:#a2d0cb}
 .home-backdrop.is-active{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .2s ease,visibility 0s}
 .home-bottom>.primary{width:max-content;max-width:100%;margin-left:auto;padding:13px 12px;gap:8px;pointer-events:auto;box-shadow:0 3px 9px #00000012}
 .add-anchor{position:relative;min-height:54px}
-.add-launcher{position:absolute;bottom:0;right:0;display:flex;flex-direction:column-reverse;width:min(8.25em,100%);background:var(--accent);color:var(--on-accent);border-radius:17px;z-index:2;pointer-events:auto;box-shadow:0 3px 9px #00000012;transition:width .36s cubic-bezier(.2,0,0,1),border-radius .36s cubic-bezier(.2,0,0,1),box-shadow .36s ease}
+.add-launcher{position:absolute;bottom:0;right:0;display:flex;flex-direction:column-reverse;width:min(8.25em,100%);background:var(--accent);color:var(--on-accent);border-radius:17px;z-index:2;pointer-events:auto;box-shadow:0 3px 9px #00000012;transition:width var(--move) var(--ease-out),border-radius var(--move) var(--ease-out),box-shadow var(--move) ease}
 .add-launcher.is-open{width:min(17em,100%);border-radius:22px;box-shadow:0 8px 26px #00000030,inset 0 0 0 1px color-mix(in srgb,var(--on-accent) 12%,transparent)}
-.add-reveal{display:grid;grid-template-rows:0fr;visibility:hidden;transition:grid-template-rows .36s cubic-bezier(.2,0,0,1),visibility 0s .36s}
-.is-open .add-reveal{grid-template-rows:1fr;visibility:visible;transition:grid-template-rows .36s cubic-bezier(.2,0,0,1),visibility 0s}
+.add-reveal{display:grid;grid-template-rows:0fr;visibility:hidden;transition:grid-template-rows var(--move) var(--ease-out),visibility 0s var(--move)}
+.is-open .add-reveal{grid-template-rows:1fr;visibility:visible;transition:grid-template-rows var(--move) var(--ease-out),visibility 0s}
 .add-options{min-height:0;overflow:hidden}
 .add-options-inner{display:grid;gap:8px;padding:10px 10px 8px}
 .add-option{display:flex;align-items:center;gap:12px;min-height:66px;width:100%;padding:12px 10px;background:color-mix(in srgb,var(--on-accent) 7%,transparent);color:inherit;text-align:left;border-radius:13px;opacity:0;transform:translateY(8px);transition:opacity .1s ease,transform .15s ease,background-color .15s ease}
-.is-open .add-option{opacity:1;transform:translateY(0);transition:opacity .18s ease,transform .28s cubic-bezier(.2,0,0,1),background-color .15s ease}
-.is-open .add-option:nth-child(1){transition-delay:.12s,.12s,0s}
-.is-open .add-option:nth-child(2){transition-delay:.08s,.08s,0s}
+.is-open .add-option{opacity:1;transform:translateY(0);transition:opacity var(--quick) ease,transform var(--move) var(--ease-out),background-color var(--quick) ease}
 .add-option:hover,.add-option:focus-visible{background:color-mix(in srgb,var(--on-accent) 13%,transparent)}
 .add-option>svg{width:32px;height:32px;padding:6px;border-radius:10px;background:color-mix(in srgb,var(--on-accent) 10%,transparent)}
 .add-option[data-value=asset]>svg{background:#b8d7b1;color:#27583b}
@@ -220,7 +230,7 @@ body[data-theme=dark] [data-metal=palladium]{--metal-tone:#a2d0cb}
 .add-option strong{display:block;font-size:.86em;font-weight:600}
 .add-option small{display:block;font-size:.64em;margin-top:3px;opacity:.92}
 .add-trigger{display:flex;align-items:center;gap:8px;width:100%;min-height:54px;padding:13px 12px;background:transparent;color:inherit;text-align:left;border-top:1px solid transparent;border-radius:17px;font-size:.85em;font-weight:600;white-space:nowrap;transition:color .18s ease}
-.add-trigger>svg{width:20px;height:20px;transition:transform .36s cubic-bezier(.2,0,0,1)}
+.add-trigger>svg{width:20px;height:20px;transition:transform var(--move) var(--ease-out)}
 .is-open .add-trigger>svg{transform:rotate(45deg)}
 .is-open .add-trigger{color:color-mix(in srgb,var(--on-accent) 80%,var(--accent));font-weight:500;border-top-color:color-mix(in srgb,var(--on-accent) 14%,transparent);border-radius:0 0 22px 22px}
 .add-label{display:grid}
@@ -242,6 +252,7 @@ body[data-theme=dark] [data-metal=palladium]{--metal-tone:#a2d0cb}
 .estimated.pending{font-size:1.55em}
 .calculation{font-size:.68em;color:var(--muted);display:block;min-height:18px}
 .fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.fields-grid[hidden]{display:none}
 .fields-grid>*{min-width:0}
 .field{display:block;margin:0 0 18px;position:relative}
 .field>span:first-child{display:block;font-size:.68em;color:var(--muted);font-weight:500;margin-bottom:7px}
@@ -249,6 +260,7 @@ body[data-theme=dark] [data-metal=palladium]{--metal-tone:#a2d0cb}
 .field input::placeholder,.field textarea::placeholder{font:inherit;letter-spacing:inherit;line-height:inherit;color:var(--muted);opacity:1}
 .field textarea{resize:vertical;min-height:90px}
 .field input[aria-invalid=true]{border-color:var(--danger);background:var(--danger-bg)}
+.field input:disabled{background:var(--soft);color:var(--muted);opacity:.65;cursor:not-allowed}
 .prominent-wrap{display:flex;align-items:baseline;gap:6px;border-bottom:1px solid var(--line);padding:4px 0 14px;min-height:62px}
 .prominent-wrap:focus-within{border-bottom-color:var(--accent);box-shadow:0 1px 0 0 var(--accent)}
 .prominent-wrap[data-invalid=true]{border-bottom-color:var(--danger);box-shadow:0 1px 0 0 var(--danger)}
@@ -313,13 +325,13 @@ body[data-theme=dark] [data-metal=palladium]{--metal-tone:#a2d0cb}
 .review-line dt{color:var(--muted)}
 .review-line dd{margin:0;text-align:right;max-width:64%;overflow-wrap:anywhere}
 .picker-error{display:block;font-size:.66em;color:var(--danger);padding:10px 4px 4px;line-height:1.5}
-.success-mark{width:74px;height:74px;border-radius:50%;display:grid;place-items:center;background:var(--tint);color:var(--accent);margin:29px auto 24px}
-.success-mark svg{width:32px;height:32px}
-.success-heading{text-align:center;font-size:1.8em;letter-spacing:-.7px;line-height:1.2;font-weight:500;margin:0 0 10px}
+.app-dialog .glance-actions .secondary{margin-top:10px}
+.app-dialog .glance-actions .quiet{margin-top:6px}
 .success-value{text-align:center;color:var(--accent);font-size:2.1em;line-height:1.4;overflow-wrap:anywhere;margin:10px 0}
-.center{text-align:center}
 .app-dialog{border:1px solid var(--box-line);border-radius:24px;padding:24px;width:calc(100% - 40px);max-width:375px;max-height:85dvh;overflow:auto;background:var(--bg);box-shadow:0 24px 90px #0003}
 .app-dialog::backdrop{background:#10231baa;backdrop-filter:blur(3px)}
+.app-dialog[open]{animation:enter-view var(--move) var(--ease-out)}
+.app-dialog[open]::backdrop{animation:fade-in var(--quick) ease}
 .app-dialog h2{font-size:1.4em;font-weight:500;letter-spacing:-.6px;line-height:1.25;margin:5px 0 10px}
 .app-dialog .primary{margin-top:12px}
 .app-dialog .quiet{width:100%}
@@ -343,8 +355,19 @@ body[data-theme=dark] [data-metal=palladium]{--metal-tone:#a2d0cb}
 @media(min-height:1000px){.studio{padding-top:55px}}
 @media(max-width:1150px){.studio{grid-template-columns:210px minmax(350px,412px);justify-content:center;gap:36px}.rail{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:30px;padding-top:0}.rail-section{margin:0}.rail-section:nth-child(3){grid-column:1/-1}.state-details{grid-column:1/-1}.lab-header{padding:20px 30px}}
 @media(max-width:700px){.lab-header{padding:17px 19px}.lab-status{display:none}.brand span:last-child{font-size:9px}.studio{display:flex;flex-direction:column;padding:23px 16px 110px;gap:22px;align-items:center}.intro{width:100%;max-width:412px;padding:0}.intro h1{font-size:30px;letter-spacing:-.8px;margin-bottom:9px}.intro h1 br{display:none}.intro>p:not(.eyebrow){max-width:none;font-size:12px;margin:0}.intro .eyebrow{display:none}.intro-foot{display:none}.concepts{display:flex;gap:5px;margin:18px 0 0}.concept{display:block;padding:10px;flex:1}.concept-key{display:none}.concept strong{font-size:11px}.concept small{font-size:9px}.device-wrap{width:100%;max-width:412px}.device{border-width:5px;border-radius:29px}.rail{display:flex;flex-direction:column;width:100%;max-width:412px;gap:20px}.rail-section{padding-bottom:18px}.rail-section:first-child{display:none}.prototype-switcher{bottom:12px}.caption{font-size:9px}.page{--page-inset:20px}.app-header{padding-left:16px;padding-right:16px}.lab-header .brand{font-size:17px}}
-@media(prefers-reduced-motion:no-preference){.page{animation:appear .18s ease-out}@keyframes appear{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}}
-@media(prefers-reduced-motion:reduce){.add-launcher,.add-reveal,.is-open .add-reveal,.add-trigger,.add-trigger>svg,.add-option,.is-open .add-option,.add-label>span,.is-open .add-label>span,.home-backdrop,.home-backdrop.is-active,.main-navigation{transition:none}}
+button{touch-action:manipulation}
+:is(.primary,.secondary,.quiet,.picker,.picker-option,.icon-button,.group-toggle,.holding-open,.dialog-choice,.type-option,.asset-kind button,.segmented button,.main-navigation button,.inline-button){
+  transition:background-color var(--quick) ease,border-color var(--quick) ease,opacity var(--quick) ease,scale var(--quick) var(--ease-out);
+}
+:is(.primary,.secondary,.quiet,.picker,.picker-option,.icon-button,.group-toggle,.holding-open,.dialog-choice,.type-option,.asset-kind button,.segmented button,.main-navigation button,.inline-button,.add-trigger,.add-option):not(:disabled):active{scale:.98}
+@media(hover:hover){
+  .primary:not(:disabled):hover{background:color-mix(in srgb,var(--accent) 90%,var(--on-accent))}
+  :is(.secondary,.quiet,.picker,.picker-option,.dialog-choice,.type-option,.segmented button):not(:disabled):hover{background:color-mix(in srgb,var(--tint) 75%,var(--surface))}
+}
+#app.enter-view .page{animation:enter-view var(--move) var(--ease-out)}
+@keyframes enter-view{from{opacity:.6;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){*,*::backdrop{animation:none!important;transition:none!important}button:active{scale:1!important}}
 </style>
 </head>
 <body data-theme="dark">
@@ -365,6 +388,9 @@ body[data-theme=dark] [data-metal=palladium]{--metal-tone:#a2d0cb}
 <symbol id="i-silver" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></symbol>
 <symbol id="i-platinum" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Zm0 9 8-4.5M12 12 4 7.5M12 12v9"/></symbol>
 <symbol id="i-palladium" viewBox="0 0 24 24"><path d="m8 3-5 5v8l5 5h8l5-5V8l-5-5H8Z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-diamond" viewBox="0 0 24 24"><path d="M2 9l5-5h10l5 5-10 11L2 9Zm0 0h20M10 4 8 9l4 11 4-11-2-5"/></symbol>
+<symbol id="i-gemstone" viewBox="0 0 24 24"><path d="M7 3h10l4 5v8l-4 5H7l-4-5V8l4-5Z"/><path d="m9 7-2 2v6l2 2h6l2-2V9l-2-2H9Z"/></symbol>
+<symbol id="i-jewellery" viewBox="0 0 24 24"><path d="m8 5 2-2h4l2 2-4 4-4-4Z"/><circle cx="12" cy="14" r="7"/></symbol>
 <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 9v12h14V9M10 21v-7h4v7"/></symbol>
 <symbol id="i-chart" viewBox="0 0 24 24"><path d="M12 3v9h9A9 9 0 1 1 12 3ZM16 3.9A9 9 0 0 1 20.1 8H16V3.9Z"/></symbol>
 <symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h4"/></symbol>
@@ -413,6 +439,7 @@ body[data-theme=dark] [data-metal=palladium]{--metal-tone:#a2d0cb}
     <section class="rail-section">
       <h2>Try a different condition</h2>
       <label class="control">Add holding action<select id="add-layout" class="lab-select"><option value="expand">Expanding button</option><option value="dialog">Dialog (original)</option></select></label>
+      <label class="control">Valuation control<select id="valuation-control" class="lab-select"><option value="selector">Two-option selector</option><option value="checkbox">Checkbox (original)</option></select></label>
       <label class="control">Connectivity<select id="connectivity" class="lab-select"><option value="online">Online (simulated)</option><option value="offline">Offline</option><option value="error">Quote service error</option></select></label>
       <label class="control">Appearance<select id="appearance" class="lab-select"><option value="dark">Midnight</option><option value="light">Classic</option></select></label>
       <label class="control">Text size<select id="text-size" class="lab-select"><option value="normal">Default</option><option value="large">Large preview</option></select></label>
@@ -424,15 +451,18 @@ body[data-theme=dark] [data-metal=palladium]{--metal-tone:#a2d0cb}
       <div class="scenario-grid">
         <button class="scenario" data-action="scenario" data-kind="asset" data-type="cash"><svg aria-hidden="true"><use href="#i-wallet"/></svg>Cash asset</button>
         <button class="scenario" data-action="scenario" data-kind="asset" data-type="stock"><svg aria-hidden="true"><use href="#i-trend"/></svg>Stock asset</button>
-        <button class="scenario" data-action="scenario" data-kind="asset" data-type="metals"><svg aria-hidden="true"><use href="#i-metals"/></svg>Metals asset</button>
+        <button class="scenario" data-action="scenario" data-kind="asset" data-type="metals"><svg aria-hidden="true"><use href="#i-metals"/></svg>Metal asset</button>
         <button class="scenario" data-action="scenario" data-kind="liability" data-type="loan"><svg aria-hidden="true"><use href="#i-bank"/></svg>Loan liability</button>
+        <button class="scenario" data-action="scenario" data-kind="asset" data-type="metals" data-material="jewellery"><svg aria-hidden="true"><use href="#i-jewellery"/></svg>Jewellery asset</button>
+        <button class="scenario" data-action="scenario" data-kind="asset" data-type="metals" data-material="diamond"><svg aria-hidden="true"><use href="#i-diamond"/></svg>Diamond asset</button>
       </div>
       <p>Or begin with <strong>Add holding</strong>. On Home, open a type group, sort its holdings, and tap one for details, edit, or delete.</p>
-      <p>For <strong>Metals</strong>, choose the metal and its purity, then enter grams. The rate is a fictional example, not a live quote. Expand Metals on Home to compare the individual icons.</p>
+      <p>In <strong>Valuables</strong>, gold, silver, platinum and palladium start with a sample per-gram rate that you can edit. Choose <strong>Total value</strong> for an appraisal or total estimate. Compare the selector with <strong>Checkbox (original)</strong> under Valuation control; your draft is preserved. Diamonds, other gems and jewellery start in total-value mode; you can also enter your own weight and rate.</p>
+      <p>Try <strong>Enter / Next</strong> in a form, then save to see a centered confirmation in the same layout as the holding glance on Home.</p>
       <button class="text-link" data-action="sample">Fill this draft with example data</button><br>
       <button class="text-link" data-action="reset">Reset all demo data</button>
     </section>
-    <details class="design-notes"><summary>Why these Canvas choices?</summary><p><strong>One exit:</strong> Back leaves the form; a changed draft gets a discard confirmation. A second Cancel action is useful in a dialog without clear navigation, but redundant in this screen. <a href="https://www.nngroup.com/articles/ten-usability-heuristics/#toc-3-user-control-and-freedom-3" target="_blank" rel="noreferrer">The principle is a clear exit</a>, not a mandatory extra button.</p><p><strong>Focused fields, live bottom estimate &amp; input guardrails:</strong> All form boxes share a crisp outline and type-aware examples. Market search opens a searchable popup dialog that filters to valid ticker/company characters (`A–Z`, `0–9`, `.`, `-` — since Tokyo/Hong Kong/Shanghai tickers like `7203.T`, `0700.HK`, `600519.SS` and funds like `S&amp;P 500` include digits alongside alphabetical tickers), while Quantity accepts positive fractional decimals only (`&gt; 0`). For assets, Estimated value starts at `0` (`₹0` / `$0`) pinned directly above Save, without a redundant Current / After net-worth block below the form.</p><p><strong>60 characters:</strong> a proposed product limit for custom names and required holding names. It allows descriptive labels while keeping lists readable. The counter counts user-perceived characters; fetched company names are not truncated.</p><p><strong>Ready to save:</strong> required fields must be valid; a quote is optional so offline entry still works. Selecting a market holding fetches once automatically, without waiting for a quantity. Bonds keep the app's current manual-value model, not an invented ticker lookup.</p><p><strong>Holdings first:</strong> names, tickers, and values are the reading experience. The small group menu holds name/value sorting and an explicit Arrange manually view; reorder arrows never occupy the normal list. Switching sorts does not erase your custom arrangement. Values are compared in the base currency; unpriced holdings stay last.</p></details>
+    <details class="design-notes"><summary>Why these Canvas choices?</summary><p><strong>One exit:</strong> Back leaves the form; a changed draft gets a discard confirmation. A second Cancel action is useful in a dialog without clear navigation, but redundant in this screen. <a href="https://www.nngroup.com/articles/ten-usability-heuristics/#toc-3-user-control-and-freedom-3" target="_blank" rel="noreferrer">The principle is a clear exit</a>, not a mandatory extra button.</p><p><strong>Focus and value:</strong> Enter / Next advances through the visible fields. For example, choosing a metal grade moves focus to Name before weight. Every editor pins the live value above its main action, labelled Estimated value for assets and Outstanding amount for liabilities. An unavailable quote is shown as Price pending, not as a real zero.</p><p><strong>Input guardrails:</strong> Market search accepts company names and tickers such as 7203.T, 0700.HK, or BTC-USD, while quantity accepts positive fractional decimals only.</p><p><strong>60 characters:</strong> a proposed product limit for custom names and required holding names. It allows descriptive labels while keeping lists readable. The counter counts user-perceived characters; fetched company names are not truncated.</p><p><strong>Ready to save:</strong> required fields must be valid; a quote is optional so offline entry still works. Selecting a market holding fetches once automatically, without waiting for a quantity. Bonds keep the app's current manual-value model, not an invented ticker lookup.</p><p><strong>Holdings first:</strong> names, tickers, and values are the reading experience. The small group menu holds name/value sorting and an explicit Arrange manually view; reorder arrows never occupy the normal list. Switching sorts does not erase your custom arrangement. Values are compared in the base currency; unpriced holdings stay last.</p></details>
     <details class="state-details"><summary>Under the surface / live state</summary><pre id="state-output"></pre></details>
   </aside>
 </main>
@@ -449,7 +479,7 @@ const ASSETS = [
   {id:'stock',label:'Stock',icon:'trend',mode:'market',hint:'Company shares'},
   {id:'mutualFund',label:'Mutual fund / ETF',icon:'grid',mode:'market',hint:'Funds and indexes'},
   {id:'crypto',label:'Cryptocurrency',icon:'coin',mode:'market',hint:'Coins and tokens'},
-  {id:'metals',label:'Metals',icon:'metals',mode:'metal',hint:'Gold, silver, platinum and palladium'},
+  {id:'metals',label:'Valuables',icon:'metals',mode:'metal',hint:'Gold, silver, gemstones & jewellery'},
   {id:'cash',label:'Cash',icon:'wallet',mode:'flat',hint:'Money on hand'},
   {id:'bankDeposit',label:'Bank / deposit',icon:'bank',mode:'flat',hint:'Savings and deposits'},
   {id:'realEstate',label:'Real estate',icon:'home',mode:'flat',hint:'Property value'},
@@ -462,6 +492,13 @@ const METALS = {
   silver:{label:'Silver',rate:112,example:'Silver coins',purities:[['999',0.999,'Fine silver'],['925',0.925,'Sterling silver'],['900',0.9,'Coin silver']]},
   platinum:{label:'Platinum',rate:2900,example:'Platinum ring',purities:[['999',0.999],['950',0.95],['900',0.9]]},
   palladium:{label:'Palladium',rate:2750,example:'Palladium bar',purities:[['999',0.999],['950',0.95]]}
+};
+const PRECIOUS_ITEMS = {
+  ...METALS,
+  diamond:{label:'Diamond',icon:'diamond',example:'Loose diamond',hint:'Appraised value'},
+  gemstone:{label:'Other gemstone',icon:'gemstone',example:'Sapphire',hint:'Ruby, sapphire, emerald or another gem'},
+  jewellery:{label:'Jewellery',icon:'jewellery',example:'Diamond engagement ring',hint:'Finished pieces or mixed materials'},
+  otherPrecious:{label:'Other precious item',icon:'metals',example:'Rhodium bar',hint:'Other metals or precious items'}
 };
 const LIABILITIES = [
   {id:'loan',label:'Loan',icon:'bank',hint:'Personal or other borrowing'},
@@ -508,14 +545,23 @@ const CONCEPTS = {
 };
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
-const metalIcon = metal => `<span class="metal-icon" data-metal="${metal}">${icon(metal||'metals')}</span>`;
-const money = (value,currency='INR') => new Intl.NumberFormat(currency==='INR'?'en-IN':'en-US',{style:'currency',currency,minimumFractionDigits:0,maximumFractionDigits:0}).format(value);
+const metalIcon = metal => `<span class="metal-icon" data-metal="${metal}">${icon(PRECIOUS_ITEMS[metal]?.icon||(metal||'metals'))}</span>`;
+const money = (value,currency='INR',precision=0) => new Intl.NumberFormat(currency==='INR'?'en-IN':'en-US',{style:'currency',currency,minimumFractionDigits:0,maximumFractionDigits:precision}).format(value);
 const metalMoney = (value,currency) => new Intl.NumberFormat(currency==='INR'?'en-IN':'en-US',{style:'currency',currency,minimumFractionDigits:2,maximumFractionDigits:2}).format(value);
 function exampleMetalPrice({metal,purity,currency}) {
   const entry=METALS[metal],grade=entry?.purities.find(([id])=>id===purity);
   return grade?Math.round(entry.rate*grade[1]/FX[currency]*100)/100:null;
 }
-const metalDescription = ({metal,purity}) => `${METALS[metal].label} · ${purity}`;
+const metalDescription = ({metal,purity,useTotalValue}) => `${PRECIOUS_ITEMS[metal].label} · ${useTotalValue?'Total value':purity||'Custom rate'}`;
+function preciousDetails(holding,hidden=false) {
+  const {metal,purity,quantity,price,currency}=holding;
+  const totalValue=holding.useTotalValue??!Object.hasOwn(METALS,metal);
+  const rows=[['Item',PRECIOUS_ITEMS[metal].label]];
+  if(purity)rows.push(['Purity',purity]);
+  if(totalValue)rows.push(['Valuation','Total value supplied']);
+  else rows.push(['Weight',hidden?'******':quantity+' g'],['Price per gram',price===null?'Pending':hidden?'******':metalMoney(price,currency)],['Rate source',holding.customPrice?'Custom rate':'Example quote']);
+  return rows;
+}
 const numeric = value => value !== '' && /^\d+(\.\d*)?$|^\.\d+$/.test(value) && Number.isFinite(Number(value));
 const positiveDecimal = value => numeric(value) && Number(value) > 0;
 const sanitizePositiveDecimal = raw => {
@@ -538,7 +584,7 @@ const NAME_LIMIT = 60;
 const nameSegmenter = new Intl.Segmenter(undefined,{granularity:'grapheme'});
 const nameCharacters = value => Array.from(nameSegmenter.segment(value),part=>part.segment);
 const currencyGlyph = code => escapeHTML(new Intl.NumberFormat('en',{style:'currency',currency:code,currencyDisplay:'narrowSymbol'}).formatToParts(0).find(part=>part.type==='currency').value);
-const initialDraft = kind => ({id:null,kind,type:kind==='asset'?'stock':'loan',currency:'INR',exchange:'us',name:'',customName:'',customNameOpen:false,symbol:'',quantity:'',metal:'',purity:'',amount:'',notes:'',price:null,quoteName:'',quoteMessage:'',quoteAttempted:false,searching:false,dirty:false});
+const initialDraft = kind => ({id:null,kind,type:kind==='asset'?'stock':'loan',currency:'INR',exchange:'us',name:'',customName:'',customNameOpen:false,symbol:'',quantity:'',metal:'',purity:'',amount:'',notes:'',price:null,pricePerGram:'',customPrice:false,useTotalValue:false,quoteName:'',quoteMessage:'',quoteAttempted:false,searching:false,dirty:false});
 const seed = () => [
   {id:1,portfolio:'Personal',kind:'asset',type:'stock',name:'Apple Inc.',quoteName:'Apple Inc.',symbol:'AAPL',exchange:'us',quantity:'100',price:17869.9,amount:1786990,currency:'INR',priced:true,order:0},
   {id:7,portfolio:'Personal',kind:'asset',type:'stock',name:'Microsoft Corporation',quoteName:'Microsoft Corporation',symbol:'MSFT',exchange:'us',quantity:'50',price:31220.38,amount:1561019,currency:'INR',priced:true,order:1},
@@ -557,25 +603,43 @@ const state = {
   screen:'home',kind:'asset',phase:'type',portfolio:'Personal',homeTab:'asset',
   connection:'online',hidden:false,errors:{},message:'',
   addLayout:new URLSearchParams(location.search).get('add')==='dialog'?'dialog':'expand',addOpen:false,
+  valuationControl:new URLSearchParams(location.search).get('valuation')==='checkbox'?'checkbox':'selector',
   busy:false,request:0,preferred:['us','bse'],holdings:seed(),
   drafts:{asset:initialDraft('asset'),liability:initialDraft('liability')},saved:null,
   expanded:{},sorts:{},undoOriginal:null,nextId:100,quoteFetches:0
 };
 let pendingAction = null;
 let pickerConfig = null;
+let dialogReturnFocus = null;
+let dialogOnDismiss = null;
 const draft = () => state.drafts[state.kind];
 const types = () => state.kind==='asset'?ASSETS:LIABILITIES;
 const currentType = () => types().find(type=>type.id===draft().type);
 const market = () => state.kind==='asset'&&currentType().mode==='market';
 const metals = () => state.kind==='asset'&&currentType().mode==='metal';
+const manualPrecious = () => metals()&&Boolean(PRECIOUS_ITEMS[draft().metal])&&!Object.hasOwn(METALS,draft().metal);
+const usesAmount = () => state.kind==='liability'||currentType().mode==='flat'||(metals()&&draft().useTotalValue);
+function loadMetalRate() {
+  const d=draft();
+  d.price=state.connection==='online'?exampleMetalPrice(d):null;
+  d.pricePerGram=d.price===null?'':String(d.price);
+  d.customPrice=false;
+}
+function metalRateHint() {
+  const d=draft();
+  if(d.useTotalValue)return 'Not used with a total value.';
+  if(d.customPrice)return `Your custom rate in ${d.currency}. Decimals allowed.`;
+  if(d.price!==null)return `Example quote in ${d.currency}, not live. You can edit it.`;
+  return METALS[d.metal]?'Enter your own rate, or choose purity for an example quote.':'Enter your own per-gram rate. No automatic quote.';
+}
 const usesExchange = () => market()&&draft().type!=='crypto';
 const amount = () => {
   const d=draft();
-  if(state.kind==='liability'||currentType().mode==='flat') return Number(d.amount)||0;
+  if(usesAmount()) return Number(d.amount)||0;
   return (Number(d.quantity)||0)*(d.price??0);
 };
-const isPriced = () => !(market()||metals())||draft().price!==null;
-const estimateValue = () => metals()&&draft().purity&&!isPriced()?'Price pending':money(amount(),draft().currency);
+const isPriced = () => usesAmount()||draft().price!==null;
+const estimateValue = () => !isPriced()&&(draft().symbol||draft().purity)?(market()&&state.busy?'Getting price…':'Price pending'):money(amount(),draft().currency,2);
 const totals = (portfolio=state.portfolio) => {
   const holdings=state.holdings.filter(holding=>holding.portfolio===portfolio);
   const assets=holdings.filter(holding=>holding.kind==='asset').reduce((sum,holding)=>sum+holding.amount*FX[holding.currency],0);
@@ -593,18 +657,18 @@ const announce = text => { document.getElementById('announcer').textContent=text
 function exposeState() {
   document.getElementById('state-output').textContent=JSON.stringify({
     variant:state.variant,screen:state.screen,phase:state.phase,portfolio:state.portfolio,connection:state.connection,
-    addLayout:state.addLayout,addOpen:state.addOpen,
+    addLayout:state.addLayout,addOpen:state.addOpen,valuationControl:state.valuationControl,
     kind:state.kind,draft:draft(),errors:state.errors,busy:state.busy,totals:totals(),
     savedHoldings:state.holdings.filter(holding=>holding.isNew),preferredExchanges:state.preferred,
     holdings:state.holdings,expanded:state.expanded,sorts:state.sorts,quoteFetches:state.quoteFetches
   },null,2);
 }
 function appHeader(back=true) {
-  return `<header class="app-header">${back?`<button class="icon-button" data-action="back" aria-label="Go back">${icon('back')}</button>`:state.screen==='success'?`<span class="header-name">${escapeHTML(state.portfolio)}</span>`:`<label><span class="live-region">Portfolio</span><select class="portfolio-select" id="portfolio"><option${state.portfolio==='Personal'?' selected':''}>Personal</option><option${state.portfolio==='Family'?' selected':''}>Family</option></select></label>`}
-    ${back?`<span class="header-brand">OKANZO</span><span class="header-sub">${escapeHTML(state.portfolio)}</span>`:state.screen==='success'?'<span class="header-brand">OKANZO</span>':`<div class="row"><button class="icon-button" data-action="refresh-holdings" aria-label="Refresh pending example prices"${state.busy?' disabled':''}>${icon('refresh')}</button><button class="icon-button" data-action="hide" aria-label="${state.hidden?'Show':'Hide'} balances" aria-pressed="${state.hidden}">${icon('eye')}</button><button class="icon-button" data-action="settings" aria-label="Settings">${icon('settings')}</button></div>`}</header>`;
+  return `<header class="app-header">${back?`<button class="icon-button" data-action="back" aria-label="Go back">${icon('back')}</button>`:`<label><span class="live-region">Portfolio</span><select class="portfolio-select" id="portfolio"><option${state.portfolio==='Personal'?' selected':''}>Personal</option><option${state.portfolio==='Family'?' selected':''}>Family</option></select></label>`}
+    ${back?`<span class="header-brand">OKANZO</span><span class="header-sub">${escapeHTML(state.portfolio)}</span>`:`<div class="row"><button class="icon-button" data-action="refresh-holdings" aria-label="Refresh pending example prices"${state.busy?' disabled':''}>${icon('refresh')}</button><button class="icon-button" data-action="hide" aria-label="${state.hidden?'Show':'Hide'} balances" aria-pressed="${state.hidden}">${icon('eye')}</button><button class="icon-button" data-action="settings" aria-label="Settings">${icon('settings')}</button></div>`}</header>`;
 }
 function offlineBanner() {
-  return state.connection==='online'?'':`<div class="banner warning">${icon(state.connection==='offline'?'offline':'info')}<span><strong>${state.connection==='offline'?"You're offline. Keep going.":'Quote service is unavailable.'}</strong>${market()||metals()?'You can save the holding without a latest price, then refresh later.':'Manual values can still be saved in this demo.'}</span></div>`;
+  return state.connection==='online'?'':`<div class="banner warning">${icon(state.connection==='offline'?'offline':'info')}<span><strong>${state.connection==='offline'?"You're offline. Keep going.":'Quote service is unavailable.'}</strong>${usesAmount()?'Manual values can still be saved in this demo.':metals()?'Enter your own price per gram, or use a total value.':'You can save the holding without a price, then refresh later.'}</span></div>`;
 }
 function addHoldingControl() {
   if(state.addLayout==='dialog')return `<button class="primary" data-action="add">${icon('plus')}Add holding</button>`;
@@ -637,13 +701,13 @@ function setAddOpen(open,restoreFocus=false) {
   syncHomeClearance();
   exposeState();
 }
-function addHolding() {
-  if(state.addLayout==='expand'){
+function addHolding(useDialog=false) {
+  if(state.addLayout==='expand'&&!useDialog){
     if(state.screen!=='home'){goHome();setAddOpen(true,true);}
     else setAddOpen(!state.addOpen);
     return;
   }
-  showDialog(`<p class="app-eyebrow">To ${escapeHTML(state.portfolio)}</p><h2 id="dialog-title">A fuller picture starts here.</h2><p class="app-copy">What would you like to add?</p><button class="dialog-choice" data-action="start" data-value="asset"><span class="tile-icon">${icon('trend')}</span><span><strong>An asset</strong><small>Something you own. Adds to net worth.</small></span></button><button class="dialog-choice" data-action="start" data-value="liability"><span class="tile-icon">${icon('down')}</span><span><strong>A liability</strong><small>Something you owe. Reduces net worth.</small></span></button><button class="quiet" data-action="close-modal">Not now</button>`);
+  showDialog(`<p class="app-eyebrow">To ${escapeHTML(state.portfolio)}</p><h2 id="dialog-title">A fuller picture starts here.</h2><p class="app-copy">What would you like to add?</p><button class="dialog-choice" data-action="start" data-value="asset"><span class="tile-icon">${icon('trend')}</span><span><strong>An asset</strong><small>Something you own. Adds to net worth.</small></span></button><button class="dialog-choice" data-action="start" data-value="liability"><span class="tile-icon">${icon('down')}</span><span><strong>A liability</strong><small>Something you owe. Reduces net worth.</small></span></button><button class="quiet" data-action="close-modal">Not now</button>`,null,useDialog?showSavedSummary:null);
 }
 const groupKey = (kind,type) => `${state.portfolio}:${kind}:${type}`;
 const groupLabels = {stock:'Stocks',mutualFund:'Mutual funds / ETFs',crypto:'Cryptocurrency',bankDeposit:'Bank / deposits',bond:'Bonds',loan:'Loans',mortgage:'Mortgages',creditCard:'Credit cards',pendingPayment:'Pending payments'};
@@ -719,7 +783,7 @@ const NAME_EXAMPLES = {
   liability:{loan:'e.g. Personal loan',mortgage:'e.g. Home loan',creditCard:'e.g. Travel card',pendingPayment:'e.g. Contractor invoice',tax:'e.g. Income tax FY26',other:'e.g. Family borrowing'}
 };
 function typeExampleHint() {
-  return state.kind==='asset'?'e.g. Stock, Cash, Metals, Real estate':'e.g. Loan, Mortgage, Credit card';
+  return state.kind==='asset'?'e.g. Stock, Cash, Valuables':'e.g. Loan, Mortgage, Credit card';
 }
 function currencyExampleHint() {
   return 'e.g. INR, USD, EUR, GBP';
@@ -744,14 +808,14 @@ function marketHelperHint() {
   return current?.suffix?`e.g. ${ticker} (${current.label}) or a full Yahoo ticker.`:`e.g. ${ticker}, AIR.PA, or RELIANCE.BO.`;
 }
 function typeSelect() {
-  return `<div class="field"><span id="type-label">Type</span><button class="picker" id="holding-type" type="button" data-action="type-picker" aria-haspopup="dialog" aria-labelledby="type-label type-value" aria-describedby="hint-type">${icon(currentType().icon)}<span class="picker-value" id="type-value">${currentType().label}</span>${icon('next')}</button><small class="hint" id="hint-type">${escapeHTML(typeExampleHint())}</small></div>`;
+  return `<div class="field"><span id="type-label">Type</span><button class="picker" id="holding-type" type="button" data-action="type-picker" data-entry-step aria-haspopup="dialog" aria-labelledby="type-label type-value" aria-describedby="hint-type">${icon(currentType().icon)}<span class="picker-value" id="type-value">${currentType().label}</span>${icon('next')}</button><small class="hint" id="hint-type">${escapeHTML(typeExampleHint())}</small></div>`;
 }
 function currencySelect() {
-  return `<div class="field"><span id="currency-label">Currency</span><button class="picker" id="currency" type="button" data-action="currency-picker" aria-haspopup="dialog" aria-labelledby="currency-label currency-value" aria-describedby="hint-currency"><span class="currency-glyph" aria-hidden="true">${currencyGlyph(draft().currency)}</span><span class="picker-value" id="currency-value">${draft().currency}</span>${icon('next')}</button><small class="hint" id="hint-currency">${escapeHTML(currencyExampleHint())}</small></div>`;
+  return `<div class="field"><span id="currency-label">Currency</span><button class="picker" id="currency" type="button" data-action="currency-picker" data-entry-step aria-haspopup="dialog" aria-labelledby="currency-label currency-value" aria-describedby="hint-currency"><span class="currency-glyph" aria-hidden="true">${currencyGlyph(draft().currency)}</span><span class="picker-value" id="currency-value">${draft().currency}</span>${icon('next')}</button><small class="hint" id="hint-currency">${escapeHTML(currencyExampleHint())}</small></div>`;
 }
 function field(key,label,placeholder='',options={}) {
   const error=state.errors[key],hint=options.hint||'',limited=key==='name'||key==='customName';
-  const input=`<input id="field-${key}" data-field="${key}" value="${escapeHTML(draft()[key])}" placeholder="${escapeHTML(placeholder)}" ${options.number?'inputmode="decimal"':''} ${options.prominent?'class="prominent"':''} autocomplete="off" ${error?'aria-invalid="true"':''} aria-describedby="hint-${key} error-${key}${limited?' count-'+key:''}">`;
+  const input=`<input id="field-${key}" data-field="${key}" enterkeyhint="next" value="${escapeHTML(draft()[key])}" placeholder="${escapeHTML(placeholder)}" ${options.number?'inputmode="decimal" pattern="[0-9]+([.][0-9]*)?|[.][0-9]+"':''} ${options.disabled?'disabled':''} ${options.prominent?'class="prominent"':''} autocomplete="off" ${error?'aria-invalid="true"':''} aria-describedby="hint-${key} error-${key}${limited?' count-'+key:''}">`;
   return `<label class="field"><span>${label}</span>${options.prominent?`<span class="prominent-wrap"${error?' data-invalid="true"':''}><span class="prominent-prefix" aria-hidden="true">${currencyGlyph(draft().currency)}</span>${input}</span>`:input}<small class="hint" id="hint-${key}">${hint}</small>${limited?`<span class="field-meta"><span>Up to ${NAME_LIMIT} characters</span><span id="count-${key}">${nameCharacters(draft()[key]).length}/${NAME_LIMIT}</span></span>`:''}<small class="error" id="error-${key}">${error||''}</small></label>`;
 }
 const activeExchange = () => {
@@ -761,20 +825,17 @@ const activeExchange = () => {
 const exchangeIcon = id => id==='other'?'globe':'candle';
 function exchangeSelect() {
   const current=activeExchange(),label=current?(current.id==='us'?'US exchange':current.label):'Exchange';
-  return `<div class="field"><span id="exchange-label">Exchange</span><button class="picker" id="exchange" type="button" data-action="exchange-picker" aria-haspopup="dialog" aria-labelledby="exchange-label exchange-value" aria-describedby="hint-exchange">${icon(current?exchangeIcon(current.id):'candle')}<span class="picker-value" id="exchange-value">${escapeHTML(label)}</span>${icon('next')}</button><small class="hint" id="hint-exchange">${escapeHTML(exchangeExampleHint())}</small></div>`;
-}
-function valueSummary() {
-  return `<div class="amount-summary"><span class="label">${state.kind==='liability'?'Outstanding amount':'Estimated value'}</span><strong class="estimated" data-live="amount">${estimateValue()}</strong><span class="calculation" data-live="calculation">${calculation()}</span></div>`;
+  return `<div class="field"><span id="exchange-label">Exchange</span><button class="picker" id="exchange" type="button" data-action="exchange-picker" data-entry-step aria-haspopup="dialog" aria-labelledby="exchange-label exchange-value" aria-describedby="hint-exchange">${icon(current?exchangeIcon(current.id):'candle')}<span class="picker-value" id="exchange-value">${escapeHTML(label)}</span>${icon('next')}</button><small class="hint" id="hint-exchange">${escapeHTML(exchangeExampleHint())}</small></div>`;
 }
 function footerEstimate() {
-  if(state.kind!=='asset')return '';
-  return `<div class="footer-estimate"><div class="footer-estimate-copy"><span class="label">Estimated value</span><span class="calculation" data-live="calculation">${calculation()}</span></div><strong class="estimated" data-live="amount">${estimateValue()}</strong></div>`;
+  return `<div class="footer-estimate"><div class="footer-estimate-copy"><span class="label">${state.kind==='liability'?'Outstanding amount':'Estimated value'}</span><span class="calculation" data-live="calculation">${calculation()}</span></div><output class="estimated" data-live="amount" aria-live="off">${estimateValue()}</output></div>`;
 }
 function calculation() {
   const d=draft();
-  if(market()) return d.price===null?`${escapeHTML(d.quantity||'0')} × ${money(0,d.currency)} · price not fetched yet`:`${escapeHTML(d.quantity||'0')} × ${money(d.price,d.currency)} / illustrative quote`;
-  if(metals()) return !d.purity?'Choose a metal and purity for an estimate.':d.price===null?`${escapeHTML(d.quantity||'0')} g · price pending`:`${escapeHTML(d.quantity||'0')} g × ${metalMoney(d.price,d.currency)} per gram`;
-  return state.kind==='liability'?'Only the amount you still owe, not the original loan.':`Current value in ${escapeHTML(d.currency)}`;
+  if(market()) return !d.symbol?'Choose a listing to get an estimate.':d.price===null?'An example quote is needed to calculate the value.':`${escapeHTML(d.quantity||'0')} × ${money(d.price,d.currency,2)} · example quote`;
+  if(metals()&&d.useTotalValue)return `Your total estimate or appraisal in ${escapeHTML(d.currency)}`;
+  if(metals()) return !d.metal?'Choose a precious item.':METALS[d.metal]&&!d.purity?'Choose purity and enter weight.':d.price===null?'Enter a valid price per gram to calculate the value.':`${escapeHTML(d.quantity||'0')} g × ${metalMoney(d.price,d.currency)} per gram${d.customPrice?' · custom rate':''}`;
+  return state.kind==='liability'?`Remaining balance in ${escapeHTML(d.currency)}`:`Current value in ${escapeHTML(d.currency)}`;
 }
 function quoteMatches(query) {
   if(state.connection!=='online') return [];
@@ -791,37 +852,55 @@ function quoteResults(query) {
 function customNameField() {
   const d=draft(),error=state.errors.customName,count=nameCharacters(d.customName).length,open=d.customNameOpen||Boolean(d.customName.trim())||Boolean(error);
   const example=d.quoteName||(d.type==='crypto'?'e.g. Cold wallet BTC':d.type==='mutualFund'?'e.g. Retirement index fund':'e.g. Long-term shares');
-  return `<details class="custom-name" id="custom-name-details"${open?' open':''}><summary><span>Custom name <span class="muted">(optional)</span></span><svg class="icon-expand" aria-hidden="true"><use href="#i-pencil"/></svg><svg class="icon-collapse" aria-hidden="true"><use href="#i-minus"/></svg></summary><div class="field"><input id="field-customName" aria-label="Custom name (optional)" data-field="customName" value="${escapeHTML(d.customName)}" placeholder="${escapeHTML(example)}" autocomplete="off" ${error?'aria-invalid="true"':''} aria-describedby="count-customName error-customName"><span class="field-meta"><span>Up to ${NAME_LIMIT} characters</span><span id="count-customName"${count===NAME_LIMIT?' class="at-limit"':''}>${count}/${NAME_LIMIT}</span></span><small class="error" id="error-customName">${error||''}</small></div></details>`;
+  return `<details class="custom-name" id="custom-name-details"${open?' open':''}><summary><span>Custom name <span class="muted">(optional)</span></span><svg class="icon-expand" aria-hidden="true"><use href="#i-pencil"/></svg><svg class="icon-collapse" aria-hidden="true"><use href="#i-minus"/></svg></summary><div class="field"><input id="field-customName" aria-label="Custom name (optional)" data-field="customName" enterkeyhint="next" value="${escapeHTML(d.customName)}" placeholder="${escapeHTML(example)}" autocomplete="off" ${error?'aria-invalid="true"':''} aria-describedby="count-customName error-customName"><span class="field-meta"><span>Up to ${NAME_LIMIT} characters</span><span id="count-customName"${count===NAME_LIMIT?' class="at-limit"':''}>${count}/${NAME_LIMIT}</span></span><small class="error" id="error-customName">${error||''}</small></div></details>`;
 }
-function marketSelect() {
-  const d=draft(),label=d.type==='crypto'?'Coin or ticker':d.type==='mutualFund'?'Fund or ticker':'Company or ticker',error=state.errors.symbol,hasSymbol=Boolean(d.symbol.trim()),code=quoteSymbol();
-  const body=d.quoteName
+function marketPickerContent() {
+  const d=draft(),code=quoteSymbol();
+  return d.quoteName
     ?`<span class="ticker-mark" aria-hidden="true">${escapeHTML(code.slice(0,2))}</span><span class="picker-detail" id="symbol-value"><strong>${escapeHTML(d.quoteName)}</strong><small>${escapeHTML(code)} / ${escapeHTML(d.currency)}</small></span>${icon('search').replace('<svg','<svg class="picker-search-trail"')}`
-    :hasSymbol
+    :code
     ?`<span class="ticker-mark" aria-hidden="true">${escapeHTML(code.slice(0,2))}</span><span class="picker-detail" id="symbol-value"><strong>${escapeHTML(code)}</strong><small>Manual ticker · ${escapeHTML(d.currency)}</small></span>${icon('search').replace('<svg','<svg class="picker-search-trail"')}`
     :`${icon('search')}<span class="picker-value is-placeholder" id="symbol-value">${escapeHTML(marketSearchExample(false))}</span>${icon('next')}`;
-  return `<div class="field"><span id="symbol-label">${label}</span><button class="picker" id="field-symbol" type="button" data-action="market-picker" aria-haspopup="dialog"${error?' aria-invalid="true"':''} aria-labelledby="symbol-label symbol-value" aria-describedby="hint-symbol error-symbol">${body}</button><small class="hint" id="hint-symbol">${escapeHTML(marketHelperHint())}</small><small class="error" id="error-symbol">${error||''}</small></div>`;
+}
+function marketSelect() {
+  const type=draft().type,label=type==='crypto'?'Coin or ticker':type==='mutualFund'?'Fund or ticker':'Company or ticker',error=state.errors.symbol;
+  return `<div class="field"><span id="symbol-label">${label}</span><button class="picker" id="field-symbol" type="button" data-action="market-picker" data-entry-step aria-haspopup="dialog"${error?' aria-invalid="true"':''} aria-labelledby="symbol-label symbol-value" aria-describedby="hint-symbol error-symbol">${marketPickerContent()}</button><small class="hint" id="hint-symbol">${escapeHTML(marketHelperHint())}</small><small class="error" id="error-symbol">${error||''}</small></div>`;
+}
+function quoteFeedback() {
+  const d=draft();
+  return d.quoteMessage?`<div class="banner${d.price===null?' warning':''}">${icon('info')}<span>${escapeHTML(d.quoteMessage)}</span></div>`:'';
 }
 function marketFields() {
   const d=draft(),qtyHint=d.type==='crypto'?'Fractional coins supported (e.g. 0.25)':d.type==='mutualFund'?'Units held (e.g. 15.5)':'Shares held (e.g. 10)';
   return `${marketSelect()}
     ${field('quantity','Quantity',d.type==='crypto'?'e.g. 0.25':d.type==='mutualFund'?'e.g. 15':'e.g. 10',{number:true,hint:qtyHint})}
-    <button class="inline-button" type="button" data-action="fetch"${state.busy||!d.symbol.trim()?' disabled':''}>${icon('refresh')}${state.busy?'Getting example price...':d.quoteAttempted?'Refresh example price':'Fetch example price'}</button>
-    <div id="quote-feedback">${d.quoteMessage?`<div class="banner${d.price===null?' warning':''}" role="status">${icon('info')}<span>${escapeHTML(d.quoteMessage)}</span></div>`:''}</div>
+    <button class="inline-button" type="button" data-action="fetch" aria-disabled="${state.busy}"${!d.symbol.trim()?' disabled':''}>${icon('refresh')}<span id="fetch-label">${state.busy?'Getting example price...':d.quoteAttempted?'Refresh example price':'Fetch example price'}</span></button>
+    <div id="quote-feedback">${quoteFeedback()}</div>
     ${customNameField()}`;
 }
 function metalSelect(key,label,value,leading,hint='',disabled=false) {
   const error=state.errors[key];
-  return `<div class="field"><span id="${key}-label">${label}</span><button class="picker" id="field-${key}" type="button" data-action="${key}-picker" aria-haspopup="dialog" aria-labelledby="${key}-label ${key}-value" aria-describedby="hint-${key} error-${key}"${error?' aria-invalid="true"':''}${disabled?' disabled':''}>${leading}<span class="picker-value" id="${key}-value">${value}</span>${icon('next')}</button><small class="hint" id="hint-${key}">${hint}</small><small class="error" id="error-${key}">${error||''}</small></div>`;
+  return `<div class="field"><span id="${key}-label">${label}</span><button class="picker" id="field-${key}" type="button" data-action="${key}-picker" data-entry-step aria-haspopup="dialog" aria-labelledby="${key}-label ${key}-value" aria-describedby="hint-${key} error-${key}"${error?' aria-invalid="true"':''}${disabled?' disabled':''}>${leading}<span class="picker-value" id="${key}-value">${value}</span>${icon('next')}</button><small class="hint" id="hint-${key}">${hint}</small><small class="error" id="error-${key}">${error||''}</small></div>`;
+}
+function valuationModeControl() {
+  const total=draft().useTotalValue;
+  if(state.valuationControl==='checkbox')return `<label class="check-row valuation-toggle"><input id="use-total-value" type="checkbox"${total?' checked':''} aria-controls="field-quantity field-pricePerGram total-value-field">Use Total Value Instead</label>`;
+  return `<fieldset class="valuation-method"><legend>Valuation method</legend><div class="valuation-options">
+    <label class="valuation-choice"><input class="live-region" id="value-by-weight" type="radio" name="valuation-method" value="weight"${total?'':' checked'} aria-controls="field-quantity field-pricePerGram"><span>By weight</span></label>
+    <label class="valuation-choice"><input class="live-region" id="value-by-total" type="radio" name="valuation-method" value="total"${total?' checked':''} aria-controls="total-value-field"><span>Total value</span></label>
+  </div></fieldset>`;
 }
 function metalFields() {
-  const d=draft(),metal=METALS[d.metal],karat=metal?.karat;
-  const rate=d.price!==null?metalMoney(d.price,d.currency):d.purity?'Price pending':'—';
-  return `<div class="fields-grid">${metalSelect('metal','Metal',metal?.label||'Choose metal',metalIcon(d.metal))}${metalSelect('purity','Purity',d.purity||(karat?'Choose karat':metal?'Choose grade':'Not selected'),'',!metal?'Choose a metal first.':karat?'Measured in karats.':'Fineness in parts per thousand.',!metal)}</div>
-    ${field('name','Name',metal?'e.g. '+metal.example:'e.g. Family gold')}
-    <div class="fields-grid">${field('quantity','Weight (grams)','e.g. 10.5',{number:true,hint:'Total weight in grams.'})}
-      <div class="field metal-price"><span id="metal-price-label">Price per gram</span><output class="rate" aria-labelledby="metal-price-label" aria-describedby="metal-price-hint"${d.price===null?' data-pending':''}>${rate}</output><small class="hint" id="metal-price-hint">${d.price!==null?`Example rate in ${d.currency}, not live.`:d.purity?'Refresh when back online.':'Shown after choosing purity.'}</small></div>
-    </div>`;
+  const d=draft(),item=PRECIOUS_ITEMS[d.metal],metal=METALS[d.metal],karat=metal?.karat;
+  const itemSelect=metalSelect('metal','Precious item',item?.label||'Choose an item',metalIcon(d.metal));
+  if(!item)return itemSelect;
+  return `${metal?`<div class="fields-grid">${itemSelect}${metalSelect('purity','Purity',d.purity||(karat?'Choose karat':'Choose grade'),'',karat?'Measured in karats.':'Fineness in parts per thousand.')}</div>`:itemSelect}
+    ${field('name','Name','e.g. '+item.example)}
+    ${valuationModeControl()}
+    <div class="fields-grid"${d.useTotalValue&&state.valuationControl==='selector'?' hidden':''}>${field('quantity','Weight (grams)','e.g. 10.5',{number:true,disabled:d.useTotalValue,hint:d.useTotalValue?'Not used with a total value.':'Total weight in grams.'})}
+      ${field('pricePerGram','Price per gram','e.g. 9026.50',{number:true,disabled:d.useTotalValue,hint:metalRateHint()})}
+    </div>
+    ${d.useTotalValue?`<div id="total-value-field">${field('amount','Total value','0.00',{number:true,hint:`Your total estimate or appraisal in ${d.currency}. Decimals allowed.`})}</div>`:metal?`<button class="inline-button" type="button" data-action="metal-rate"${!d.purity||state.connection!=='online'?' disabled':''}>${icon('refresh')}Use example rate</button>`:''}`;
 }
 function detailFields({canvas=false}={}) {
   const type=currentType(),flat=state.kind==='liability'||type.mode==='flat';
@@ -836,56 +915,63 @@ function detailFields({canvas=false}={}) {
   if(market()) html+=marketFields();
   return html;
 }
-const saveHint = invalid => invalid?'Complete the required fields with valid values.':!isPriced()?'Ready to save without a price; refresh when available.':'All required details are ready.';
-function footer(primary,action,{back=false,estimate=false}={}) {
+const saveHint = invalid => state.busy?'Getting an example quote…':invalid?'Complete the required fields with valid values.':!isPriced()?'Ready to save without a price; refresh when available.':'All required details are ready.';
+function footer(primary,action,{back=false}={}) {
   const gated=action==='save'||action==='review',invalid=gated&&Object.keys(draftErrors()).length>0;
-  return `<footer class="app-footer">${estimate?footerEstimate():''}<div class="footer-actions">${back?`<button class="secondary" data-action="previous-step" aria-label="Previous step">${icon('back')}</button>`:''}<button class="primary" data-action="${action}"${state.busy||invalid?' disabled':''}${gated?' aria-describedby="save-help"':''}>${state.busy?'Working...':action==='save'&&draft().id!==null?'Save changes':primary}${!state.busy&&action!=='save'?icon('next'):''}</button></div>${gated?`<p class="save-hint" id="save-help">${saveHint(invalid)}</p>`:''}</footer>`;
+  return `<footer class="app-footer">${gated?footerEstimate():''}<div class="footer-actions">${back?`<button class="secondary" data-action="previous-step" aria-label="Previous step">${icon('back')}</button>`:''}<button class="primary" data-action="${action}"${state.busy||invalid?' disabled':''}${gated?' aria-describedby="save-help"':''}>${action==='save'&&draft().id!==null?'Save changes':primary}${action!=='save'?icon('next'):''}</button></div>${gated?`<p class="save-hint" id="save-help">${saveHint(invalid)}</p>`:''}</footer>`;
 }
 function canvas() {
-  return `${appHeader()}<div class="app-scroll"><div class="page">${kindTabs()}<p class="app-eyebrow">To ${escapeHTML(state.portfolio)}</p><h1 class="page-title">${draft().id===null?'Add':'Edit'} ${state.kind}</h1><p class="app-copy">${state.kind==='asset'?'A little more of your picture, in one place.':'Keep what you owe in perspective.'}</p>${offlineBanner()}${detailFields({canvas:true})}</div></div>${footer('Save '+state.kind,'save',{estimate:state.kind==='asset'})}`;
+  return `${appHeader()}<div class="app-scroll"><div class="page">${kindTabs()}<p class="app-eyebrow">To ${escapeHTML(state.portfolio)}</p><h1 class="page-title" tabindex="-1">${draft().id===null?'Add':'Edit'} ${state.kind}</h1><p class="app-copy">${state.kind==='asset'?'A little more of your picture, in one place.':'Keep what you owe in perspective.'}</p>${offlineBanner()}${detailFields({canvas:true})}</div></div>${footer('Save '+state.kind,'save')}`;
 }
 function typeCards() {
-  return `<div class="type-grid">${types().map(type=>`<button class="type-option" data-action="type" data-value="${type.id}" aria-pressed="${draft().type===type.id}"${type.mode==='metal'?' id="guide-metals" aria-haspopup="dialog"':''}>${icon(type.icon)}<strong>${type.label}</strong><small>${type.hint}</small></button>`).join('')}</div>`;
+  return `<div class="type-grid">${types().map(type=>`<button class="type-option" data-action="type" data-value="${type.id}" aria-pressed="${draft().type===type.id}">${icon(type.icon)}<strong>${type.label}</strong><small>${type.hint}</small></button>`).join('')}</div>`;
 }
 function guide() {
   const choosing=state.phase==='type';
-  return `${appHeader()}<div class="app-scroll"><div class="page">${kindTabs()}<div class="progress" aria-label="Step ${choosing?1:2} of 3"><span class="done"></span><span class="${choosing?'':'done'}"></span><span></span></div><p class="step-label">0${choosing?1:2} / 03 &nbsp; ${choosing?'The kind of holding':'The details'}</p><h1 class="page-title">${choosing?(state.kind==='asset'?'What do you own?':'What do you owe?'):(market()?'Make it yours.':'Give it some detail.')}</h1><p class="app-copy">${choosing?'Choose a category. We will only ask for what matters.':`${currentType().label} / ${escapeHTML(state.portfolio)}. You can review before saving.`}</p>
-    ${choosing?typeCards():offlineBanner()+detailFields()}</div></div>${choosing?footer('Continue with '+(metals()&&draft().metal?METALS[draft().metal].label:currentType().label),'next-type'):footer('Review holding','review',{back:true,estimate:state.kind==='asset'})}`;
+  return `${appHeader()}<div class="app-scroll"><div class="page">${kindTabs()}<div class="progress" aria-label="Step ${choosing?1:2} of 3"><span class="done"></span><span class="${choosing?'':'done'}"></span><span></span></div><p class="step-label">0${choosing?1:2} / 03 &nbsp; ${choosing?'The kind of holding':'The details'}</p><h1 class="page-title" tabindex="-1">${choosing?(state.kind==='asset'?'What do you own?':'What do you owe?'):(market()?'Make it yours.':'Give it some detail.')}</h1><p class="app-copy">${choosing?'Choose a category. We will only ask for what matters.':`${currentType().label} / ${escapeHTML(state.portfolio)}. You can review before saving.`}</p>
+    ${choosing?typeCards():offlineBanner()+detailFields()}</div></div>${choosing?footer('Continue with '+currentType().label,'next-type'):footer('Review holding','review',{back:true})}`;
 }
 function review() {
   const d=draft(),type=currentType();
   const rows=[['Portfolio',state.portfolio],['Category',type.label],['Name',market()?(d.customName.trim()||d.quoteName||quoteSymbol()):d.name],['Currency',d.currency]];
   if(market()) rows.push(['Ticker',quoteSymbol()],['Quantity',d.quantity],['Price',d.price===null?'Not available':money(d.price,d.currency)]);
   if(usesExchange()) rows.push(['Exchange',EXCHANGES.find(exchange=>exchange.id===d.exchange).label]);
-  if(metals()) rows.push(['Metal',METALS[d.metal].label],['Purity',d.purity],['Weight',d.quantity+' g'],['Example price per gram',d.price===null?'Pending':metalMoney(d.price,d.currency)]);
+  if(metals()) rows.push(...preciousDetails(d));
   if(d.notes.trim()) rows.push(['Notes',d.notes.trim()]);
-  return `${appHeader()}<div class="app-scroll"><div class="page">${state.variant==='B'?'<div class="progress" aria-label="Step 3 of 3"><span class="done"></span><span class="done"></span><span class="done"></span></div><p class="step-label">03 / 03 &nbsp; A final look</p>':'<p class="app-eyebrow">One last look</p>'}<h1 class="page-title">Does that look right?</h1><p class="app-copy">Your ${state.kind}, ready for ${escapeHTML(state.portfolio)}.</p>${valueSummary()}<dl class="review-panel">${rows.map(([label,value])=>`<div class="review-line"><dt>${label}</dt><dd>${escapeHTML(value)}</dd></div>`).join('')}</dl>${!isPriced()?`<div class="banner warning">${icon('info')}<span><strong>Save now. Price later.</strong>${market()?'We will try an example quote when saving. If unavailable, this holding stays unpriced and is excluded from net worth until refreshed.':'This holding stays unpriced and is excluded from net worth until refreshed.'}</span></div>`:''}<button class="inline-button" data-action="edit">${icon('back')}Edit details</button></div></div>${footer('Save '+state.kind,'save',{back:true})}`;
+  return `${appHeader()}<div class="app-scroll"><div class="page">${state.variant==='B'?'<div class="progress" aria-label="Step 3 of 3"><span class="done"></span><span class="done"></span><span class="done"></span></div><p class="step-label">03 / 03 &nbsp; A final look</p>':'<p class="app-eyebrow">One last look</p>'}<h1 class="page-title" tabindex="-1">Does that look right?</h1><p class="app-copy">Your ${state.kind}, ready for ${escapeHTML(state.portfolio)}.</p><dl class="review-panel">${rows.map(([label,value])=>`<div class="review-line"><dt>${label}</dt><dd>${escapeHTML(value)}</dd></div>`).join('')}</dl>${!isPriced()?`<div class="banner warning">${icon('info')}<span><strong>Save now. Price later.</strong>This holding stays unpriced and is excluded from net worth until refreshed.</span></div>`:''}<button class="inline-button" data-action="edit">${icon('back')}Edit details</button></div></div>${footer('Save '+state.kind,'save',{back:true})}`;
 }
-function success() {
-  const holding=state.saved,t=totals();
-  return `${appHeader(false)}<div class="app-scroll"><div class="page"><div class="success-mark">${icon('check')}</div><h1 class="success-heading">${holding.kind==='asset'?'Asset':'Liability'} ${state.undoOriginal?'updated':'added'}.</h1><p class="app-copy center">${escapeHTML(holding.name)} is now in ${escapeHTML(holding.portfolio)}.</p><div class="success-value">${holding.priced?(state.hidden?'******':money(holding.amount,holding.currency)):'Price pending'}</div>${!holding.priced?`<div class="banner warning">${icon('offline')}<span><strong>Saved without a latest price.</strong>${escapeHTML(holding.notice)} This asset is excluded from totals until it has a price.</span></div>`:''}
-    <dl class="review-panel"><div class="review-line"><dt>Portfolio</dt><dd>${escapeHTML(holding.portfolio)}</dd></div><div class="review-line"><dt>Net worth${t.unpriced?' (priced holdings)':''}</dt><dd>${state.hidden?'******':money(t.net)}</dd></div></dl><div class="banner">${icon('info')}<span><strong>Only saved in this demo.</strong>No real app data was changed. Refreshing this page clears your example holdings and drafts.</span></div>
-    <button class="secondary" data-action="add-another">${icon('plus')}Add another holding</button><button class="quiet" style="width:100%" data-action="undo">Undo this ${state.undoOriginal?'update':'addition'}</button></div></div>${footer('Back to portfolio','home',{preview:false})}`;
+function showSavedSummary() {
+  const holding=state.saved,change=state.undoOriginal?'updated':'added';
+  const status=`${holding.kind==='asset'?'Asset':'Liability'} ${change}.`;
+  showDialog(holdingGlanceContent(holding,{
+    status,
+    notice:holding.priced?'':`<div class="banner warning">${icon('info')}<span><strong>Saved without a latest price.</strong>It doesn't count toward net worth until it has a price.</span></div>`,
+    actions:`<button class="primary" data-action="close-modal">Back to portfolio</button><button class="secondary" data-action="add-another">${icon('plus')}Add another holding</button><button class="quiet" data-action="undo">Undo this ${change==='updated'?'update':'addition'}</button>`
+  }),'.home-bottom [data-action="add"]');
 }
 function render(keepScroll=false) {
+  const app=document.getElementById('app'),view=state.screen==='editor'?`editor:${state.variant}:${state.phase}:${state.kind}`:state.screen;
+  app.classList.toggle('enter-view',app.dataset.view!==view);
+  app.dataset.view=view;
   const scroll=document.querySelector('.app-scroll');
   const previousScroll=scroll?scroll.scrollTop:0;
   const active=document.activeElement,restoreFocus=(keepScroll||state.busy)&&active.matches('#app input,#app textarea')&&active.id;
   const selection=restoreFocus?[active.selectionStart,active.selectionEnd]:null;
   const isRoot=['home','statistics','portfolios'].includes(state.screen);
-  const content=state.screen==='home'?home():state.screen==='statistics'?statisticsPreview():state.screen==='portfolios'?portfoliosPreview():state.screen==='success'?success():state.screen==='review'?review():state.variant==='A'?canvas():guide();
-  document.getElementById('app').innerHTML=isRoot?`<div class="root-page">${content}</div>${mainNavigation()}`:content;
+  const content=state.screen==='home'?home():state.screen==='statistics'?statisticsPreview():state.screen==='portfolios'?portfoliosPreview():state.screen==='review'?review():state.variant==='A'?canvas():guide();
+  app.innerHTML=isRoot?`<div class="root-page">${content}</div>${mainNavigation()}`:content;
   document.querySelectorAll('.concept').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.value===state.variant)));
   document.getElementById('variant-label').textContent=state.variant+' / '+CONCEPTS[state.variant].name;
   document.getElementById('hypothesis').textContent=CONCEPTS[state.variant].question;
   document.getElementById('tradeoff').textContent=CONCEPTS[state.variant].tradeoff;
   document.getElementById('connectivity').value=state.connection;
   document.getElementById('add-layout').value=state.addLayout;
+  document.getElementById('valuation-control').value=state.valuationControl;
   const nextScroll=document.querySelector('.app-scroll');
   homeActionObserver.disconnect();
   const homeAction=document.querySelector('.home-bottom .add-trigger,.home-bottom>.primary');
   if(homeAction){setAddOpen(state.addOpen);homeActionObserver.observe(homeAction);}
-  if(restoreFocus){const replacement=document.getElementById(active.id);if(replacement){replacement.focus({preventScroll:true});replacement.setSelectionRange(...selection);}}
+  if(restoreFocus){const replacement=document.getElementById(active.id);if(replacement){replacement.focus({preventScroll:true});if(selection[0]!==null)replacement.setSelectionRange(...selection);}}
   if((state.busy||keepScroll)&&nextScroll) nextScroll.scrollTop=previousScroll;
   exposeState();
 }
@@ -896,9 +982,29 @@ function updateLive() {
   document.querySelectorAll('#app [data-action="save"],#app [data-action="review"]').forEach(button=>{button.disabled=state.busy||invalid;});
   const saveHelp=document.getElementById('save-help');
   if(saveHelp)saveHelp.textContent=saveHint(invalid);
+  const rateHint=document.getElementById('hint-pricePerGram');
+  if(rateHint)rateHint.textContent=metalRateHint();
   const fetchButton=document.querySelector('#app [data-action="fetch"]');
-  if(fetchButton)fetchButton.disabled=state.busy||!draft().symbol.trim();
+  if(fetchButton){
+    fetchButton.disabled=!draft().symbol.trim();
+    fetchButton.setAttribute('aria-disabled',String(state.busy));
+    document.getElementById('fetch-label').textContent=state.busy?'Getting example price...':draft().quoteAttempted?'Refresh example price':'Fetch example price';
+  }
   exposeState();
+}
+function editorFields() {
+  return [...document.querySelectorAll('#app [data-entry-step],#app input[data-field]')].filter(field=>!field.disabled&&!field.closest('details:not([open])'));
+}
+const firstInvalidField = (fields,errors) => fields.find(field=>errors[field.id.replace(/^field-/,'')]);
+function focusNextField(from) {
+  const fields=editorFields(),index=fields.findIndex(field=>field.id===from);
+  const next=fields[index+1]||firstInvalidField(fields,draftErrors())||document.querySelector('.app-footer .primary:not(:disabled)');
+  next?.focus();
+}
+function focusEditorStart() {
+  const first=firstInvalidField(editorFields(),draftErrors());
+  if(first)first.focus();
+  else document.querySelector('#app .page-title')?.focus({preventScroll:true});
 }
 function invalidateQuote() {
   state.request++;state.busy=false;draft().price=null;draft().quoteName='';draft().quoteMessage='';draft().quoteAttempted=false;
@@ -907,16 +1013,17 @@ function changeType(value) {
   if(value===draft().type)return;
   const previousMarket=market(),previousMetals=metals();invalidateQuote();draft().type=value;
   if(previousMarket||market()){draft().symbol='';draft().customName='';draft().customNameOpen=false;}
-  if(previousMetals||metals()){draft().metal='';draft().purity='';draft().quantity='';}
+  if(previousMetals||metals()){draft().metal='';draft().purity='';draft().quantity='';draft().amount='';draft().pricePerGram='';draft().customPrice=false;draft().useTotalValue=false;}
   state.errors={};draft().dirty=true;
 }
-function begin(kind,type,clear=false) {
+function begin(kind,type,clear=false,material='') {
   state.request++;state.busy=false;state.addOpen=false;state.kind=kind;
   if(clear) state.drafts[kind]=initialDraft(kind);
   if(type) draft().type=type;
+  if(material){draft().metal=material;draft().useTotalValue=manualPrecious();}
   state.screen='editor';state.phase=state.variant==='B'?'type':'details';
   state.errors={};state.message='';render();if(innerWidth<=700)document.getElementById('device').scrollIntoView({block:'center'});announce('Add '+kind+'. '+CONCEPTS[state.variant].name);
-  if(type==='metals')metalPicker();
+  focusEditorStart();
 }
 function switchVariant(value) {
   if(!Object.hasOwn(CONCEPTS,value)) return;
@@ -926,11 +1033,18 @@ function switchVariant(value) {
   render();if(innerWidth<=700)document.getElementById('device').scrollIntoView({block:'center'});console.info('Okanzo prototype variant',value,JSON.parse(document.getElementById('state-output').textContent));
   announce(value+'. '+CONCEPTS[value].name+'. Your draft is preserved.');
 }
-function showDialog(content) {
-  setAddOpen(false);pickerConfig=null;
-  const modal=document.getElementById('modal');modal.innerHTML=content;if(!modal.open) modal.showModal();modal.querySelector('input:not(:disabled),button:not(:disabled)')?.focus();
+function showDialog(content,returnFocus=null,onDismiss=null) {
+  setAddOpen(false);pickerConfig=null;dialogReturnFocus=returnFocus;dialogOnDismiss=onDismiss;
+  const modal=document.getElementById('modal');modal.innerHTML=content;if(!modal.open) modal.showModal();modal.scrollTop=0;modal.querySelector('input:not(:disabled),button:not(:disabled)')?.focus({preventScroll:true});
 }
-function closeDialog(){const focusTarget=pickerConfig?.closeFocus;pickerConfig=null;document.getElementById('modal').close();if(focusTarget)document.getElementById(focusTarget)?.focus({preventScroll:true});}
+function closeDialog(){
+  const focusTarget=pickerConfig?.closeFocus?document.getElementById(pickerConfig.closeFocus):dialogReturnFocus?document.querySelector(dialogReturnFocus):null;
+  pickerConfig=null;dialogReturnFocus=null;dialogOnDismiss=null;document.getElementById('modal').close();focusTarget?.focus({preventScroll:true});
+}
+function dismissDialog(){
+  pendingAction=null;
+  if(dialogOnDismiss)dialogOnDismiss();else closeDialog();
+}
 function renderPickerItems(query='') {
   if(!pickerConfig)return '';
   if(pickerConfig.render)return pickerConfig.render(query);
@@ -960,11 +1074,11 @@ function typePicker() {
 }
 function metalPicker() {
   selectionPicker({
-    eyebrow:'Metals',
-    title:'Choose a metal',
-    closeFocus:state.variant==='B'&&state.phase==='type'?'guide-metals':'field-metal',
-    placeholder:'e.g. Gold or Silver',
-    items:Object.entries(METALS).map(([id,metal])=>({action:'pick-metal',value:id,selected:draft().metal===id,leading:metalIcon(id),title:metal.label,search:metal.label}))
+    eyebrow:currentType().label,
+    title:'Choose a precious item',
+    closeFocus:'field-metal',
+    placeholder:'e.g. Gold, Diamond, Jewellery',
+    items:Object.entries(PRECIOUS_ITEMS).map(([id,item])=>({action:'pick-metal',value:id,selected:draft().metal===id,leading:metalIcon(id),title:item.label,subtitle:item.hint||'Weight × purity-adjusted rate',search:`${item.label} ${item.hint||''}`}))
   });
 }
 function purityPicker() {
@@ -1048,8 +1162,7 @@ function useManualTicker(raw) {
   pickerConfig=null;
   closeDialog();
   render(true);
-  if(!draft().quantity.trim())document.getElementById('field-quantity')?.focus({preventScroll:true});
-  else document.getElementById('field-symbol')?.focus({preventScroll:true});
+  focusNextField('field-symbol');
   void fetchQuote();
   announce('Using ticker '+quoteSymbol()+'.');
 }
@@ -1063,20 +1176,29 @@ function setExchange(value) {
 function setCurrency(value) {
   if(value===draft().currency)return;
   const previous=draft().currency;draft().currency=value;
-  if(metals()&&draft().price!==null) draft().price=exampleMetalPrice(draft());
+  if(metals()&&draft().price!==null){
+    if(!draft().customPrice&&!manualPrecious())loadMetalRate();
+    else {draft().price=Math.round(draft().price*FX[previous]/FX[value]*100)/100;draft().pricePerGram=String(draft().price);}
+  }
   else if(draft().price!==null){draft().price=draft().price*FX[previous]/FX[value];draft().quoteMessage='Example price converted with fixed demo FX rates.';}
   state.request++;state.busy=false;draft().dirty=true;
+}
+function holdingGlanceContent(holding,{status,notice='',caption='',actions}) {
+  const type=(holding.kind==='asset'?ASSETS:LIABILITIES).find(type=>type.id===holding.type);
+  const value=number=>state.hidden?'******':money(number,holding.currency,2);
+  const rows=[['Portfolio',holding.portfolio],['Type',type.label],['Currency',holding.currency]];
+  if(holding.symbol)rows.push(['Ticker',holding.symbol],['Quantity',state.hidden?'******':holding.quantity],['Last example price',holding.priced?value(holding.price):'Pending']);
+  if(type.mode==='metal')rows.push(...preciousDetails(holding,state.hidden));
+  if(holding.notes)rows.push(['Notes',holding.notes]);
+  return `<button class="icon-button detail-close" data-action="close-modal" aria-label="Close">${icon('close')}</button><p class="app-eyebrow">${status||`${holding.kind} / ${type.label}`}</p><h2 class="detail-title" id="dialog-title">${escapeHTML(holding.name)}</h2><p class="success-value">${holding.priced?value(holding.amount):'Price pending'}</p><dl class="review-panel">${rows.map(([label,text])=>`<div class="review-line"><dt>${label}</dt><dd>${escapeHTML(text)}</dd></div>`).join('')}</dl>${notice}${caption}<div class="glance-actions">${actions}</div>`;
 }
 function holdingDetails(id) {
   const holding=state.holdings.find(holding=>holding.id===id);
   if(!holding)return;
-  const type=(holding.kind==='asset'?ASSETS:LIABILITIES).find(type=>type.id===holding.type);
-  const value=number=>state.hidden?'******':money(number,holding.currency);
-  const rows=[['Portfolio',holding.portfolio],['Type',type.label],['Currency',holding.currency]];
-  if(holding.symbol)rows.push(['Ticker',holding.symbol],['Quantity',state.hidden?'******':holding.quantity],['Last example price',holding.priced?value(holding.price):'Pending']);
-  if(type.mode==='metal')rows.push(['Metal',METALS[holding.metal].label],['Purity',holding.purity],['Weight',state.hidden?'******':holding.quantity+' g'],['Example price per gram',!holding.priced?'Pending':state.hidden?'******':metalMoney(holding.price,holding.currency)]);
-  if(holding.notes)rows.push(['Notes',holding.notes]);
-  showDialog(`<button class="icon-button detail-close" data-action="close-modal" aria-label="Close holding details">${icon('close')}</button><p class="app-eyebrow">${holding.kind} / ${type.label}</p><h2 class="detail-title" id="dialog-title">${escapeHTML(holding.name)}</h2><p class="success-value">${holding.priced?value(holding.amount):'Price pending'}</p><dl class="review-panel">${rows.map(([label,text])=>`<div class="review-line"><dt>${label}</dt><dd>${escapeHTML(text)}</dd></div>`).join('')}</dl><p class="detail-caption">Stored example values, not live financial data.</p><button class="primary" data-action="edit-holding" data-id="${id}">Edit ${holding.kind}</button><button class="secondary danger-button" data-action="request-delete" data-id="${id}">Delete ${holding.kind}</button>`);
+  showDialog(holdingGlanceContent(holding,{
+    caption:'<p class="detail-caption">Stored example values, not live financial data.</p>',
+    actions:`<button class="primary" data-action="edit-holding" data-id="${id}">Edit ${holding.kind}</button><button class="secondary danger-button" data-action="request-delete" data-id="${id}">Delete ${holding.kind}</button>`
+  }));
   exposeState();
 }
 function editHolding(id) {
@@ -1086,9 +1208,10 @@ function editHolding(id) {
   const type=(holding.kind==='asset'?ASSETS:LIABILITIES).find(type=>type.id===holding.type),linked=type.mode==='market';
   state.drafts[state.kind]={...initialDraft(state.kind),id:holding.id,type:holding.type,currency:holding.currency,
     exchange:holding.exchange||'us',name:linked?'':holding.name,customName:holding.customName||'',customNameOpen:Boolean((holding.customName||'').trim()),symbol:holding.symbol||'',
-    quantity:holding.quantity||'',metal:holding.metal||'',purity:holding.purity||'',amount:String(holding.amount),notes:holding.notes||'',
-    price:holding.price??null,quoteName:holding.quoteName||'',quoteAttempted:linked,dirty:false};
-  state.errors={};state.screen='editor';state.phase='details';render();announce('Editing '+holding.name);
+    quantity:holding.quantity||'',metal:holding.metal||'',purity:holding.purity||'',amount:holding.totalValueInput??String(holding.amount),notes:holding.notes||'',
+    price:holding.price??null,pricePerGram:holding.pricePerGram??(holding.price===null||holding.price===undefined?'':String(holding.price)),customPrice:holding.customPrice||false,
+    useTotalValue:holding.useTotalValue??(type.mode==='metal'&&!Object.hasOwn(METALS,holding.metal)),quoteName:holding.quoteName||'',quoteAttempted:linked,dirty:false};
+  state.errors={};state.screen='editor';state.phase='details';render();focusEditorStart();announce('Editing '+holding.name);
 }
 function requestDelete(id) {
   const holding=state.holdings.find(holding=>holding.id===id);
@@ -1130,27 +1253,29 @@ function confirmDiscard(action) {
 function goHome(){state.request++;state.busy=false;state.addOpen=false;state.screen='home';state.homeTab=state.kind;render();}
 function draftErrors() {
   const d=draft(),errors={};
-  if(!market()&&!d.name.trim()) errors.name=`Give this ${state.kind} a name.`;
+  if(metals()&&!d.metal)errors.metal='Choose a precious item.';
+  if(!market()&&(!metals()||d.metal)&&!d.name.trim()) errors.name=`Give this ${state.kind} a name.`;
   if(!market()&&nameCharacters(d.name).length>NAME_LIMIT)errors.name=`Use no more than ${NAME_LIMIT} characters.`;
   if(market()&&nameCharacters(d.customName).length>NAME_LIMIT)errors.customName=`Use no more than ${NAME_LIMIT} characters.`;
-  if(state.kind==='liability'||currentType().mode==='flat'){
+  if(usesAmount()){
     if(!numeric(d.amount)) errors.amount='Enter a valid amount, zero or greater.';
-  }else{
-    if(!positiveDecimal(d.quantity)) errors.quantity=metals()?'Enter a valid positive weight (decimals allowed, e.g. 10.5).':'Enter a valid positive quantity (decimals allowed, e.g. 0.25 or 10).';
+    else if(metals()&&!positiveDecimal(d.amount))errors.amount='Enter a total value greater than zero.';
+  }else if(market()||d.metal){
+    if(!positiveDecimal(d.quantity)) errors.quantity=market()?'Enter a valid positive quantity (decimals allowed, e.g. 0.25 or 10).':'Enter a valid positive weight (decimals allowed, e.g. 10.5).';
     if(market()&&!validTickerSymbol(quoteSymbol(),d.type)) errors.symbol='Choose a listing or enter a valid ticker symbol (letters/digits, e.g. AAPL, 7203.T, BTC-USD).';
     if(metals()){
-      if(!d.metal)errors.metal='Choose a metal.';
-      else if(!d.purity)errors.purity='Choose a purity.';
+      if(METALS[d.metal]&&!d.purity)errors.purity='Choose a purity.';
+      if(!positiveDecimal(d.pricePerGram))errors.pricePerGram='Enter a valid positive price per gram (decimals allowed).';
     }
   }
-  if(!Number.isFinite(amount())||!Number.isFinite(amount()*FX[d.currency])) errors[state.kind==='liability'||currentType().mode==='flat'?'amount':'quantity']='This value is too large for the demo.';
+  if(!Number.isFinite(amount())||!Number.isFinite(amount()*FX[d.currency])) errors[usesAmount()?'amount':'quantity']='This value is too large for the demo.';
   return errors;
 }
 function validate() {
   const errors=draftErrors();
   state.errors=errors;
   if(Object.keys(errors).length){
-    render();const first=document.getElementById('field-'+Object.keys(errors)[0]);first?.focus();first?.scrollIntoView({block:'center'});announce('Check the highlighted fields.');return false;
+    render(true);focusEditorStart();announce('Check the highlighted fields.');return false;
   }
   return true;
 }
@@ -1161,7 +1286,7 @@ function pickQuote(symbol) {
   invalidateQuote();draft().type=quote.type;draft().symbol=quote.symbol;draft().quoteName=quote.name;
   if(quote.exchange) draft().exchange=quote.exchange;
   draft().currency=quote.currency;draft().dirty=true;state.errors={};state.phase='details';draft().searching=false;render(true);
-  if(!draft().quantity.trim())document.getElementById('field-quantity')?.focus({preventScroll:true});
+  focusNextField('field-symbol');
   void fetchQuote();
   announce(quote.name+' selected. Fetching its example price automatically.');
 }
@@ -1172,10 +1297,11 @@ function quoteFailure() {
   return state.connection==='offline'?'No internet connection. Refresh when online.':state.connection==='error'?'The example quote service could not respond. Try again later.':'No quote in this demo catalogue. Try AAPL, RELIANCE.BO, VOO, or BTC-USD, or save without a price.';
 }
 async function fetchQuote({saving=false}={}) {
+  if(state.busy)return false;
   if(!draft().symbol.trim()){
     state.errors.symbol='Enter a ticker symbol first.';render();document.getElementById('field-symbol')?.focus();return false;
   }
-  const request=++state.request;state.quoteFetches++;state.busy=true;render();
+  const request=++state.request;state.quoteFetches++;state.busy=true;updateLive();
   await new Promise(resolve=>setTimeout(resolve,550));
   if(request!==state.request) return false;
   const quote=state.connection==='online'?availableQuote():null;
@@ -1183,7 +1309,12 @@ async function fetchQuote({saving=false}={}) {
   if(quote){draft().price=quote.price*FX[quote.currency]/FX[draft().currency];draft().quoteName=quote.name;draft().quoteMessage='Example price loaded. Not live market data.';}
   else draft().quoteMessage=quoteFailure();
   state.busy=false;
-  if(!saving){render(true);announce(draft().quoteMessage);}
+  if(!saving){
+    document.getElementById('field-symbol').innerHTML=marketPickerContent();
+    document.getElementById('quote-feedback').innerHTML=quoteFeedback();
+    if(draft().quoteName)document.getElementById('field-customName').placeholder=draft().quoteName;
+    updateLive();announce(draft().quoteMessage);
+  }
   return true;
 }
 async function save() {
@@ -1196,18 +1327,18 @@ async function save() {
     name:market()?(d.customName.trim()||d.quoteName||quoteSymbol()):d.name.trim(),
     amount:amount(),currency:d.currency,priced,symbol:market()?quoteSymbol():null,notes:original?(original.notes||''):d.notes.trim(),
     quantity:d.quantity,price:d.price,quoteName:d.quoteName,customName:d.customName,exchange:d.exchange,isNew:original?!!original.isNew:true,
-    ...(metals()?{metal:d.metal,purity:d.purity}:{}),notice:priced?'':metals()?'The example metal price is unavailable.':d.quoteMessage,
+    ...(metals()?{metal:d.metal,purity:d.purity,pricePerGram:d.pricePerGram,customPrice:d.customPrice,useTotalValue:d.useTotalValue,totalValueInput:d.amount}:{}),
     order:original&&original.type===d.type?original.order:Math.max(-1,...groupHoldings(state.kind,d.type).map(holding=>holding.order))+1
   };
   state.undoOriginal=original?{...original}:null;
   if(original)state.holdings[state.holdings.indexOf(original)]=holding;else state.holdings.push(holding);
   state.saved=holding;state.drafts[state.kind]=initialDraft(state.kind);
-  state.screen='success';state.busy=false;state.errors={};render();announce('Your '+holding.kind+' was saved in the demo only.');
+  state.errors={};goHome();showSavedSummary();
 }
 function previousStep() {
   if(state.busy){state.request++;state.busy=false;render(true);}
-  if(state.screen==='review'){state.screen='editor';state.phase='details';render();return;}
-  if(state.variant==='B'&&state.phase==='details'){state.phase='type';render();return;}
+  if(state.screen==='review'){state.screen='editor';state.phase='details';render();focusEditorStart();return;}
+  if(state.variant==='B'&&state.phase==='details'){state.phase='type';render();focusEditorStart();return;}
   confirmDiscard(()=>{state.drafts[state.kind]=initialDraft(state.kind);goHome();});
 }
 async function refreshHoldings() {
@@ -1231,25 +1362,33 @@ function preferences() {
 }
 function fillSample() {
   state.request++;state.busy=false;
-  if(state.screen==='home'||state.screen==='success') begin('asset','cash',true);
+  if(state.screen!=='editor'&&state.screen!=='review') begin('asset','cash',true);
   const d=draft();
   if(market()){
     const quote=QUOTES.find(quote=>quote.type===d.type);d.symbol=quote.symbol;d.quoteName=quote.name;d.currency=quote.currency;if(quote.exchange)d.exchange=quote.exchange;d.quantity=d.type==='crypto'?'0.25':'10';d.price=null;d.quoteAttempted=false;d.searching=false;
   }else if(metals()){
     d.metal=d.metal||'gold';
-    const metal=METALS[d.metal];
-    d.purity=d.purity||(metal.karat?'22K':metal.purities[0][0]);
-    d.name=metal.example;d.quantity='10.5';d.price=state.connection==='online'?exampleMetalPrice(d):null;
+    d.name=PRECIOUS_ITEMS[d.metal].example;
+    if(d.useTotalValue)d.amount=d.metal==='diamond'?'68000':'42000';
+    else if(METALS[d.metal]){
+      const metal=METALS[d.metal];
+      d.purity=d.purity||(metal.karat?'22K':metal.purities[0][0]);d.quantity='10.5';loadMetalRate();
+    }else{d.quantity='10.5';d.pricePerGram='4000';d.price=4000;d.customPrice=true;}
   }else{d.name=state.kind==='liability'?'Education loan':'Emergency fund';d.amount=state.kind==='liability'?'25000':'10000';}
   d.dirty=true;state.phase='details';state.screen='editor';state.errors={};render();if(market())void fetchQuote();
 }
 document.addEventListener('click',event=>{
+  if(event.target.id==='modal'){
+    const {left,right,top,bottom}=event.target.getBoundingClientRect();
+    if(event.clientX<left||event.clientX>right||event.clientY<top||event.clientY>bottom){dismissDialog();return;}
+  }
   if(state.addOpen&&!event.target.closest('.add-launcher'))setAddOpen(false,document.getElementById('add-options').contains(document.activeElement));
   const button=event.target.closest('[data-action]');if(!button||button.disabled) return;
   const action=button.dataset.action,value=button.dataset.value;
   if(action==='variant')switchVariant(value);
   else if(action==='previous-variant'||action==='next-variant'){const keys=Object.keys(CONCEPTS),index=keys.indexOf(state.variant);switchVariant(keys[(index+(action==='next-variant'?1:keys.length-1))%keys.length]);}
-  else if(action==='add'||action==='add-another')addHolding();
+  else if(action==='add')addHolding();
+  else if(action==='add-another'){addHolding(true);}
   else if(action==='close-add')setAddOpen(false,true);
   else if(action==='navigate'){state.request++;state.busy=false;state.addOpen=false;state.screen=value;render();}
   else if(action==='choose-portfolio'){state.portfolio=value;goHome();}
@@ -1276,46 +1415,46 @@ document.addEventListener('click',event=>{
   else if(action==='market-picker'||action==='change-market')marketPicker();
   else if(action==='pick-type'){
     pickerConfig=null;changeType(value);closeDialog();render(true);
-    if(metals())metalPicker();
-    else document.getElementById('holding-type')?.focus({preventScroll:true});
+    if(metals())metalPicker();else focusEditorStart();
   }
   else if(action==='pick-metal'){
-    const d=draft(),focusTarget=pickerConfig.closeFocus;
-    if(d.metal!==value){d.metal=value;d.purity='';d.price=null;d.dirty=true;delete state.errors.metal;delete state.errors.purity;}
+    const d=draft();
+    if(d.metal!==value){
+      d.metal=value;d.purity='';d.price=null;d.pricePerGram='';d.customPrice=false;d.useTotalValue=manualPrecious();d.quantity='';d.amount='';d.dirty=true;
+      for(const field of ['metal','purity','quantity','pricePerGram','amount'])delete state.errors[field];
+    }
     pickerConfig=null;closeDialog();render(true);
-    document.getElementById(focusTarget==='guide-metals'?focusTarget:'field-purity')?.focus();
-    announce(METALS[value].label+' selected. Choose its purity.');
+    if(METALS[d.metal])purityPicker();else focusNextField('field-metal');
+    announce(PRECIOUS_ITEMS[value].label+(manualPrecious()?' selected. Enter a total value or your own weight and rate.':' selected. Choose its purity.'));
   }
   else if(action==='pick-purity'){
-    const d=draft();d.purity=value;d.price=state.connection==='online'?exampleMetalPrice(d):null;d.dirty=true;delete state.errors.purity;
-    pickerConfig=null;closeDialog();render(true);document.getElementById('field-purity')?.focus();
+    const d=draft();d.purity=value;if(!d.customPrice)loadMetalRate();d.dirty=true;delete state.errors.purity;
+    pickerConfig=null;closeDialog();render(true);focusNextField('field-purity');
     announce(d.price===null?'Example price pending.':`Example price: ${metalMoney(d.price,d.currency)} per gram.`);
   }
-  else if(action==='pick-currency'){pickerConfig=null;setCurrency(value);closeDialog();render(true);document.getElementById('currency')?.focus({preventScroll:true});}
-  else if(action==='pick-exchange'){pickerConfig=null;setExchange(value);closeDialog();render(true);document.getElementById('exchange')?.focus({preventScroll:true});}
+  else if(action==='pick-currency'){pickerConfig=null;setCurrency(value);closeDialog();render(true);focusEditorStart();}
+  else if(action==='pick-exchange'){pickerConfig=null;setExchange(value);closeDialog();render(true);focusEditorStart();}
   else if(action==='use-manual-ticker')useManualTicker(value);
-  else if(action==='scenario'){const next=()=>begin(button.dataset.kind,button.dataset.type,true);if(state.screen==='editor'||state.screen==='review')confirmDiscard(next);else next();}
-  else if(action==='kind'){if(value!==state.kind&&draft().id===null){state.request++;state.busy=false;state.kind=value;state.phase=state.variant==='B'?'type':'details';state.errors={};render();}}
-  else if(action==='type'){changeType(value);render();if(metals())metalPicker();}
-  else if(action==='next-type'){
-    if(metals()&&!draft().metal)metalPicker();
-    else {state.phase='details';render();}
-  }
+  else if(action==='scenario'){const next=()=>begin(button.dataset.kind,button.dataset.type,true,button.dataset.material);if(state.screen==='editor'||state.screen==='review')confirmDiscard(next);else next();}
+  else if(action==='kind'){if(value!==state.kind&&draft().id===null){state.request++;state.busy=false;state.kind=value;state.phase=state.variant==='B'?'type':'details';state.errors={};render();focusEditorStart();}}
+  else if(action==='type'){changeType(value);render(true);document.querySelector('.type-option[aria-pressed="true"]')?.focus({preventScroll:true});}
+  else if(action==='next-type'){state.phase='details';render();focusEditorStart();}
   else if(action==='quote')pickQuote(button.dataset.symbol);
   else if(action==='fetch')void fetchQuote();
-  else if(action==='review'){if(validate()){state.screen='review';render();announce('Review your holding before saving.');}}
+  else if(action==='metal-rate'){loadMetalRate();delete state.errors.pricePerGram;draft().dirty=true;render(true);document.getElementById('field-pricePerGram')?.focus();announce('Example rate loaded. You can edit it.');}
+  else if(action==='review'){if(validate()){state.screen='review';render();focusEditorStart();}}
   else if(action==='save')void save();
   else if(action==='back'||action==='previous-step')previousStep();
-  else if(action==='edit'){state.request++;state.busy=false;state.screen='editor';state.phase='details';render();}
+  else if(action==='edit'){state.request++;state.busy=false;state.screen='editor';state.phase='details';render();focusEditorStart();}
   else if(action==='cancel')confirmDiscard(()=>{state.drafts[state.kind]=initialDraft(state.kind);goHome();});
-  else if(action==='keep-editing'||action==='close-modal'){pendingAction=null;closeDialog();}
+  else if(action==='keep-editing'||action==='close-modal')dismissDialog();
   else if(action==='discard'){const next=pendingAction;pendingAction=null;closeDialog();state.drafts[state.kind]=initialDraft(state.kind);next?.();}
   else if(action==='home')goHome();
   else if(action==='home-tab'){state.homeTab=value;render();}
   else if(action==='hide'){state.hidden=!state.hidden;render();}
   else if(action==='settings')settingsPreview();
   else if(action==='refresh-holdings')void refreshHoldings();
-  else if(action==='undo'){if(state.undoOriginal){const index=state.holdings.findIndex(holding=>holding.id===state.saved.id);state.holdings[index]=state.undoOriginal;}else state.holdings=state.holdings.filter(holding=>holding.id!==state.saved.id);state.undoOriginal=null;goHome();announce('The demo change was undone.');}
+  else if(action==='undo'){if(state.undoOriginal){const index=state.holdings.findIndex(holding=>holding.id===state.saved.id);state.holdings[index]=state.undoOriginal;}else state.holdings=state.holdings.filter(holding=>holding.id!==state.saved.id);state.undoOriginal=null;render(true);closeDialog();announce('The demo change was undone.');}
   else if(action==='preferences')preferences();
   else if(action==='save-preferences'){
     state.preferred=Array.from(document.querySelectorAll('input[name="preferred"]:checked'),input=>input.value);
@@ -1343,8 +1482,8 @@ document.addEventListener('input',event=>{
     document.getElementById('picker-list').innerHTML=renderPickerItems(input.value);
     return;
   }
-  const key=input.dataset.field;if(!key||input.tagName==='SELECT')return;
-  if(key==='quantity'||key==='amount'){
+  const key=input.dataset.field;if(!key||input.tagName==='SELECT'||input.disabled)return;
+  if(key==='quantity'||(key==='amount'&&!metals())){
     const caret=input.selectionStart,cleaned=sanitizePositiveDecimal(input.value);
     if(cleaned!==input.value){
       const removed=input.value.length-cleaned.length;
@@ -1363,6 +1502,10 @@ document.addEventListener('input',event=>{
   }
   const previousExchange=key==='symbol'?activeExchange()?.id:null;
   draft()[key]=input.value;draft().dirty=true;
+  if(key==='pricePerGram'){
+    draft().customPrice=true;
+    draft().price=numeric(input.value)?Number(input.value):null;
+  }
   if(key==='symbol'){
     const wasBusy=state.busy,caret=input.selectionStart;
     draft().searching=false;
@@ -1384,6 +1527,7 @@ document.addEventListener('input',event=>{
     document.getElementById('field-customName')?.setAttribute('placeholder','e.g. Long-term shares');
     document.querySelectorAll('.selected-quote').forEach(node=>node.remove());
   }
+  if(key==='pricePerGram'||(key==='amount'&&metals()))showFieldError(input);
   if(state.errors[key]){
     const message=draftErrors()[key];
     if(!message){delete state.errors[key];input.removeAttribute('aria-invalid');input.closest('.prominent-wrap')?.removeAttribute('data-invalid');}
@@ -1402,23 +1546,36 @@ document.addEventListener('toggle',event=>{
   }
   exposeState();
 },true);
-document.addEventListener('focusout',event=>{
-  const input=event.target,key=input.dataset.field;
-  if(!key||!input.matches('input'))return;
+function showFieldError(input) {
+  const key=input.dataset.field;
   const message=draftErrors()[key],error=document.getElementById('error-'+key);
   if(message){state.errors[key]=message;input.setAttribute('aria-invalid','true');input.closest('.prominent-wrap')?.setAttribute('data-invalid','true');if(error)error.textContent=message;}
   exposeState();
+  return message;
+}
+document.addEventListener('focusout',event=>{
+  if(state.screen==='editor'&&event.target.matches('#app input[data-field]'))showFieldError(event.target);
 });
 document.addEventListener('change',event=>{
   const input=event.target;
-  if(input.id==='add-layout'){
+  if(input.id==='use-total-value'||input.name==='valuation-method'){
+    const total=input.id==='use-total-value'?input.checked:input.value==='total';
+    draft().useTotalValue=total;draft().dirty=true;
+    for(const key of ['amount','quantity','pricePerGram','purity'])delete state.errors[key];
+    render(true);document.getElementById(input.name==='valuation-method'?input.id:total?'field-amount':'use-total-value')?.focus({preventScroll:true});
+    announce(total?`Total value enabled. Weight and price per gram are ${state.valuationControl==='selector'?'hidden':'disabled'}.`:'Weight and price per gram enabled. Your previous entries are preserved.');
+  }else if(input.id==='valuation-control'){
+    state.valuationControl=input.value;
+    const url=new URL(location.href);url.searchParams.set('valuation',state.valuationControl);history.replaceState(null,'',url);render(true);
+    announce(input.value==='checkbox'?'Original checkbox restored. Your draft is preserved.':'Two-option selector enabled. Your draft is preserved.');
+  }else if(input.id==='add-layout'){
     state.addOpen=false;state.addLayout=input.value;
     const url=new URL(location.href);url.searchParams.set('add',state.addLayout);history.replaceState(null,'',url);render(true);
   }else if(input.id==='portfolio'){state.portfolio=input.value;state.addOpen=false;render();}
   else if(input.id==='connectivity'){
     state.connection=input.value;state.request++;state.busy=false;
     if(market())draft().quoteMessage=state.connection==='online'?'':quoteFailure();
-    if(metals()&&state.connection==='online'&&draft().price===null)draft().price=exampleMetalPrice(draft());
+    if(metals()&&!manualPrecious()&&!draft().customPrice&&state.connection==='online'&&draft().price===null)loadMetalRate();
     render();announce(state.connection==='online'?'Simulated connection restored.':'Offline and error states are simulated. No network request was made.');
   }else if(input.id==='appearance'){document.body.dataset.theme=input.value;}
   else if(input.id==='text-size'){document.getElementById('device').dataset.large=String(input.value==='large');syncHomeClearance();}
@@ -1426,9 +1583,9 @@ document.addEventListener('change',event=>{
   else if(input.dataset.previewSetting==='text-size'){document.getElementById('device').dataset.large=String(input.value==='large');document.getElementById('text-size').value=input.value;syncHomeClearance();}
 });
 document.addEventListener('keydown',event=>{
-  if(event.defaultPrevented||event.altKey||event.ctrlKey||event.metaKey)return;
+  if(event.defaultPrevented||event.isComposing||event.altKey||event.ctrlKey||event.metaKey)return;
   if(document.getElementById('modal').open){
-    if(event.key==='Escape'){event.preventDefault();pendingAction=null;closeDialog();return;}
+    if(event.key==='Escape'){event.preventDefault();dismissDialog();return;}
     if(event.key==='Enter'&&event.target.matches('[data-picker-search]')){
       const first=document.querySelector('#picker-list .picker-option');
       if(first){event.preventDefault();first.click();}
@@ -1447,6 +1604,13 @@ document.addEventListener('keydown',event=>{
   }else if(event.target.id==='add-trigger'&&(event.key==='ArrowDown'||event.key==='ArrowUp')){
     event.preventDefault();setAddOpen(true);document.querySelector('#add-options button').focus({preventScroll:true});return;
   }
+  if(event.key==='Enter'&&event.target.matches('#app input[data-field]')){
+    event.preventDefault();
+    const error=showFieldError(event.target);
+    if(error)announce(error);
+    else focusNextField(event.target.id);
+    return;
+  }
   if(event.target.closest('input,textarea,select,[contenteditable="true"],[role="textbox"]'))return;
   if(event.key==='ArrowLeft'||event.key==='ArrowRight'){
     event.preventDefault();const keys=Object.keys(CONCEPTS),index=keys.indexOf(state.variant);switchVariant(keys[(index+(event.key==='ArrowRight'?1:keys.length-1))%keys.length]);
@@ -1455,15 +1619,16 @@ document.addEventListener('keydown',event=>{
 document.addEventListener('focusin',event=>{if(state.addOpen&&!event.target.closest('.add-launcher'))setAddOpen(false);});
 document.addEventListener('wheel',event=>{if(state.addOpen&&event.target.closest('#app'))event.preventDefault();},{passive:false});
 window.addEventListener('popstate',()=>{
-  const params=new URLSearchParams(location.search);state.variant=Object.hasOwn(CONCEPTS,params.get('variant'))?params.get('variant'):'A';state.addLayout=params.get('add')==='dialog'?'dialog':'expand';state.addOpen=false;
+  const params=new URLSearchParams(location.search);state.variant=Object.hasOwn(CONCEPTS,params.get('variant'))?params.get('variant'):'A';state.addLayout=params.get('add')==='dialog'?'dialog':'expand';state.valuationControl=params.get('valuation')==='checkbox'?'checkbox':'selector';state.addOpen=false;
   if(state.screen==='editor')state.phase=state.variant==='B'?'type':'details';
   render();
 });
 function fitPhonePreview() {
   const device=document.getElementById('device'),width=parseFloat(getComputedStyle(document.querySelector('.device-wrap')).width);
-  device.style.setProperty('--preview-scale',String(width/device.offsetWidth));
+  const scale=String(width/device.offsetWidth);
+  if(device.style.getPropertyValue('--preview-scale')!==scale)device.style.setProperty('--preview-scale',scale);
 }
-const previewObserver=new ResizeObserver(fitPhonePreview);
+const previewObserver=new ResizeObserver(()=>requestAnimationFrame(fitPhonePreview));
 previewObserver.observe(document.querySelector('.device-wrap'));
 fitPhonePreview();
 render();

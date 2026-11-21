@@ -86,7 +86,7 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 - **Simple net worth** (`Settings → Currency → Simple net worth`) shortens only the home headline from 1,000 upward (`$7K`, `$165.3M`, or `₹1.65 Cr` in INR lakh/crore) while keeping detailed totals exact
 - **Multiple portfolios** (*Personal*, *Family*, *Business*), a **Default** that powers the home screen, and instant switching
 - **Custom ordering**: long-press and drag to reorder categories; arrange holdings inside a category using its **Sort or arrange** menu
-- **Canvas holding entry**: the compact bottom-right **Add holding** button expands in place over a blurred background, without moving the portfolio list. Choose **An asset** or **A liability**. The amount-led editors use outlined fields, consistent searchable type/currency/exchange dialogs, a net-worth impact preview, and a pinned Save button. Name or Custom name identifies each holding, without a separate Notes field; previously stored notes remain preserved. Switch between asset and liability tabs without losing either draft; Back protects unsaved changes, and Save is available once the required fields are valid.
+- **Canvas holding entry**: the compact bottom-right **Add holding** button expands in place over a blurred background, without moving the portfolio list. Choose **An asset** or **A liability**. The amount-led editors use outlined fields and searchable type/currency/exchange dialogs. A live **Estimated value** for assets or **Outstanding amount** for liabilities appears above the pinned Save button. Name or Custom name identifies each holding, without a separate Notes field; previously stored notes remain preserved. Switch between asset and liability tabs without losing either draft; Back protects unsaved changes, and Save is available once the required fields are valid.
 - **Holding details and order**: tap a holding for its details, Edit, or confirmed Delete. The category's **Sort or arrange** menu offers name/value sorting and **Arrange manually**; saved custom order is preserved when trying other sorts. Sort choices are session-scoped and separate for each portfolio/category.
 - **Readable names and quotes**: newly entered names and custom names are limited to 60 user-perceived characters, with a counter. Search suggestions appear directly below the search field. Tap a selected market holding to search again; selecting a stock, fund or crypto listing fetches its price once automatically, without waiting for a quantity. An unavailable quote does not block saving offline.
 
@@ -96,7 +96,7 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 ### Global markets & multi-currency
 
 - Track **stocks, mutual funds/ETFs, crypto, precious metals, cash, bank deposits, real estate, vehicles, bonds**, plus **loans, mortgages, credit cards, pending payments and taxes**
-- **Metals**: choose Gold, Silver, Platinum or Palladium, select its purity, and enter the weight in grams. Okanzo estimates the value using a purity-adjusted futures quote, not a local retail or resale price. Save without a quote if offline, then refresh it from Home. Existing Gold holdings retain their manual price under Metals.
+- **Valuables**: track metals, diamonds, other gemstones, jewellery and other precious items. Choosing Gold, Silver, Platinum or Palladium opens its purity picker directly. **By weight** multiplies grams by an editable price per gram: available purity-adjusted futures quotes prefill it, or enter a custom rate. **Total value** hides weight/rate and uses your estimate or appraisal; gems and jewellery start in this mode. Both modes retain their inputs when switching and editing. Rates and totals accept finite positive decimals; offline, enter a custom rate or total. Automatic refresh never overwrites custom rates or total valuations. Existing Gold holdings keep their legacy manual price under Valuables.
 - **International exchanges**: NYSE/Nasdaq, Shanghai, Tokyo, Hong Kong, BSE (India), and Euronext Paris, Amsterdam, Brussels, Lisbon, Dublin, Oslo and Milan — or **Other / full Yahoo ticker** (`000001.SZ`, `VOD.L`, `RELIANCE.NS`, `SHOP.TO`). Quotes in minor units (such as British pence) convert automatically; [Yahoo Finance coverage](https://help.yahoo.com/kb/finance/complete-list-markets-exchanges-yahoo-finance-sln2310.html) applies
 - **Preferred exchanges** shortlist starting with **US (NYSE / Nasdaq)**, customisable via **Select preferred exchanges...** (including an empty shortlist) while preserving existing holdings
 - **Company, coin or ticker search**: type at least two characters in the stock, fund or crypto search field for Yahoo Finance suggestions showing the name and ticker, plus the exchange for stocks/funds. Crypto suggestions show full trading pairs such as `BTC-USD`; explicit non-USD pairs are preserved. Select a listing to fill its symbol and use its fetched name automatically, or enter an optional **Custom name** to override it in lists. Manual ticker entry still works offline or when search is unavailable
@@ -332,9 +332,24 @@ directly in a browser; no server or dependencies are needed. It preserves the
 approved **Canvas** design and the alternative **Guide** flow for future
 iterations, including Home, Add holding, and both asset/liability editors.
 Use `?variant=A&add=expand` for Canvas or `?variant=B` for Guide.
-Try **Add holding → Asset → Metals** to choose a metal and purity and
-estimate its value from a sample per-gram price. Expand **Metals** on Home
-to see each holding's metal icon.
+Try **Add holding → An asset**, then choose **Valuables** as the type.
+The type picker opens the precious-item picker directly after choosing Valuables.
+Choosing a supported metal then opens its purity picker before returning to the form.
+Supported metals use weight, purity, and an editable sample per-gram rate.
+Enter your own positive decimal rate, or select **Total value**
+to hide weight and rate and enter a total estimate or appraisal.
+The **Valuation method** selector offers **By weight** and **Total value**.
+To revert to the previous checkbox, choose **Valuation control → Checkbox
+(original)** in the prototype side panel, or use `?valuation=checkbox`.
+The original checkbox keeps weight and rate visible but disabled.
+Switching controls or methods preserves all draft values.
+Diamonds, other gemstones, jewellery, and other precious items start in
+total-value mode but also support a custom weight and rate. Custom rates and
+totals must be finite decimal numbers; saving requires a positive valuation.
+Choosing a market-linked type focuses its search picker
+before Quantity. Use **Enter / Next** to move through the fields and **Save**
+to see a centered confirmation matching the holding glance on Home. The live
+estimate (or outstanding liability amount) stays above the editor action.
 
 This is a design reference, not app code: all data is fictional, quotes and FX
 are simulated, and changes stay in memory. It is not bundled into the Flutter
@@ -378,6 +393,16 @@ flutter build apk --debug --target integration_test/canvas_holding_test.dart --b
 flutter drive -d <emulator-id> --use-application-binary build/app/outputs/flutter-apk/app-debug.apk \
   --driver test_driver/canvas_holding.dart --keep-app-running
 ```
+
+The Valuables regression uses the same driver and `CANVAS_EVIDENCE`, with
+`--target integration_test/valuables_test.dart` when building. It verifies the
+in-place database upgrade, chained item/purity pickers, decimal custom rates,
+total-value switching, save/edit round-trips, and manual-price refresh protection.
+It removes only its temporary verification portfolio and restores preferences,
+checking that existing asset rows are unchanged.
+Fault probes use a separate encrypted database and a temporary trigger scoped
+to a test holding. They cover interrupted migration recovery, quote updates
+while the rate field is focused, and translated Undo-failure feedback.
 
 Use an equal-or-higher build number than any installed debug build, preflight
 with `adb install -r`, and restore a normal `lib/main.dart` build after testing,

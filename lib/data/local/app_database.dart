@@ -25,7 +25,7 @@ class AppDatabase {
   /// The pre-rebrand database filename. Kept only so upgrading users' data can
   /// be migrated to [databaseName] (see AppContainer); it is not a brand name.
   static const String legacyDatabaseName = 'mywealth.db';
-  static const int schemaVersion = 4;
+  static const int schemaVersion = 5;
 
   final Database db;
 
@@ -95,6 +95,17 @@ class AppDatabase {
       await db.transaction((Transaction txn) async {
         await txn.execute('ALTER TABLE assets ADD COLUMN metal TEXT');
         await txn.execute('ALTER TABLE assets ADD COLUMN purity TEXT');
+        await txn.execute('PRAGMA user_version = 4');
+      });
+    }
+    if (currentVersion < 5) {
+      await db.transaction((Transaction txn) async {
+        await txn.execute(
+          'ALTER TABLE assets ADD COLUMN customPrice INTEGER NOT NULL DEFAULT 0',
+        );
+        await txn.execute(
+          'ALTER TABLE assets ADD COLUMN useTotalValue INTEGER NOT NULL DEFAULT 0',
+        );
         await txn.execute('PRAGMA user_version = $schemaVersion');
       });
     }
@@ -141,6 +152,8 @@ class AppDatabase {
         'pricePerUnit REAL, '
         'metal TEXT, '
         'purity TEXT, '
+        'customPrice INTEGER NOT NULL DEFAULT 0, '
+        'useTotalValue INTEGER NOT NULL DEFAULT 0, '
         'symbol TEXT, '
         'lastPrice REAL, '
         'lastPriceTimestamp INTEGER, '

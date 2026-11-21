@@ -319,9 +319,9 @@ void main({bool deviceViewport = false, CaptureScreenshot? capture}) {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Stock'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Metals'));
+      await tester.ensureVisible(find.text('Valuables'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Metals'));
+      await tester.tap(find.text('Valuables'));
       await tester.pumpAndSettle();
 
       expect(find.text('1.25 × BTC-USD'), findsOneWidget);
@@ -544,6 +544,16 @@ void main({bool deviceViewport = false, CaptureScreenshot? capture}) {
       await tester.pumpAndSettle();
       expect(find.byType(LiabilityEditScreen), findsOneWidget);
       expect(find.text('4375'), findsOneWidget);
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(
+                const ValueKey<String>('liability-outstanding-amount'),
+              ),
+            )
+            .data,
+        CurrencyUtil.format(4375, 'USD'),
+      );
       await tester.pageBack();
       await tester.pumpAndSettle();
 
