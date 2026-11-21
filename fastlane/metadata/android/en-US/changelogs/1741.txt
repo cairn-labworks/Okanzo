@@ -1,0 +1,6 @@
+Okanzo 1.6.1
+- Canvas holding entry with pinned Save and centered confirmations.
+- Valuables: metals, gems and jewellery with editable per-gram rates or total appraisal.
+- Global App Lock and authentication for protected exports.
+- Hide Balances across Home, Statistics and Portfolios.
+- Safer upgrades, retained inputs and localized Undo errors.

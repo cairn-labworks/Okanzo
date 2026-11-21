@@ -13,15 +13,18 @@ import 'package:okanzo/di/app_container.dart';
 import 'package:okanzo/domain/model/app_language.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/precious_metal.dart';
+import 'package:okanzo/domain/model/release_notes.dart';
 import 'package:okanzo/domain/model/theme_mode.dart';
 import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/components/form_components.dart';
 import 'package:okanzo/ui/components/holding_editor_chrome.dart';
+import 'package:okanzo/ui/components/whats_new_dialog.dart';
 import 'package:okanzo/ui/asset/asset_edit_screen.dart';
 import 'package:okanzo/ui/asset/asset_edit_view_model.dart';
 import 'package:okanzo/util/result.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_sqlcipher/sqflite.dart' as sql;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _DelayedMetalQuote extends Fake implements AssetRepository {
   _DelayedMetalQuote(this.delegate);
@@ -231,6 +234,21 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+
+      if (find.byType(WhatsNewDialog).evaluate().isNotEmpty) {
+        expect(
+          tester
+              .widget<WhatsNewDialog>(find.byType(WhatsNewDialog))
+              .releaseNotes
+              .version,
+          AppReleaseNotes.currentVersion,
+        );
+        for (final highlight in AppReleaseNotes.current.highlights) {
+          expect(find.text(highlight.title), findsOneWidget);
+        }
+        await capture(tester, 'release-highlights');
+        await tap(tester, find.text('Got it'));
+      }
 
       final delayed = _DelayedMetalQuote(container.assetRepository);
       final quotedEditor = AssetEditViewModel(
@@ -459,6 +477,13 @@ void main() {
         await container.settingsRepository.setSelectedPortfolioId(
           originalSettings.selectedPortfolioId,
         );
+        if (originalSettings.lastSeenVersion case final String version) {
+          await container.settingsRepository.setLastSeenVersion(version);
+        } else {
+          await (await SharedPreferences.getInstance()).remove(
+            'last_seen_version',
+          );
+        }
         await container.database.close();
         container.settingsRepository.dispose();
       });

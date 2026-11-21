@@ -42,9 +42,34 @@ class ReleaseNotes {
 class AppReleaseNotes {
   const AppReleaseNotes._();
 
-  static const String currentVersion = '1.6.0';
+  static const String currentVersion = '1.6.1';
 
   static const List<ReleaseNotes> all = <ReleaseNotes>[
+    ReleaseNotes(
+      version: '1.6.1',
+      highlights: <ReleaseHighlight>[
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.theme,
+          title: 'Canvas holding entry',
+          description: 'Add holdings with searchable pickers, live values and centered save confirmations.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.assets,
+          title: 'Valuables your way',
+          description: 'Track metals, gems and jewellery using quoted or custom per-gram rates, or a total appraisal.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.security,
+          title: 'App lock on every screen',
+          description: 'Protect screens and dialogs, and authenticate before changing app lock or exporting protected data.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.portfolio,
+          title: 'Hide balances everywhere',
+          description: 'Hide amounts and quantities across Home, Statistics and Portfolios while keeping editors usable.',
+        ),
+      ],
+    ),
     ReleaseNotes(
       version: '1.6.0',
       highlights: <ReleaseHighlight>[
