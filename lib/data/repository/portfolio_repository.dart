@@ -1,6 +1,8 @@
 import '../local/dao/portfolio_dao.dart';
 import '../local/entity/portfolio_entity.dart';
 
+export '../local/dao/portfolio_dao.dart' show DuplicatePortfolioNameException;
+
 class PortfolioRepository {
   const PortfolioRepository(this._dao);
 
@@ -32,16 +34,8 @@ class PortfolioRepository {
     return id;
   }
 
-  Future<void> rename(int id, String name) async {
-    final PortfolioEntity? current = await _dao.getById(id);
-    if (current == null) return;
-    await _dao.update(
-      current.copyWith(
-        name: name.trim(),
-        updatedAt: DateTime.now().millisecondsSinceEpoch,
-      ),
-    );
-  }
+  Future<void> rename(int id, String name) =>
+      _dao.rename(id, name.trim(), DateTime.now().millisecondsSinceEpoch);
 
   Future<void> setDefault(int id) => _dao.setDefault(id);
 

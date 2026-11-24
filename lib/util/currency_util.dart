@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:intl/intl.dart';
 
 import 'currency_data.dart';
+import 'decimal_format.dart';
 
 /// Helpers for currency codes and money formatting. All formatting happens
 /// on-device; nothing is transmitted.
@@ -79,16 +80,65 @@ class CurrencyUtil {
   );
 
   /// Formats [amount] as a currency string with grouping and no decimals,
-  /// e.g. "US $1,234" or "₹1,234". Decimals are intentionally truncated.
+  /// e.g. "US $1,234" or "₹1,234". Fractional amounts round to whole units.
   static String format(double amount, String code) {
     final String currencySymbol = symbol(code);
+    if (_isLargeWhole(amount)) {
+      final String sign = amount < 0 ? '-' : '';
+      return '$sign$currencySymbol${_formatLargeWhole(amount, _integerFormat)}';
+    }
     final int rounded = _javaRound(amount);
     final String sign = rounded < 0 ? '-' : '';
     return '$sign$currencySymbol${_integerFormat.format(rounded.abs())}';
   }
 
-  static String formatRate(double amount, String code) =>
-      '${symbol(code)}${NumberFormat.decimalPatternDigits(decimalDigits: 2).format(amount)}';
+  static String formatRate(double amount, String code) {
+    final NumberFormat format = NumberFormat.decimalPatternDigits(
+      decimalDigits: 2,
+    );
+    if (_isLargeWhole(amount)) {
+      final String prefix = amount < 0
+          ? format.negativePrefix
+          : format.positivePrefix;
+      final String suffix = amount < 0
+          ? format.negativeSuffix
+          : format.positiveSuffix;
+      return '${symbol(code)}$prefix${_formatLargeWhole(amount, format)}'
+          '${format.symbols.DECIMAL_SEP}${format.symbols.ZERO_DIGIT * 2}$suffix';
+    }
+    return '${symbol(code)}${format.format(amount)}';
+  }
+
+  // Finite doubles at this magnitude have no fractional part. Format their
+  // round-trippable digits without a rounding step or a fixed-width int.
+  static bool _isLargeWhole(double amount) =>
+      amount.isFinite && amount.abs() >= 4503599627370496.0; // 2^52
+
+  static String _formatLargeWhole(double amount, NumberFormat format) {
+    final String digits = formatPlainDecimal(amount.abs());
+    final List<String> groups = format.symbols.DECIMAL_PATTERN
+        .split(';')
+        .first
+        .split('.')
+        .first
+        .split(',');
+    final int primary = groups.length > 1 ? groups.last.length : 0;
+    final int secondary = groups.length > 2
+        ? groups[groups.length - 2].length
+        : primary;
+    final StringBuffer text = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      final int remaining = digits.length - i;
+      if (i > 0 &&
+          primary > 0 &&
+          remaining >= primary &&
+          (remaining - primary) % secondary == 0) {
+        text.write(format.symbols.GROUP_SEP);
+      }
+      text.writeCharCode(format.localeZero + digits.codeUnitAt(i) - 0x30);
+    }
+    return text.toString();
+  }
 
   /// A masked placeholder for a hidden balance, e.g. "₹ ••••" or "US $ ••••".
   static String masked(String code) => '${symbol(code)} $maskShort';
@@ -181,16 +231,15 @@ class CurrencyUtil {
     return buffer.toString();
   }
 
-  /// Matches `java.lang.Math.round`: floor(value + 0.5), which differs from
-  /// Dart's [double.round] for negative halves (-0.5 rounds to 0, not -1).
+  /// Rounds half ties toward positive infinity without adding 0.5 first,
+  /// which can change the value before flooring.
   static int _javaRound(double value) {
     if (value.isNaN) return 0;
     if (value.isInfinite) {
       return value.isNegative ? -9007199254740992 : 9007199254740992;
     }
-    final double shifted = value + 0.5;
-    if (shifted.abs() > 9007199254740992.0) return shifted.toInt();
-    return shifted.floor();
+    final int floor = value.floor();
+    return value - floor >= 0.5 ? floor + 1 : floor;
   }
 
   static NumberFormat get _integerFormat {

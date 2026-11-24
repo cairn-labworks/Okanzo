@@ -8,6 +8,7 @@ import '../../domain/model/liability_type.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../asset/asset_edit_view_model.dart' show AssetEditEventType;
+import '../asset/asset_form_state.dart' show numberPrecisionError;
 import '../components/form_components.dart';
 import '../components/holding_editor_guard.dart';
 import '../components/holding_editor_chrome.dart';
@@ -188,6 +189,9 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                     asset: false,
                     amount: double.tryParse(form.amount) ?? 0,
                     currency: form.currency,
+                    amountError: form.hasPrecisionLoss
+                        ? numberPrecisionError
+                        : null,
                     saving: form.isSaving,
                     ready: form.validate() == null,
                     onSave: () {

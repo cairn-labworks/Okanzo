@@ -169,6 +169,7 @@ class HoldingEditorFooter extends StatelessWidget {
     required this.onSave,
     this.priced = true,
     this.calculation,
+    this.amountError,
     super.key,
   });
 
@@ -180,13 +181,14 @@ class HoldingEditorFooter extends StatelessWidget {
   final bool saving;
   final bool priced;
   final String? calculation;
+  final String? amountError;
   final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
-    final String? effectiveCalculation = asset
+    final String? effectiveCalculation = asset && amountError == null
         ? (calculation ??
               (priced
                   ? 'Current value in {currency}'
@@ -263,7 +265,9 @@ class HoldingEditorFooter extends StatelessWidget {
                               maxWidth: constraints.maxWidth * 0.52,
                             ),
                             child: Text(
-                              CurrencyUtil.format(amount, currency),
+                              amountError == null
+                                  ? CurrencyUtil.format(amount, currency)
+                                  : '—',
                               key: ValueKey<String>(
                                 asset
                                     ? 'asset-estimated-value'
@@ -307,16 +311,19 @@ class HoldingEditorFooter extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                (!ready
-                        ? 'Complete the required fields with valid values.'
-                        : !priced
-                        ? 'Ready to save without a price; refresh when available.'
-                        : 'All required details are ready.')
+                (amountError ??
+                        (!ready
+                            ? 'Complete the required fields with valid values.'
+                            : !priced
+                            ? 'Ready to save without a price; refresh when available.'
+                            : 'All required details are ready.'))
                     .tr(context),
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontSize: 10,
                   height: 1.5,
-                  color: colors.onSurfaceVariant,
+                  color: amountError == null
+                      ? colors.onSurfaceVariant
+                      : colors.error,
                 ),
               ),
             ],

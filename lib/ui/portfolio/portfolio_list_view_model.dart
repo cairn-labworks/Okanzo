@@ -159,15 +159,12 @@ class PortfolioListViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void create(String name) {
-    if (name.trim().isEmpty) return;
-    unawaited(_portfolioRepository.create(name));
+  Future<void> create(String name) async {
+    await _portfolioRepository.create(name);
   }
 
-  void rename(int id, String name) {
-    if (name.trim().isEmpty) return;
-    unawaited(_portfolioRepository.rename(id, name));
-  }
+  Future<void> rename(int id, String name) =>
+      _portfolioRepository.rename(id, name);
 
   Future<void> setDefault(int id) async {
     await _portfolioRepository.setDefault(id);

@@ -107,6 +107,7 @@ IconData stockExchangeIcon(StockExchange exchange) {
     case StockExchange.tokyo:
     case StockExchange.hongKong:
     case StockExchange.bse:
+    case StockExchange.nse:
       return Icons.account_balance;
     case StockExchange.other:
       return Icons.public;

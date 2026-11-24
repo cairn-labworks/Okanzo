@@ -276,6 +276,12 @@ void main() {
   });
 
   group('percentageLabel', () {
+    test('distinguishes tiny positive shares from zero', () {
+      expect(percentageLabel(0, 1000000), '0.0%');
+      expect(percentageLabel(1, 1000000), '<0.001%');
+      expect(percentageLabel(10, 1000000), '0.001%');
+      expect(percentageLabel(100, 1000000), '0.01%');
+    });
     test('uses whole numbers from ten percent up', () {
       expect(percentageLabel(50, 100), '50%');
       expect(percentageLabel(10, 100), '10%');

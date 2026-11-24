@@ -1,6 +1,7 @@
 import '../../data/local/entity/liability_entity.dart';
 import '../../domain/model/liability_type.dart';
-import '../asset/asset_form_state.dart' show formatInput;
+import '../asset/asset_form_state.dart'
+    show formatInput, losesInputPrecision, numberPrecisionError;
 
 /// Editable state of the liability form (pure data + validation).
 class LiabilityFormState {
@@ -30,11 +31,14 @@ class LiabilityFormState {
 
   bool get isEditing => id != 0;
 
+  bool get hasPrecisionLoss => losesInputPrecision(amount);
+
   /// Returns the first validation error, or null when the form can be saved.
   String? validate() {
     if (name.trim().isEmpty) return 'Give this liability a name';
     if (currency.trim().isEmpty) return 'Choose a currency';
-    if (double.tryParse(amount) == null) return 'Enter an amount';
+    if (hasPrecisionLoss) return numberPrecisionError;
+    if (double.tryParse(amount)?.isFinite != true) return 'Enter an amount';
     return null;
   }
 
