@@ -7,6 +7,7 @@ import '../../util/currency_util.dart';
 import '../components/donut_chart.dart';
 import '../components/ui_components.dart';
 import '../theme/colors.dart';
+import '../theme/motion.dart';
 import '../theme/theme.dart';
 import 'chart_format.dart';
 import 'statistics_view_model.dart';
@@ -458,10 +459,17 @@ class _LegendRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final FontWeight weight = highlighted ? FontWeight.w600 : FontWeight.normal;
+    final Color highlight = theme.colorScheme.onSurface;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(shapeSmall),
-      child: Padding(
+      child: AnimatedContainer(
+        duration: interactionDuration(context),
+        curve: interactionCurve,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(shapeSmall),
+          color: highlight.withValues(alpha: highlighted ? 0.10 : 0),
+        ),
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
