@@ -3,10 +3,17 @@
 const double kMinFullChartAmountScale = 0.75;
 
 /// Percentage label shown under the donut's center value: whole numbers at or
-/// above 10%, one decimal below that.
+/// above 10%, with extra precision for small but nonzero shares.
 String percentageLabel(double value, double total) {
   if (total <= 0.0) return '';
   final double pct = value / total * 100.0;
+  if (value > 0 && pct < 0.001) return '<0.001%';
+  if (pct > 0 && pct < 0.05) {
+    final String digits = pct
+        .toStringAsFixed(3)
+        .replaceFirst(RegExp(r'0+$'), '');
+    return '$digits%';
+  }
   return pct >= 10.0 ? '${pct.truncate()}%' : '${pct.toStringAsFixed(1)}%';
 }
 

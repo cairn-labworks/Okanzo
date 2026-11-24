@@ -11,6 +11,49 @@ import 'package:okanzo/ui/liability/liability_form_state.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('holding editors reject decimal inputs that would change on save', () {
+    const String sixteenNines = '9999999999999999';
+    const String exactLargeAmount = '9999999999999998';
+    const asset = AssetFormState(type: AssetType.cash, name: 'Cash');
+    const liability = LiabilityFormState(name: 'Loan');
+    expect(
+      asset.copyWith(manualValue: sixteenNines).validate(),
+      numberPrecisionError,
+    );
+    expect(
+      liability.copyWith(amount: sixteenNines).validate(),
+      numberPrecisionError,
+    );
+    expect(asset.copyWith(manualValue: exactLargeAmount).validate(), isNull);
+    expect(liability.copyWith(amount: '000.12500').validate(), isNull);
+  });
+
+  test('blocks whole inputs whose printed double hides storage rounding', () {
+    const asset = AssetFormState(type: AssetType.cash, name: 'Cash');
+    const liability = LiabilityFormState(name: 'Loan');
+    // The double prints as ...0100, but represents ...0128.
+    expect(
+      asset.copyWith(manualValue: '1000000000000000100').validate(),
+      numberPrecisionError,
+    );
+    expect(
+      liability.copyWith(amount: '1000000000000000100.00').validate(),
+      numberPrecisionError,
+    );
+    expect(
+      asset.copyWith(manualValue: '1000000000000000000').validate(),
+      isNull,
+    );
+  });
+
+  test('NSE qualifies bare symbols and recognizes existing Yahoo tickers', () {
+    expect(StockExchange.nse.qualify(' reliance '), 'RELIANCE.NS');
+    expect(StockExchange.nse.qualify('RELIANCE.NS'), 'RELIANCE.NS');
+    expect(StockExchange.fromSymbol('RELIANCE.NS'), StockExchange.nse);
+    expect(StockExchange.fromSymbol('RELIANCE.BO'), StockExchange.bse);
+    expect(StockExchange.nse.currency, 'INR');
+  });
+
   group('Valuables valuation', () {
     AssetEntity holding({bool total = false, String item = 'gold'}) =>
         AssetEntity.fromMap({
@@ -188,6 +231,7 @@ void main() {
             StockExchange.tokyo: ('.T', 'JPY'),
             StockExchange.hongKong: ('.HK', 'HKD'),
             StockExchange.bse: ('.BO', 'INR'),
+            StockExchange.nse: ('.NS', 'INR'),
             StockExchange.other: ('', null),
           };
 

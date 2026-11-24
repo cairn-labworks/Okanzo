@@ -17,6 +17,7 @@ void main() {
 
     test('appends the first free numeric suffix', () {
       expect(uniqueName('Main', <String>{'Main'}), 'Main (2)');
+      expect(uniqueName(' Main ', <String>{'main ', 'MAIN (2)'}), 'Main (3)');
       expect(uniqueName('Main', <String>{'Main', 'Main (2)'}), 'Main (3)');
       expect(
         uniqueName('Main', <String>{'Main', 'Main (2)', 'Main (4)'}),

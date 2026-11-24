@@ -315,6 +315,9 @@ class _AssetEditScreenState extends State<AssetEditScreen> {
                               form.metalRate != null
                         : !form.type.isMarketLinked || form.lastPrice != null,
                     calculation: _footerCalculation(context, form),
+                    amountError: form.hasPrecisionLoss
+                        ? numberPrecisionError
+                        : null,
                     saving: form.isSaving,
                     ready: !form.isFetchingPrice && form.validate() == null,
                     onSave: () {

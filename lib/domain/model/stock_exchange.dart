@@ -12,6 +12,7 @@ enum StockExchange {
   tokyo('Japan Exchange Group (Tokyo)', '.T', 'JPY', '7203'),
   hongKong('Hong Kong Stock Exchange', '.HK', 'HKD', '0700'),
   bse('BSE (India)', '.BO', 'INR', 'RELIANCE'),
+  nse('NSE (India)', '.NS', 'INR', 'RELIANCE'),
   other('Other / full Yahoo ticker', '', null, 'VOD.L');
 
   const StockExchange(
@@ -58,7 +59,7 @@ enum StockExchange {
     StockExchange.tokyo => fund ? ('TOPIX ETF', '1306') : ('Toyota', '7203'),
     StockExchange.hongKong =>
       fund ? ('Tracker Fund', '2800') : ('Tencent', '0700'),
-    StockExchange.bse =>
+    StockExchange.bse || StockExchange.nse =>
       fund ? ('Nifty 50 ETF', 'NIFTYBEES') : ('Reliance', 'RELIANCE'),
     StockExchange.other =>
       fund ? ('Vanguard FTSE', 'VWRL.L') : ('Vodafone', 'VOD.L'),

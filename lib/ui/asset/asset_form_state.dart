@@ -2,6 +2,7 @@ import '../../data/local/entity/asset_entity.dart';
 import '../../domain/model/asset_type.dart';
 import '../../domain/model/precious_metal.dart';
 import '../../domain/model/stock_exchange.dart';
+import '../../util/decimal_format.dart';
 
 /// Editable state of the asset form. Pure data + validation so it can be
 /// unit-tested without a widget tree.
@@ -120,12 +121,25 @@ class AssetFormState {
     }
   }
 
+  bool get hasPrecisionLoss => switch (type.valuationMode) {
+    ValuationMode.market => losesInputPrecision(quantity),
+    ValuationMode.quantity =>
+      losesInputPrecision(quantity) || losesInputPrecision(pricePerUnit),
+    ValuationMode.metal =>
+      useTotalValue
+          ? losesInputPrecision(manualValue)
+          : losesInputPrecision(quantity) ||
+                (customPrice && losesInputPrecision(pricePerUnit)),
+    ValuationMode.flat => losesInputPrecision(manualValue),
+  };
+
   /// Returns the first validation error, or null when the form can be saved.
   String? validate() {
     if (!type.isMarketLinked && name.trim().isEmpty) {
       return 'Give this asset a name';
     }
     if (currency.trim().isEmpty) return 'Choose a currency';
+    if (hasPrecisionLoss) return numberPrecisionError;
     switch (type.valuationMode) {
       case ValuationMode.market:
         if (quoteSymbol.isEmpty) return 'Enter a ticker symbol';
@@ -315,25 +329,38 @@ String filterDecimal(String input) {
 }
 
 /// Renders a stored double back into the text field, dropping a trailing `.0`.
-String formatInput(double value) {
-  final sign = value < 0 ? '-' : '';
-  final parts = value.abs().toString().split('e');
-  final mantissa = parts.first.endsWith('.0')
-      ? parts.first.substring(0, parts.first.length - 2)
-      : parts.first;
-  if (parts.length == 1) return '$sign$mantissa';
-  final point = mantissa.contains('.')
-      ? mantissa.indexOf('.')
-      : mantissa.length;
-  final digits = mantissa.replaceAll('.', '');
-  final position = point + int.parse(parts.last);
-  if (position <= 0) {
-    return '${sign}0.${'0' * -position}$digits';
-  }
-  if (position >= digits.length) {
-    return '$sign$digits${'0' * (position - digits.length)}';
-  }
-  return '$sign${digits.substring(0, position)}.${digits.substring(position)}';
+String formatInput(double value) => formatPlainDecimal(value);
+
+const String numberPrecisionError =
+    'This number can’t be saved exactly. Enter fewer digits.';
+
+final RegExp _inputDecimal = RegExp(r'^-?(?:\d+(?:\.\d*)?|\.\d+)$');
+final RegExp _leadingZeros = RegExp(r'^0+(?=\d)');
+final RegExp _trailingZeros = RegExp(r'0+$');
+
+/// Compare decimal text on both sides so a double rounding to a different
+/// value (for example sixteen nines rounding to 10^16) is not saved silently.
+bool losesInputPrecision(String input) {
+  final String trimmed = input.trim();
+  if (!_inputDecimal.hasMatch(trimmed)) return false;
+  final double value = double.parse(trimmed);
+  if (!value.isFinite) return true;
+  final List<String> parts = trimmed.split('.');
+  final bool negative = trimmed.startsWith('-');
+  final String whole = (negative ? parts.first.substring(1) : parts.first)
+      .replaceFirst(_leadingZeros, '');
+  final String fraction = parts.length == 2
+      ? parts.last.replaceFirst(_trailingZeros, '')
+      : '';
+  final String digits =
+      '${whole.isEmpty ? '0' : whole}'
+      '${fraction.isEmpty ? '' : '.$fraction'}';
+  final String normalized = negative && digits != '0' ? '-$digits' : digits;
+  if (normalized != formatInput(value)) return true;
+  // A double's shortest decimal can hide rounding of a large integer.
+  return fraction.isEmpty &&
+      value.abs() >= 9007199254740992.0 &&
+      BigInt.parse(normalized) != BigInt.from(value);
 }
 
 bool _isPositiveNumber(String raw) {

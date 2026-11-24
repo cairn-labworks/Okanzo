@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../data/local/entity/portfolio_entity.dart';
+import '../../data/repository/portfolio_repository.dart';
 import '../../di/app_container.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
@@ -112,22 +113,24 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     );
   }
 
-  Future<void> _showCreateDialog() async {
-    final String? name = await _showNameDialog(
+  Future<void> _showCreateDialog() {
+    final PortfolioListViewModel viewModel = _viewModel!;
+    return _showNameDialog(
       title: 'New portfolio'.tr(context),
       initial: '',
       confirmLabel: 'Create'.tr(context),
+      onSave: viewModel.create,
     );
-    if (name != null) _viewModel?.create(name);
   }
 
-  Future<void> _showRenameDialog(PortfolioEntity portfolio) async {
-    final String? name = await _showNameDialog(
+  Future<void> _showRenameDialog(PortfolioEntity portfolio) {
+    final PortfolioListViewModel viewModel = _viewModel!;
+    return _showNameDialog(
       title: 'Rename portfolio'.tr(context),
       initial: portfolio.name,
       confirmLabel: 'Save'.tr(context),
+      onSave: (name) => viewModel.rename(portfolio.id, name),
     );
-    if (name != null) _viewModel?.rename(portfolio.id, name);
   }
 
   Future<void> _showDeleteDialog(PortfolioEntity portfolio) async {
@@ -158,17 +161,20 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
     if (confirmed) await _viewModel?.delete(portfolio.id);
   }
 
-  Future<String?> _showNameDialog({
+  Future<void> _showNameDialog({
     required String title,
     required String initial,
     required String confirmLabel,
+    required Future<void> Function(String) onSave,
   }) {
-    return showDialog<String>(
+    return showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) => _NameDialog(
         title: title,
         initial: initial,
         confirmLabel: confirmLabel,
+        onSave: onSave,
       ),
     );
   }
@@ -300,11 +306,13 @@ class _NameDialog extends StatefulWidget {
     required this.title,
     required this.initial,
     required this.confirmLabel,
+    required this.onSave,
   });
 
   final String title;
   final String initial;
   final String confirmLabel;
+  final Future<void> Function(String) onSave;
 
   @override
   State<_NameDialog> createState() => _NameDialogState();
@@ -314,6 +322,26 @@ class _NameDialogState extends State<_NameDialog> {
   late final TextEditingController _controller = TextEditingController(
     text: widget.initial,
   );
+  bool _saving = false;
+  String? _error;
+
+  Future<void> _save() async {
+    if (_saving || _controller.text.trim().isEmpty) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.onSave(_controller.text);
+      if (mounted) Navigator.of(context).pop();
+    } on DuplicatePortfolioNameException {
+      if (mounted) {
+        setState(() => _error = 'Name already in use. Try another');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -324,26 +352,34 @@ class _NameDialogState extends State<_NameDialog> {
   @override
   Widget build(BuildContext context) {
     final bool canConfirm = _controller.text.trim().isNotEmpty;
-    return AlertDialog(
-      title: Text(widget.title),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(labelText: 'Name'.tr(context)),
+    return PopScope(
+      canPop: !_saving,
+      child: AlertDialog(
+        title: Text(widget.title),
+        content: TextField(
+          controller: _controller,
+          autofocus: true,
+          readOnly: _saving,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _save(),
+          onChanged: (_) => setState(() => _error = null),
+          decoration: InputDecoration(
+            labelText: 'Name'.tr(context),
+            errorText: _error?.tr(context),
+            errorMaxLines: 2,
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: _saving ? null : () => Navigator.of(context).pop(),
+            child: Text('Cancel'.tr(context)),
+          ),
+          TextButton(
+            onPressed: canConfirm && !_saving ? _save : null,
+            child: Text(widget.confirmLabel),
+          ),
+        ],
       ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('Cancel'.tr(context)),
-        ),
-        TextButton(
-          onPressed: canConfirm
-              ? () => Navigator.of(context).pop(_controller.text)
-              : null,
-          child: Text(widget.confirmLabel),
-        ),
-      ],
     );
   }
 }

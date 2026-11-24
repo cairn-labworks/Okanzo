@@ -77,9 +77,13 @@ LiabilityEntity backupToLiability(
 /// Returns [base] if it is free, otherwise "base (2)", "base (3)" and so on, so
 /// an import never silently merges into an existing portfolio.
 String uniqueName(String base, Set<String> taken) {
-  if (!taken.contains(base)) return base;
+  base = base.trim();
+  final Set<String> keys = taken
+      .map((name) => name.trim().toLowerCase())
+      .toSet();
+  if (!keys.contains(base.toLowerCase())) return base;
   int i = 2;
-  while (taken.contains('$base ($i)')) {
+  while (keys.contains('${base.toLowerCase()} ($i)')) {
     i++;
   }
   return '$base ($i)';

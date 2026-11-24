@@ -18,6 +18,38 @@ void main() {
       expect(CurrencyUtil.format(-0.5, 'USD'), '\$0');
       expect(CurrencyUtil.format(-1.5, 'USD'), '-\$1');
       expect(CurrencyUtil.format(-2.5, 'USD'), '-\$2');
+      expect(CurrencyUtil.format(0.49999999999999994, 'USD'), '\$0');
+    });
+
+    test('keeps whole amounts unchanged past double and int boundaries', () {
+      expect(
+        CurrencyUtil.format(4503599627370497.0, 'USD'),
+        '\$4,503,599,627,370,497',
+      );
+      expect(
+        CurrencyUtil.format(-4503599627370495.5, 'USD'),
+        '-\$4,503,599,627,370,495',
+      );
+      expect(CurrencyUtil.format(1e19, 'USD'), '\$10,000,000,000,000,000,000');
+      expect(
+        CurrencyUtil.formatRate(1e21, 'USD'),
+        '\$1,000,000,000,000,000,000,000.00',
+      );
+    });
+
+    test('localizes large whole amounts without changing their digits', () {
+      Intl.withLocale('hi_IN', () {
+        expect(
+          CurrencyUtil.format(1e19, 'INR'),
+          '₹1,00,00,00,00,00,00,00,00,000',
+        );
+      });
+      Intl.withLocale('ar_EG', () {
+        expect(
+          CurrencyUtil.format(1e19, 'USD'),
+          '\$١٠٬٠٠٠٬٠٠٠٬٠٠٠٬٠٠٠٬٠٠٠٬٠٠٠',
+        );
+      });
     });
 
     test('keeps the sign outside the symbol', () {

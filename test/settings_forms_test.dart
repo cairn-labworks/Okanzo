@@ -3928,7 +3928,7 @@ void main() {
         expect(selectedSmallAmount, findsOneWidget);
         expectInsideFirstDonutHole(selectedSmallAmount);
         expectInsideFirstDonutHole(
-          find.descendant(of: overviewDonut, matching: find.text('0.0%')),
+          find.descendant(of: overviewDonut, matching: find.text('<0.001%')),
         );
 
         // Tapping the donut hole clears the slice selection back to Net worth.
