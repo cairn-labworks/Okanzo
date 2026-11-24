@@ -293,8 +293,10 @@ void main() {
 
       Future<void> addItem(String item, {String? purity}) async {
         await tap(tester, find.text('Add holding'));
-        await tap(tester, find.text('An asset'));
-        await tap(tester, find.byType(DropdownSelector<AssetType>));
+        await tap(
+          tester,
+          find.byKey(const ValueKey<String>('holding-type-chip')),
+        );
         await tap(tester, find.widgetWithText(ListTile, 'Valuables'));
         expect(
           find.widgetWithText(AlertDialog, 'Choose a precious item'),

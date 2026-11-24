@@ -1,14 +1,15 @@
 import 'dart:async';
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
 import '../../data/local/entity/asset_entity.dart';
 import '../../data/local/entity/liability_entity.dart';
 import '../../di/app_container.dart';
+import '../../domain/model/asset_type.dart';
+import '../../domain/model/holding_type.dart';
+import '../../domain/model/liability_type.dart';
 import '../../l10n/app_localizations.dart';
-import 'form_components.dart';
-import 'holding_create_screen.dart';
+import '../holding/holding_create_screen.dart';
 import 'holding_glance_dialog.dart';
 
 DialogRoute<void> holdingSavedSummaryRoute(
@@ -33,6 +34,7 @@ class HoldingSavedSummaryScreen extends StatefulWidget {
     this.savedLiability,
     this.previousLiability,
     this.notice,
+    this.onHoldingSaved,
     super.key,
   }) : assert((savedAsset == null) != (savedLiability == null));
 
@@ -43,6 +45,7 @@ class HoldingSavedSummaryScreen extends StatefulWidget {
   final LiabilityEntity? savedLiability;
   final LiabilityEntity? previousLiability;
   final String? notice;
+  final ValueChanged<HoldingKind>? onHoldingSaved;
 
   @override
   State<HoldingSavedSummaryScreen> createState() =>
@@ -94,92 +97,18 @@ class _HoldingSavedSummaryScreenState extends State<HoldingSavedSummaryScreen> {
 
   Future<void> _addAnotherHolding() async {
     if (_busy) return;
-    final bool? asset = await showDialog<bool>(
-      context: context,
-      barrierColor: holdingGlanceBarrierColor(context),
-      builder: (BuildContext context) {
-        final ThemeData theme = Theme.of(context);
-        final ColorScheme colors = theme.colorScheme;
-        return BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-          child: AlertDialog(
-            scrollable: true,
-            backgroundColor: colors.surface,
-            surfaceTintColor: Colors.transparent,
-            elevation: 0,
-            insetPadding: const EdgeInsets.all(20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-              side: BorderSide(color: canvasBoxBorderColor(colors)),
-            ),
-            titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 8),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-            actionsPadding: const EdgeInsets.fromLTRB(24, 8, 24, 14),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Add holding'.tr(context).toUpperCase(),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.35,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  'What would you like to add?'.tr(context),
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: -0.6,
-                    height: 1.25,
-                  ),
-                ),
-              ],
-            ),
-            content: SizedBox(
-              width: 375,
-              child: Column(
-                children: <Widget>[
-                  _HoldingKindChoiceCard(
-                    icon: Icons.trending_up,
-                    title: 'An asset'.tr(context),
-                    subtitle: 'Something you own'.tr(context),
-                    onTap: () => Navigator.of(context).pop(true),
-                  ),
-                  const SizedBox(height: 10),
-                  _HoldingKindChoiceCard(
-                    icon: Icons.trending_down,
-                    title: 'A liability'.tr(context),
-                    subtitle: 'Something you owe'.tr(context),
-                    onTap: () => Navigator.of(context).pop(false),
-                  ),
-                ],
-              ),
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: TextButton.styleFrom(
-                  foregroundColor: colors.onSurfaceVariant,
-                  minimumSize: const Size(double.infinity, 44),
-                ),
-                child: Text('Close'.tr(context)),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-    if (!mounted || asset == null) return;
     final int portfolioId = widget.portfolioId;
+    final HoldingType initialType = widget.savedAsset != null
+        ? const HoldingType.asset(AssetType.stock)
+        : const HoldingType.liability(LiabilityType.loan);
     unawaited(
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) =>
-              HoldingCreateScreen(portfolioId: portfolioId, asset: asset),
+        MaterialPageRoute<HoldingKind>(
+          builder: (_) => HoldingCreateScreen(
+            portfolioId: portfolioId,
+            initialType: initialType,
+            onHoldingSaved: widget.onHoldingSaved,
+          ),
         ),
       ),
     );
@@ -289,76 +218,6 @@ class _HoldingSavedSummaryScreenState extends State<HoldingSavedSummaryScreen> {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _HoldingKindChoiceCard extends StatelessWidget {
-  const _HoldingKindChoiceCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colors = theme.colorScheme;
-    return Material(
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: colors.outlineVariant),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: <Widget>[
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: colors.surfaceContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: Icon(icon, size: 20, color: colors.primary),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      title,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: colors.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

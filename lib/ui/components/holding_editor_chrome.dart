@@ -4,6 +4,7 @@ import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
+import 'form_components.dart';
 import 'ui_components.dart';
 
 class HoldingEditorHeading extends StatelessWidget {
@@ -167,6 +168,8 @@ class HoldingEditorFooter extends StatelessWidget {
     required this.ready,
     required this.saving,
     required this.onSave,
+    this.onCancel,
+    this.cancelEnabled = true,
     this.priced = true,
     this.calculation,
     super.key,
@@ -178,6 +181,8 @@ class HoldingEditorFooter extends StatelessWidget {
   final String currency;
   final bool ready;
   final bool saving;
+  final VoidCallback? onCancel;
+  final bool cancelEnabled;
   final bool priced;
   final String? calculation;
   final VoidCallback onSave;
@@ -287,23 +292,13 @@ class HoldingEditorFooter extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              FilledButton(
-                onPressed: !ready || saving ? null : onSave,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(48, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                ),
-                child: saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        (asset ? 'Save asset' : 'Save liability').tr(context),
-                      ),
+              _FooterActions(
+                asset: asset,
+                ready: ready,
+                saving: saving,
+                onSave: onSave,
+                onCancel: onCancel,
+                cancelEnabled: cancelEnabled,
               ),
               const SizedBox(height: 8),
               Text(
@@ -323,6 +318,83 @@ class HoldingEditorFooter extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _FooterActions extends StatelessWidget {
+  const _FooterActions({
+    required this.asset,
+    required this.ready,
+    required this.saving,
+    required this.onSave,
+    required this.onCancel,
+    required this.cancelEnabled,
+  });
+
+  final bool asset;
+  final bool ready;
+  final bool saving;
+  final VoidCallback onSave;
+  final VoidCallback? onCancel;
+  final bool cancelEnabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final Widget saveButton = FilledButton(
+      onPressed: !ready || saving ? null : onSave,
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(48, 50),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+      ),
+      child: saving
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Text(
+              (asset ? 'Save asset' : 'Save liability').tr(context),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+    );
+    if (onCancel == null) return saveButton;
+    final Widget cancelButton = OutlinedButton(
+      onPressed: cancelEnabled ? onCancel : null,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(48, 50),
+        side: BorderSide(color: canvasBoxBorderColor(colors)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+      ),
+      child: Text(
+        'Cancel'.tr(context),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        if (constraints.maxWidth >= 260 &&
+            MediaQuery.textScalerOf(context).scale(14) <= 20) {
+          return Row(
+            children: <Widget>[
+              Expanded(child: cancelButton),
+              const SizedBox(width: 12),
+              Expanded(child: saveButton),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            cancelButton,
+            const SizedBox(height: 10),
+            saveButton,
+          ],
+        );
+      },
     );
   }
 }

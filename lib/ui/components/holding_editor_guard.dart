@@ -134,12 +134,14 @@ class HoldingEditorGuard extends StatefulWidget {
     required this.dirty,
     required this.onDiscard,
     required this.child,
+    this.canDiscard = true,
     super.key,
   });
 
   final bool dirty;
   final VoidCallback onDiscard;
   final Widget child;
+  final bool canDiscard;
 
   @override
   State<HoldingEditorGuard> createState() => HoldingEditorGuardState();
@@ -175,7 +177,7 @@ class HoldingEditorGuardState extends State<HoldingEditorGuard> {
   }
 
   Future<void> _onBack() async {
-    if (_confirming) return;
+    if (_confirming || !widget.canDiscard) return;
     _confirming = true;
     final DialogRoute<bool> route = DialogRoute<bool>(
       context: context,
@@ -200,14 +202,14 @@ class HoldingEditorGuardState extends State<HoldingEditorGuard> {
         await Navigator.of(context, rootNavigator: true).push(route) ?? false;
     _confirmationRoute = null;
     _confirming = false;
-    if (!mounted || !discard) return;
+    if (!mounted || !discard || !widget.canDiscard) return;
     widget.onDiscard();
     await close();
   }
 
   @override
   Widget build(BuildContext context) => PopScope<void>(
-    canPop: !widget.dirty || _leaving,
+    canPop: (!widget.dirty && widget.canDiscard) || _leaving,
     onPopInvokedWithResult: (bool didPop, _) {
       if (!didPop) _onBack();
     },
