@@ -1342,6 +1342,164 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final bool reducedMotion in <bool>[false, true]) {
+    testWidgets(
+      'home category disclosure respects reduced motion: $reducedMotion',
+      (WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(430, 950));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            FakeAccessibilityFeatures(disableAnimations: reducedMotion);
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        seedHoldings();
+        await open(
+          tester,
+          HomeScreen(
+            onOpenAssetEditor: (_, _) {},
+            onOpenLiabilityEditor: (_, _) {},
+            onManagePortfolios: () {},
+            onOpenSettings: () {},
+          ),
+        );
+        final Finder panel = find.byKey(
+          const ValueKey<String>('home-category-panel'),
+        );
+        final double closedHeight = tester.getSize(panel).height;
+        await tester.tap(find.text('Cash'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 60));
+        final double openingHeight = tester.getSize(panel).height;
+        await tester.pumpAndSettle();
+        final double openHeight = tester.getSize(panel).height;
+        expect(openHeight, greaterThan(closedHeight));
+        expect(find.text('Savings').hitTestable(), findsOneWidget);
+        if (reducedMotion) {
+          expect(openingHeight, openHeight);
+        } else {
+          expect(
+            openingHeight,
+            allOf(greaterThan(closedHeight), lessThan(openHeight)),
+          );
+        }
+        await tester.tap(find.text('Cash'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 60));
+        expect(find.text('Savings').hitTestable(), findsNothing);
+        if (reducedMotion) {
+          expect(tester.getSize(panel).height, closedHeight);
+        } else {
+          expect(tester.getSize(panel).height, greaterThan(closedHeight));
+        }
+        await tester.pumpAndSettle();
+        expect(tester.getSize(panel).height, closedHeight);
+      },
+    );
+
+    testWidgets(
+      'custom name disclosure respects reduced motion: $reducedMotion',
+      (WidgetTester tester) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            FakeAccessibilityFeatures(disableAnimations: reducedMotion);
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        final TextEditingController controller = TextEditingController();
+        addTearDown(controller.dispose);
+        final Finder field = find.byType(OptionalCustomNameField);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Column(
+                children: <Widget>[
+                  OptionalCustomNameField(
+                    controller: controller,
+                    label: 'Custom name',
+                    onChanged: (_) {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        final double closedHeight = tester.getSize(field).height;
+        await tester.tap(_customNameToggle);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 60));
+        final double openingHeight = tester.getSize(field).height;
+        await tester.pumpAndSettle();
+        final double openHeight = tester.getSize(field).height;
+        expect(openHeight, greaterThan(closedHeight));
+        if (reducedMotion) {
+          expect(openingHeight, openHeight);
+        } else {
+          expect(
+            openingHeight,
+            allOf(greaterThan(closedHeight), lessThan(openHeight)),
+          );
+        }
+        final Finder input = find.byType(EditableText);
+        expect(tester.widget<EditableText>(input).focusNode.hasFocus, isTrue);
+        await tester.enterText(input, 'My shares');
+        await _tap(tester, _customNameToggle);
+        expect(find.byType(EditableText), findsNothing);
+        await _tap(tester, _customNameToggle);
+        expect(tester.widget<EditableText>(input).controller.text, 'My shares');
+      },
+    );
+
+    testWidgets(
+      'statistics legend selection respects reduced motion: $reducedMotion',
+      (WidgetTester tester) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            FakeAccessibilityFeatures(disableAnimations: reducedMotion);
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        seedHoldings();
+        await open(tester, const StatisticsScreen());
+        final Finder row = find.widgetWithText(InkWell, 'Liabilities').first;
+        final Finder highlight = find.descendant(
+          of: row,
+          matching: find.byWidgetPredicate(
+            (Widget widget) =>
+                widget is DecoratedBox &&
+                widget.decoration is BoxDecoration &&
+                (widget.decoration as BoxDecoration).borderRadius != null,
+          ),
+        );
+        double highlightAlpha() =>
+            (tester.widget<DecoratedBox>(highlight).decoration as BoxDecoration)
+                .color!
+                .a;
+
+        expect(
+          highlight,
+          findsOneWidget,
+          reason: 'the legend row shows its selection',
+        );
+        final double unselected = highlightAlpha();
+        await tester.tap(row);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 60));
+        final double selecting = highlightAlpha();
+        expect(find.text('Net worth'), findsNothing);
+        await tester.pumpAndSettle();
+        final double selected = highlightAlpha();
+        expect(selected, greaterThan(unselected));
+        if (reducedMotion) {
+          expect(selecting, selected);
+        } else {
+          expect(selecting, allOf(greaterThan(unselected), lessThan(selected)));
+        }
+        await _tap(tester, row);
+        expect(highlightAlpha(), unselected);
+        expect(find.text('Net worth'), findsOneWidget);
+      },
+    );
+  }
+
   testWidgets(
     'Quiet overview has an unboxed headline, one panel and persistent category expansion',
     (WidgetTester tester) async {

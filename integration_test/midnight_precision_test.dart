@@ -426,6 +426,20 @@ void main() {
         'Canvas form has paired type/currency, separate exchange and pinned Save',
       );
       await _enter(tester, 'Quantity', '13');
+      final Finder customNameToggle = find.byKey(
+        const ValueKey<String>('custom-name-toggle'),
+      );
+      final Finder customNameInput = find.descendant(
+        of: find.byType(OptionalCustomNameField),
+        matching: find.byType(EditableText),
+      );
+      await _tap(tester, customNameToggle);
+      expect(
+        tester.widget<EditableText>(customNameInput).focusNode.hasFocus,
+        isTrue,
+      );
+      await _tap(tester, customNameToggle);
+      expect(customNameInput, findsNothing);
       await _tap(tester, _saveButton);
       await _wait(
         tester,

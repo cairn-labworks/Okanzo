@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../asset/asset_form_state.dart' show filterDecimal;
+import '../theme/motion.dart';
 import 'type_icons.dart';
 
 const EdgeInsets _editorFieldPadding = EdgeInsets.only(top: 24, bottom: 4);
@@ -724,7 +725,7 @@ class _OptionalCustomNameFieldState extends State<OptionalCustomNameField> {
     setState(() => _expanded = next);
     if (next) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _focusNode.requestFocus();
+        if (mounted && _expanded) _focusNode.requestFocus();
       });
     } else {
       _focusNode.unfocus();
@@ -774,22 +775,25 @@ class _OptionalCustomNameFieldState extends State<OptionalCustomNameField> {
               ),
             ),
           ),
-          if (_expanded)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: LabeledTextField(
-                canvas: true,
-                showLabel: false,
-                controller: widget.controller,
-                focusNode: _focusNode,
-                label: widget.label,
-                placeholder: widget.placeholder,
-                maxLength: widget.maxLength,
-                textInputAction: widget.textInputAction,
-                onSubmitted: widget.onSubmitted,
-                onChanged: widget.onChanged,
-              ),
-            ),
+          DisclosureSize(
+            child: _expanded
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: LabeledTextField(
+                      canvas: true,
+                      showLabel: false,
+                      controller: widget.controller,
+                      focusNode: _focusNode,
+                      label: widget.label,
+                      placeholder: widget.placeholder,
+                      maxLength: widget.maxLength,
+                      textInputAction: widget.textInputAction,
+                      onSubmitted: widget.onSubmitted,
+                      onChanged: widget.onChanged,
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );

@@ -12,6 +12,7 @@ import '../components/type_icons.dart';
 import '../components/ui_components.dart';
 import '../theme/app_style.dart';
 import '../theme/colors.dart';
+import '../theme/motion.dart';
 import 'category_groups.dart';
 import 'add_holding_button.dart';
 import 'holding_details.dart';
@@ -743,10 +744,14 @@ class _CategoryCardShell extends StatelessWidget {
         children: <Widget>[
           if (showDivider) const Divider(height: 1),
           InkWell(onTap: onToggle, child: header),
-          if (isExpanded) ...<Widget>[
-            expandedContentBuilder(),
-            const SizedBox(height: 4),
-          ],
+          DisclosureSize(
+            child: isExpanded
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: expandedContentBuilder(),
+                  )
+                : const SizedBox.shrink(),
+          ),
         ],
       ),
     );

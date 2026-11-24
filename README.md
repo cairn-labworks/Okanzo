@@ -328,6 +328,10 @@ checkout, and the pipeline's actual project ID when inspecting fork CI jobs.
 
 ## UX prototype
 
+In the app, holding categories and the optional custom-name field expand
+smoothly, and the selected chart legend row eases into its highlight. These
+transitions follow Android's **Remove animations** accessibility setting.
+
 Open [the holding experience prototype](docs/prototypes/add-holding.prototype.html)
 directly in a browser; no server or dependencies are needed. It preserves the
 approved **Canvas** design and the alternative **Guide** flow for future
