@@ -356,13 +356,17 @@ before Quantity. Use **Enter / Next** to move through the fields and **Save**
 to see a centered confirmation matching the holding glance on Home. The live
 estimate (or outstanding liability amount) stays above the editor action.
 
-Open [the Warm Minimalism end-to-end flow prototype](docs/prototypes/warm-minimalism-e2e.prototype.html)
-directly in a browser to explore the approved **Mineral Ledger** design across
-all five connected screens (**Home**, **Portfolios**, **Add / edit holding**,
-**Holding details**, and **Statistics**), including an 8-step guided walkthrough
-(`?mode=studio`), an 11-frame storyboard gallery (`?mode=renders`), **Midnight**
-dark appearance, **Hide Balances**, 50-holding search, negative net worth,
-empty portfolios, and offline unpriced market holdings.
+Open [the Warm Minimalism end-to-end navigation prototype](docs/prototypes/warm-minimalism-e2e.prototype.html)
+directly in a browser to explore the approved **Mineral Ledger** and **Midnight
+Precision** designs across every screen in Okanzo (**Home**, **Portfolios**,
+**Add / edit asset, valuables & liability**, **Saved summary**, **Holding
+details**, **Statistics**, **Settings** and its five **Appearance / Currency /
+Security / Data / About** drill-in screens, **Encrypted backup export /
+import**, **What's new**, and the full-screen **App lock** gate, plus adaptive
+tablet rail mode). It includes a direct all-screens jumper, a 12-step guided
+walkthrough (`?mode=studio`), an 18-frame storyboard gallery (`?mode=renders`),
+and live **DisclosureSize**, **AddHoldingButton** morph, and chart-legend
+transitions that honor **Remove animations**.
 
 These are design references, not app code: all data is fictional, quotes and FX
 are simulated, and changes stay in memory. They are not bundled into the Flutter
