@@ -1,0 +1,2412 @@
+<!doctype html>
+<!--
+  Okanzo — Warm Minimalism ("Mineral Ledger") End-to-End Flow Prototype
+  Grounded in cairn-labworks/Okanzo's domain rules & docs/prototypes/add-holding.prototype.html.
+  Self-contained HTML/CSS/JS; fictional reconciled multi-currency data; zero network or persistence.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Okanzo — Warm Minimalism End-to-End Flow Prototype</title>
+<style>
+  :root {
+    --studio-bg: #EFECE4;
+    --studio-surface: #FAF8F3;
+    --studio-card: #FFFFFF;
+    --studio-ink: #1F2A24;
+    --studio-muted: #5C6860;
+    --studio-line: #D8D2C5;
+    --studio-pine: #3D6249;
+    --studio-pine-soft: #DFEAD9;
+    --studio-terra: #8C4A27;
+    --ease-emph: cubic-bezier(0.05, 0.7, 0.1, 1.0);
+    --ease-std: cubic-bezier(0.2, 0, 0, 1);
+    --dur-fast: 150ms;
+    --dur-med: 240ms;
+    --dur-slow: 360ms;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--studio-bg);
+    color: var(--studio-ink);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body[data-reduced-motion="true"] *,
+  body[data-reduced-motion="true"] *::before,
+  body[data-reduced-motion="true"] *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; touch-action: manipulation; }
+  button:disabled { cursor: not-allowed; opacity: 0.45; }
+  button:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 2.5px solid #3D6249;
+    outline-offset: 2px;
+  }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+  svg.ico {
+    width: 18px; height: 18px; fill: none; stroke: currentColor;
+    stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;
+  }
+
+  /* Top Studio Header */
+  .top-bar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(239, 236, 228, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--studio-line);
+    padding: 12px 28px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .brand-cluster { display: flex; align-items: center; gap: 12px; }
+  .brand-badge {
+    width: 34px; height: 34px; border-radius: 11px;
+    background: var(--studio-pine); color: #FFF;
+    display: grid; place-items: center;
+  }
+  .brand-title { font-weight: 700; font-size: 16px; letter-spacing: -0.02em; }
+  .brand-sub {
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--studio-muted); padding-left: 12px; border-left: 1px solid var(--studio-line);
+  }
+  .mode-switch {
+    display: inline-flex; gap: 4px; padding: 4px;
+    background: #E4DFD4; border-radius: 999px; border: 1px solid var(--studio-line);
+  }
+  .mode-btn {
+    padding: 7px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    color: var(--studio-muted); transition: all var(--dur-fast) var(--ease-std);
+  }
+  .mode-btn[aria-pressed="true"] {
+    background: var(--studio-pine); color: #FFFFFF; box-shadow: 0 2px 6px rgba(35, 55, 42, 0.18);
+  }
+  .quick-pills { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .q-pill {
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    background: var(--studio-surface); border: 1px solid var(--studio-line);
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background var(--dur-fast) var(--ease-std);
+  }
+  .q-pill[aria-pressed="true"] {
+    background: var(--studio-pine-soft); border-color: #9BB89E; color: #1E3827;
+  }
+
+  /* Studio 3-Column Layout */
+  .studio-grid {
+    max-width: 1420px; margin: 0 auto; padding: 26px 28px 96px;
+    display: grid; grid-template-columns: minmax(270px, 330px) 406px minmax(270px, 340px);
+    gap: 34px; justify-content: center; align-items: start;
+  }
+  .studio-grid[hidden], .renders-gallery[hidden] { display: none !important; }
+  .panel-card {
+    background: var(--studio-surface);
+    border: 1px solid var(--studio-line);
+    border-radius: 20px; padding: 18px 20px; margin-bottom: 16px;
+  }
+  .eyebrow {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--studio-muted); margin: 0 0 6px;
+  }
+  .panel-card h2 {
+    margin: 0 0 8px; font-size: 17px; font-weight: 650; letter-spacing: -0.02em;
+  }
+  .panel-card p { margin: 0 0 10px; font-size: 12.5px; color: var(--studio-muted); line-height: 1.55; }
+
+  /* Guided Flow Stepper */
+  .step-list { display: grid; gap: 6px; margin-top: 10px; }
+  .step-btn {
+    width: 100%; text-align: left; padding: 9px 11px; border-radius: 12px;
+    border: 1px solid var(--studio-line); background: #FFFFFF;
+    display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: center;
+    transition: all var(--dur-fast) var(--ease-std);
+  }
+  .step-btn:hover { background: #F5F2EA; border-color: #B9B2A3; }
+  .step-btn.active {
+    background: var(--studio-pine-soft); border-color: var(--studio-pine);
+  }
+  .step-num {
+    width: 24px; height: 24px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    background: #EAE5DA; color: var(--studio-ink); display: grid; place-items: center;
+  }
+  .step-btn.active .step-num { background: var(--studio-pine); color: #FFF; }
+  .step-btn strong { display: block; font-size: 12.5px; font-weight: 600; }
+  .step-btn small { display: block; font-size: 11px; color: var(--studio-muted); }
+
+  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 8px; }
+  .preset-btn {
+    padding: 8px 10px; border-radius: 10px; border: 1px solid var(--studio-line);
+    background: #FFF; font-size: 11.5px; font-weight: 600; text-align: left;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .preset-btn:hover { background: #F4F0E6; }
+
+  .ctrl-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 7px 0; border-bottom: 1px solid #E6E1D6; font-size: 12.5px;
+  }
+  .ctrl-row:last-child { border-bottom: 0; }
+  .ctrl-select {
+    padding: 5px 8px; border-radius: 8px; border: 1px solid var(--studio-line);
+    background: #FFF; font-size: 12px; font-weight: 500;
+  }
+  .state-log {
+    margin-top: 8px; padding: 10px 12px; border-radius: 10px;
+    background: #E8E3D7; font: 11px/1.55 Consolas, monospace;
+    max-height: 210px; overflow: auto; white-space: pre-wrap;
+  }
+
+  /* ==========================================================================
+     WARM MINIMALISM ("MINERAL LEDGER") ANDROID DEVICE TOKENS & CHROME
+     ========================================================================== */
+  .phone-frame {
+    --bg: #FAF8F3;
+    --surface: #FFFFFF;
+    --soft: #F2EEE5;
+    --soft-mid: #EDE8DE;
+    --soft-high: #E5DFD2;
+    --ink: #223028;
+    --muted: #5F6E63;
+    --line: #DFD9CC;
+    --box-line: #C9C2B2;
+    --accent: #3D6249;
+    --on-accent: #FFFFFF;
+    --tint: #DCE9D8;
+    --on-tint: #1F3727;
+    --liab: #8C4A27;
+    --liab-soft: #F5E6DC;
+    --danger: #B3261E;
+    --danger-soft: #FCEAE8;
+    --warn: #7D5118;
+    --warn-soft: #F8ECD8;
+
+    width: 390px;
+    height: 836px;
+    margin: 0 auto;
+    border: 8px solid #232B26;
+    border-radius: 42px;
+    background: var(--bg);
+    color: var(--ink);
+    box-shadow: 0 24px 60px rgba(28, 38, 31, 0.18), 0 2px 8px rgba(28, 38, 31, 0.08);
+    display: flex; flex-direction: column; position: relative; overflow: hidden;
+    isolation: isolate;
+    transition: background var(--dur-med) var(--ease-std), color var(--dur-med) var(--ease-std);
+  }
+  .phone-frame[data-theme="dark"] {
+    --bg: #16201D;
+    --surface: #1C2925;
+    --soft: #20302A;
+    --soft-mid: #253730;
+    --soft-high: #2D423A;
+    --ink: #EAEFE9;
+    --muted: #93AA9D;
+    --line: #2B3D36;
+    --box-line: #3C5449;
+    --accent: #C1E1BD;
+    --on-accent: #1C2F23;
+    --tint: #2D4635;
+    --on-tint: #D7ECD3;
+    --liab: #F2B896;
+    --liab-soft: #382820;
+    --danger: #FFB4AB;
+    --danger-soft: #432523;
+    --warn: #ECC488;
+    --warn-soft: #362E20;
+    border-color: #101715;
+  }
+
+  .sys-status {
+    height: 30px; padding: 6px 22px 0; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; font-weight: 650; letter-spacing: 0.02em; color: var(--ink);
+    position: relative;
+  }
+  .punch-hole {
+    width: 10px; height: 10px; border-radius: 50%; background: #151C18;
+    position: absolute; left: calc(50% - 5px); top: 11px;
+  }
+  .sys-gesture {
+    height: 16px; flex-shrink: 0; display: grid; place-items: center; background: var(--bg);
+  }
+  .sys-gesture span {
+    width: 104px; height: 4px; border-radius: 99px; background: var(--ink); opacity: 0.22;
+  }
+
+  .app-root {
+    flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative;
+  }
+  .screen-stage {
+    flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative;
+  }
+  .screen-stage.animate-enter {
+    animation: routeEnter var(--dur-med) var(--ease-emph);
+  }
+  @keyframes routeEnter {
+    from { opacity: 0.65; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* App Bar */
+  .m3-appbar {
+    min-height: 56px; padding: 6px 16px 6px 20px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .portfolio-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 11px 7px 12px; border-radius: 999px;
+    background: var(--soft); border: 1px solid var(--line);
+    font-size: 13.5px; font-weight: 600; color: var(--ink);
+    min-height: 40px; max-width: 205px;
+    transition: background var(--dur-fast) var(--ease-std), transform var(--dur-fast) var(--ease-std);
+  }
+  .portfolio-chip:hover { background: var(--soft-mid); }
+  .portfolio-chip:active { transform: scale(0.98); }
+  .portfolio-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .appbar-actions { display: flex; align-items: center; gap: 2px; }
+  .icon-btn {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: grid; place-items: center; color: var(--muted);
+    transition: background var(--dur-fast) var(--ease-std), color var(--dur-fast) var(--ease-std);
+  }
+  .icon-btn:hover { background: var(--soft-mid); color: var(--ink); }
+  .icon-btn.is-active { background: var(--tint); color: var(--on-tint); }
+  .spin { animation: spinAnim 700ms linear infinite; }
+  @keyframes spinAnim { to { transform: rotate(360deg); } }
+
+  /* Scrollable Screen Content */
+  .scroll-view {
+    flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    padding: 8px 22px 24px; scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+  }
+  .scroll-view.has-fab { padding-bottom: 92px; }
+
+  /* Net Worth Hero ("Mineral Ledger" Warm Minimalism) */
+  .nw-label-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .nw-caption { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .fx-pill {
+    font-size: 10.5px; font-weight: 600; color: var(--muted);
+    background: var(--soft); padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line);
+  }
+  .nw-headline {
+    font-size: 40px; font-weight: 550; letter-spacing: -1.6px; line-height: 1.12;
+    margin: 5px 0 6px; color: var(--ink);
+    transition: opacity var(--dur-fast) var(--ease-std), transform var(--dur-fast) var(--ease-emph);
+  }
+  .nw-headline.is-negative { color: var(--liab); }
+  .nw-headline.value-swap { animation: valSwap 190ms var(--ease-emph); }
+  @keyframes valSwap {
+    from { opacity: 0.35; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .nw-sub { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+
+  /* Tonal Balance Sheet Tiles + Coverage Bar */
+  .ledger-pair {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .ledger-tile {
+    background: var(--soft); border: 1px solid var(--line);
+    border-radius: 16px; padding: 11px 13px;
+  }
+  .ledger-tile-lbl {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 600; color: var(--muted);
+  }
+  .ledger-tile-val {
+    margin-top: 5px; font-size: 15.5px; font-weight: 600; color: var(--ink);
+  }
+  .ledger-tile.asset .ico { color: var(--accent); }
+  .ledger-tile.liability .ico { color: var(--liab); }
+
+  .coverage-block { margin-top: 12px; }
+  .coverage-track {
+    height: 6px; border-radius: 999px; overflow: hidden;
+    background: color-mix(in srgb, var(--liab) 28%, var(--soft));
+  }
+  .coverage-fill {
+    height: 100%; border-radius: 999px; background: var(--accent);
+    transition: width var(--dur-slow) var(--ease-emph), background var(--dur-med) var(--ease-std);
+  }
+  .coverage-fill.negative { background: var(--liab); }
+  .coverage-legend {
+    display: flex; justify-content: space-between; gap: 8px;
+    margin-top: 5px; font-size: 11px; color: var(--muted);
+  }
+
+  /* Segmented Assets / Liabilities Switch */
+  .seg-bar {
+    margin: 18px 0 14px; padding: 4px; border-radius: 999px;
+    background: var(--soft); display: grid; grid-template-columns: 1fr 1fr; position: relative;
+  }
+  .seg-btn {
+    min-height: 42px; border-radius: 999px; font-size: 13px; font-weight: 500;
+    color: var(--muted); transition: all 180ms var(--ease-std);
+  }
+  .seg-btn[aria-selected="true"] {
+    background: var(--soft-high); color: var(--ink); font-weight: 650;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+
+  /* Section Toolbar + Animated Quick-Find Filter */
+  .list-toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    margin-bottom: 8px; min-height: 36px;
+  }
+  .list-toolbar-title {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.11em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .toolbar-btns { display: flex; align-items: center; gap: 2px; }
+  .mini-icon-btn {
+    width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+    color: var(--muted); transition: background var(--dur-fast) var(--ease-std);
+  }
+  .mini-icon-btn:hover, .mini-icon-btn[aria-expanded="true"] {
+    background: var(--soft-mid); color: var(--ink);
+  }
+
+  .disclosure-box {
+    display: grid; grid-template-rows: 0fr; opacity: 0;
+    transition: grid-template-rows var(--dur-med) var(--ease-emph), opacity 180ms var(--ease-std);
+  }
+  .disclosure-box.is-open { grid-template-rows: 1fr; opacity: 1; }
+  .disclosure-inner { overflow: hidden; min-height: 0; }
+
+  .filter-bar-wrap { padding-bottom: 10px; }
+  .filter-input-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--soft); border: 1px solid var(--box-line);
+    border-radius: 13px; padding: 0 11px; min-height: 44px;
+  }
+  .filter-input-box input {
+    border: 0; background: transparent; width: 100%; font-size: 13px; outline: none;
+  }
+
+  /* Collapsible Category Panel */
+  .category-panel {
+    background: var(--soft); border-radius: 20px; padding: 0 14px;
+    border: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  }
+  .cat-group + .cat-group { border-top: 1px solid var(--line); }
+  .cat-header {
+    width: 100%; display: flex; align-items: center; gap: 11px;
+    padding: 14px 0; text-align: left; min-height: 66px;
+  }
+  .type-avatar {
+    width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent); display: grid; place-items: center;
+  }
+  .type-avatar.liab {
+    background: color-mix(in srgb, var(--liab) 13%, transparent);
+    color: var(--liab);
+  }
+  .cat-meta { flex: 1; min-width: 0; }
+  .cat-name { font-size: 14px; font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cat-sub { font-size: 11.5px; color: var(--muted); display: block; margin-top: 1px; }
+  .cat-total { font-size: 14px; font-weight: 600; text-align: right; max-width: 40%; }
+  .cat-chev {
+    color: var(--muted); transition: transform 200ms var(--ease-std);
+  }
+  .cat-group.is-open .cat-chev { transform: rotate(180deg); }
+
+  .holding-indent {
+    margin: 0 0 12px 18px; padding-left: 12px;
+    border-left: 1.5px solid var(--line);
+  }
+  .holding-subbar {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); padding: 2px 0 4px;
+  }
+  .h-item-btn {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 11px 6px; border-radius: 10px; text-align: left;
+    transition: background var(--dur-fast) var(--ease-std);
+  }
+  .h-item-btn + .h-item-btn { border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+  .h-item-btn:hover { background: var(--soft-mid); }
+  .h-item-title { font-size: 13.5px; font-weight: 550; display: block; }
+  .h-item-sub { font-size: 11.5px; color: var(--muted); display: block; margin-top: 3px; }
+  .h-item-amt { font-size: 13.5px; font-weight: 600; text-align: right; flex-shrink: 0; }
+  .pill-new {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 1px 6px; border-radius: 6px; margin-left: 6px;
+    background: var(--tint); color: var(--on-tint);
+  }
+  .pill-pending {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--warn-soft); color: var(--warn);
+  }
+
+  /* In-Place Expanding Add Holding Button */
+  .scrim-blur {
+    position: absolute; inset: 0; z-index: 15;
+    background: rgba(18, 30, 23, 0.14); backdrop-filter: blur(4px);
+    opacity: 0; pointer-events: none;
+    transition: opacity 200ms var(--ease-std);
+  }
+  .scrim-blur.is-open { opacity: 1; pointer-events: auto; }
+  .fab-dock {
+    position: absolute; right: 18px; bottom: 78px; z-index: 20;
+    display: flex; flex-direction: column; align-items: flex-end;
+  }
+  .add-morph {
+    width: 146px; border-radius: 18px;
+    background: var(--accent); color: var(--on-accent);
+    box-shadow: 0 8px 22px rgba(28, 50, 36, 0.24);
+    overflow: hidden;
+    transition: width var(--dur-med) var(--ease-emph), border-radius var(--dur-med) var(--ease-emph), box-shadow var(--dur-med) var(--ease-std);
+  }
+  .add-morph.is-open {
+    width: 268px; border-radius: 22px;
+    box-shadow: 0 14px 36px rgba(15, 28, 20, 0.34);
+  }
+  .add-choices-wrap {
+    display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows var(--dur-med) var(--ease-emph);
+  }
+  .add-morph.is-open .add-choices-wrap { grid-template-rows: 1fr; }
+  .add-choices-inner { overflow: hidden; min-height: 0; }
+  .add-choices-pad { padding: 10px 10px 8px; display: grid; gap: 8px; }
+  .add-choice-btn {
+    width: 100%; display: flex; align-items: center; gap: 11px;
+    padding: 11px 10px; border-radius: 14px; text-align: left;
+    background: color-mix(in srgb, var(--on-accent) 9%, transparent);
+    color: var(--on-accent);
+    transition: background var(--dur-fast) var(--ease-std), transform var(--dur-fast) var(--ease-std);
+  }
+  .add-choice-btn:hover { background: color-mix(in srgb, var(--on-accent) 16%, transparent); }
+  .choice-badge {
+    width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0;
+  }
+  .choice-badge.own { background: #C7E2C0; color: #204B30; }
+  .choice-badge.owe { background: #F3D6C3; color: #7C3E1D; }
+  .add-choice-btn strong { display: block; font-size: 13.5px; font-weight: 650; }
+  .add-choice-btn small { display: block; font-size: 11px; opacity: 0.88; }
+  .add-trigger-btn {
+    width: 100%; min-height: 52px; padding: 0 15px;
+    display: flex; align-items: center; gap: 8px;
+    color: var(--on-accent); font-size: 13.5px; font-weight: 650;
+    border-top: 1px solid transparent;
+  }
+  .add-morph.is-open .add-trigger-btn {
+    border-top-color: color-mix(in srgb, var(--on-accent) 16%, transparent);
+    font-weight: 500; opacity: 0.92;
+  }
+  .add-trigger-btn .plus-ico { transition: transform var(--dur-med) var(--ease-emph); }
+  .add-morph.is-open .add-trigger-btn .plus-ico { transform: rotate(45deg); }
+
+  /* Bottom Navigation Bar */
+  .m3-navbar {
+    height: 64px; flex-shrink: 0; border-top: 1px solid var(--line);
+    background: var(--bg); display: grid; grid-template-columns: repeat(3, 1fr);
+    padding: 6px 8px 4px;
+    transition: filter 200ms var(--ease-std);
+  }
+  .m3-navbar.is-blurred { filter: blur(3px); pointer-events: none; }
+  .nav-dest {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; font-size: 11.5px; color: var(--muted); font-weight: 500;
+  }
+  .nav-pill {
+    width: 56px; height: 28px; border-radius: 999px; display: grid; place-items: center;
+    transition: background 180ms var(--ease-std), color 180ms var(--ease-std);
+  }
+  .nav-dest[aria-current="page"] { color: var(--ink); font-weight: 650; }
+  .nav-dest[aria-current="page"] .nav-pill { background: var(--tint); color: var(--on-tint); }
+
+  /* Portfolios Screen */
+  .portfolio-card {
+    background: var(--soft); border: 1px solid var(--line);
+    border-radius: 20px; padding: 17px 18px; margin-bottom: 12px;
+    text-align: left; width: 100%; cursor: pointer;
+    transition: background 180ms var(--ease-std), border-color 180ms var(--ease-std), transform 140ms var(--ease-std);
+  }
+  .portfolio-card:hover { background: var(--soft-mid); }
+  .portfolio-card.is-selected {
+    background: var(--soft-mid);
+    border: 1.5px solid color-mix(in srgb, var(--accent) 70%, var(--line));
+  }
+  .p-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+  .p-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 650; padding: 3px 9px; border-radius: 8px;
+  }
+  .p-tag.viewing { background: var(--tint); color: var(--on-tint); }
+  .p-tag.default {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+  }
+
+  /* Add / Edit Holding Canvas Screen */
+  .kind-tabs {
+    display: flex; gap: 6px; border-bottom: 1px solid var(--line); margin-bottom: 18px;
+  }
+  .kind-tab {
+    padding: 9px 12px; font-size: 12.5px; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px; min-height: 44px;
+  }
+  .kind-tab[aria-selected="true"] {
+    color: var(--accent); border-bottom-color: var(--accent); font-weight: 650;
+  }
+  .kind-tab.owe[aria-selected="true"] {
+    color: var(--liab); border-bottom-color: var(--liab);
+  }
+  .editor-h1 { font-size: 27px; font-weight: 600; letter-spacing: -0.03em; margin: 4px 0 6px; }
+  .editor-lead { font-size: 12.5px; color: var(--muted); margin: 0 0 16px; }
+  .pair-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .f-group { margin-bottom: 14px; }
+  .f-label { display: block; font-size: 11.5px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+  .f-box, .f-picker {
+    width: 100%; min-height: 48px; padding: 10px 12px;
+    border-radius: 11px; border: 1px solid var(--box-line);
+    background: var(--surface); color: var(--ink); font-size: 13.5px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left;
+  }
+  .f-box:focus { border-color: var(--accent); outline: none; }
+  .f-box[aria-invalid="true"], .f-picker[aria-invalid="true"] {
+    border-color: var(--danger); background: var(--danger-soft);
+  }
+  .f-hint { display: block; font-size: 11px; color: var(--muted); margin-top: 5px; }
+  .f-err { display: block; font-size: 11.5px; color: var(--danger); margin-top: 4px; font-weight: 500; }
+  .prominent-amount {
+    display: flex; align-items: baseline; gap: 6px;
+    border-bottom: 1.5px solid var(--box-line); padding: 2px 0 10px; margin-bottom: 6px;
+  }
+  .prominent-amount:focus-within { border-bottom-color: var(--accent); }
+  .prominent-amount span { font-size: 30px; font-weight: 500; color: var(--muted); }
+  .prominent-amount input {
+    border: 0; background: transparent; width: 100%; outline: none;
+    font-size: 32px; font-weight: 600; letter-spacing: -0.03em; color: var(--accent);
+  }
+  .prominent-amount.owe input { color: var(--liab); }
+
+  .editor-footer {
+    border-top: 1px solid var(--line); background: var(--bg);
+    padding: 12px 22px 12px; flex-shrink: 0;
+  }
+  .est-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding-bottom: 11px; margin-bottom: 11px; border-bottom: 1px solid var(--line);
+  }
+  .est-val {
+    font-size: 24px; font-weight: 650; letter-spacing: -0.03em; color: var(--accent);
+    text-align: right;
+  }
+  .est-val.owe { color: var(--liab); }
+  .btn-primary {
+    width: 100%; min-height: 48px; border-radius: 14px;
+    background: var(--accent); color: var(--on-accent);
+    font-size: 14px; font-weight: 650; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: opacity var(--dur-fast) var(--ease-std), transform var(--dur-fast) var(--ease-std);
+  }
+  .btn-primary:active:not(:disabled) { transform: scale(0.99); }
+  .btn-outlined {
+    width: 100%; min-height: 46px; border-radius: 14px;
+    background: var(--soft); color: var(--ink); border: 1px solid var(--box-line);
+    font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .btn-danger {
+    width: 100%; min-height: 46px; border-radius: 14px;
+    background: var(--soft); color: var(--danger);
+    border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+    font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  }
+
+  /* Statistics Screen & Interactive SVG Donut */
+  .chart-card {
+    background: var(--soft); border: 1px solid var(--line);
+    border-radius: 20px; padding: 18px; margin-bottom: 14px;
+  }
+  .chart-card.liab-card {
+    border-color: color-mix(in srgb, var(--liab) 32%, var(--line));
+  }
+  .donut-wrap {
+    position: relative; width: 196px; height: 196px; margin: 14px auto;
+    display: grid; place-items: center;
+  }
+  .donut-svg { width: 196px; height: 196px; transform: rotate(-90deg); overflow: visible; }
+  .donut-arc {
+    fill: none; cursor: pointer;
+    transition: stroke-width 180ms var(--ease-std), opacity 180ms var(--ease-std), stroke-dasharray 380ms var(--ease-emph);
+  }
+  .donut-center {
+    position: absolute; inset: 34px; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; pointer-events: none; padding: 6px;
+  }
+  .legend-row {
+    width: 100%; min-height: 46px; padding: 7px 8px; border-radius: 10px;
+    display: flex; align-items: center; gap: 10px; text-align: left;
+    transition: background 160ms var(--ease-std);
+  }
+  .legend-row:hover { background: var(--soft-mid); }
+  .legend-row.is-selected { background: var(--soft-high); font-weight: 650; }
+  .swatch-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+
+  /* In-Phone Modal Sheet / Glance Dialog */
+  .phone-modal-backdrop {
+    position: absolute; inset: 0; z-index: 30;
+    background: rgba(16, 32, 24, 0.52); backdrop-filter: blur(3px);
+    display: grid; place-items: center; padding: 18px;
+    animation: fadeIn 160ms var(--ease-std);
+  }
+  .phone-modal-backdrop[hidden] { display: none; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .glance-card {
+    width: 100%; max-height: 90%; overflow-y: auto;
+    background: var(--bg); color: var(--ink);
+    border: 1px solid var(--box-line); border-radius: 24px;
+    padding: 18px 20px 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+    animation: modalPop 210ms var(--ease-emph);
+  }
+  @keyframes modalPop {
+    from { opacity: 0; transform: scale(0.96) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .source-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    background: var(--soft); border: 1px solid var(--line);
+    font-size: 11px; font-weight: 600; color: var(--muted);
+  }
+  .kv-box {
+    background: var(--soft); border-radius: 16px; padding: 4px 15px;
+    border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  }
+  .kv-row {
+    display: flex; justify-content: space-between; gap: 12px;
+    padding: 10px 0; font-size: 12.5px;
+  }
+  .kv-row + .kv-row { border-top: 1px solid var(--line); }
+  .banner-note {
+    background: var(--warn-soft); color: var(--warn);
+    border-radius: 12px; padding: 10px 12px; font-size: 12px;
+    display: flex; gap: 8px; align-items: flex-start; margin: 10px 0;
+  }
+
+  /* ==========================================================================
+     MODE 2: FULL END-TO-END RENDERS STORYBOARD GALLERY
+     ========================================================================== */
+  .renders-gallery {
+    max-width: 1460px; margin: 0 auto; padding: 28px 28px 80px;
+  }
+  .gallery-band { margin-bottom: 44px; }
+  .gallery-band-hdr {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; margin-bottom: 18px; border-bottom: 1px solid var(--studio-line); padding-bottom: 10px;
+  }
+  .gallery-band-hdr h2 { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+  .renders-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(324px, 1fr));
+    gap: 24px; align-items: start;
+  }
+  .render-slot { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .render-slot .phone-frame {
+    width: 340px; height: 760px; border-width: 7px; border-radius: 36px;
+    font-size: 13px;
+  }
+  .render-slot .nw-headline { font-size: 33px; }
+  .render-slot .scroll-view { padding: 4px 18px 14px; scrollbar-width: none; }
+  .render-slot .scroll-view.has-fab { padding-bottom: 84px; }
+  .render-slot .kind-tabs { margin-bottom: 10px; }
+  .render-slot .kind-tab { padding: 6px 10px; min-height: 36px; font-size: 11.5px; }
+  .render-slot .editor-h1 { font-size: 22px; margin: 2px 0 3px; }
+  .render-slot .editor-lead { font-size: 11.5px; margin: 0 0 10px; }
+  .render-slot .f-group { margin-bottom: 8px; }
+  .render-slot .f-label { margin-bottom: 3px; font-size: 11px; }
+  .render-slot .f-box, .render-slot .f-picker { min-height: 38px; padding: 6px 10px; font-size: 12.5px; }
+  .render-slot .f-hint { margin-top: 2px; font-size: 10px; }
+  .render-slot .prominent-amount { padding: 0 0 6px; margin-bottom: 3px; }
+  .render-slot .prominent-amount input { font-size: 26px; }
+  .render-slot .editor-footer { padding: 9px 18px 10px; }
+  .render-slot .est-row { padding-bottom: 8px; margin-bottom: 8px; }
+  .render-slot .est-val { font-size: 20px; }
+  .render-slot .btn-primary, .render-slot .btn-danger, .render-slot .btn-outlined { min-height: 40px; font-size: 13px; }
+  .render-slot, .render-slot * { animation: none !important; }
+  .render-slot .glance-card { padding: 13px 15px 14px; max-height: 96%; scrollbar-width: none; }
+  .render-slot .kv-box { padding: 3px 12px; border-radius: 13px; }
+  .render-slot .kv-row { padding: 5px 0; font-size: 11.5px; }
+  .render-caption {
+    width: 340px; background: var(--studio-surface); border: 1px solid var(--studio-line);
+    border-radius: 14px; padding: 11px 14px; font-size: 12px;
+  }
+  .render-caption strong { display: block; font-size: 13px; margin-bottom: 3px; color: var(--studio-ink); }
+
+  @media (max-width: 1160px) {
+    .studio-grid { grid-template-columns: 1fr; max-width: 440px; }
+  }
+</style>
+</head>
+<body>
+<svg class="sprite" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10.5 9-7.5 9 7.5M5.5 9v11h13V9M10 20v-6h4v6"/></symbol>
+    <symbol id="i-pie" viewBox="0 0 24 24"><path d="M12 3v9h9a9 9 0 1 1-9-9Zm4 .9A9 9 0 0 1 20.1 8H16V3.9Z"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H10l2 2.5h6.5A2.5 2.5 0 0 1 21 10v8.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18.5v-11Z"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-9M15 6h6v6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="m3 7 6 6 4-4 8 9M15 18h6v-6"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6M8 12h12"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A10.5 10.5 0 0 1 12 5c6 0 10 7 10 7a16 16 0 0 1-4 4.9M6.2 6.2C3.6 8.1 2 12 2 12s4 7 10 7a10.6 10.6 0 0 0 5.8-1.7"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M19 12a7 7 0 0 0-12-5l-3 3M5 12a7 7 0 0 0 12 5l3-3"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></symbol>
+    <symbol id="i-unfold" viewBox="0 0 24 24"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.9L12 3.5Z"/></symbol>
+    <symbol id="i-offline" viewBox="0 0 24 24"><path d="m3 3 18 18M9 5.2A16 16 0 0 1 21.5 8M2.5 8a16 16 0 0 1 3.8-2.2M5.5 12.2a11 11 0 0 1 4.5-2M14.2 10.4a11 11 0 0 1 4.3 1.8M8.5 16a6 6 0 0 1 7 0M12 19.5h.01"/></symbol>
+    <symbol id="i-bank" viewBox="0 0 24 24"><path d="m3 8 9-5 9 5H3Zm2 2v8m5-8v8m4-8v8m5-8v8M3 20h18"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.5 8h4a2 2 0 0 1 0 4h-4h4.5a2 2 0 0 1 0 4H9.5V8Zm2-2v12"/></symbol>
+    <symbol id="i-gem" viewBox="0 0 24 24"><path d="m6 4 12 0 4 5-10 11L2 9l4-5Zm-4 5h20"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6V3Zm8 0v4h4M9 12h6M9 16h6"/></symbol>
+  </defs>
+</svg>
+
+<header class="top-bar">
+  <div class="brand-cluster">
+    <div class="brand-badge"><svg class="ico"><use href="#i-up"/></svg></div>
+    <div>
+      <div class="brand-title">Okanzo · Warm Minimalism ("Mineral Ledger")</div>
+    </div>
+    <span class="brand-sub">End-to-End Flow Prototype &amp; Screen Renders</span>
+  </div>
+
+  <div class="mode-switch" role="group" aria-label="Prototype view mode">
+    <button class="mode-btn" id="btn-mode-studio" aria-pressed="true" data-top-mode="studio">Interactive E2E Studio</button>
+    <button class="mode-btn" id="btn-mode-renders" aria-pressed="false" data-top-mode="renders">All E2E Renders (11 Frames)</button>
+  </div>
+
+  <div class="quick-pills">
+    <button class="q-pill" id="pill-theme" aria-pressed="false" data-toggle="theme">🌙 Midnight Dark</button>
+    <button class="q-pill" id="pill-mask" aria-pressed="false" data-toggle="mask">👁 Hide Balances</button>
+    <button class="q-pill" id="pill-offline" aria-pressed="false" data-toggle="offline">⚡ Offline Mode</button>
+    <button class="q-pill" id="pill-motion" aria-pressed="false" data-toggle="motion">Reduced Motion</button>
+  </div>
+</header>
+
+<!-- ========================================================================
+     MODE 1: INTERACTIVE END-TO-END STUDIO
+     ======================================================================== -->
+<main class="studio-grid" id="studio-view">
+  <section aria-label="Guided End-to-End Flow">
+    <div class="panel-card">
+      <p class="eyebrow">Guided End-to-End Walkthrough</p>
+      <h2>Put Warm Minimalism in motion</h2>
+      <p>Click through the complete user journey in order, or drive the phone freely in the center column.</p>
+      <div class="step-list" id="walkthrough-steps">
+        <button class="step-btn active" data-step="1">
+          <span class="step-num">1</span>
+          <span><strong>Home Overview ($212,500)</strong><small>Warm alabaster ledger, equity bar &amp; category shares</small></span>
+        </button>
+        <button class="step-btn" data-step="2">
+          <span class="step-num">2</span>
+          <span><strong>Expand "+ Add holding" in place</strong><small>Blurred scrim morphs into Asset vs. Liability</small></span>
+        </button>
+        <button class="step-btn" data-step="3">
+          <span class="step-num">3</span>
+          <span><strong>Add Stock · ASML.AS (EUR)</strong><small>Listing search, auto-quote (€650), 25 shares &amp; custom name</small></span>
+        </button>
+        <button class="step-btn" data-step="4">
+          <span class="step-num">4</span>
+          <span><strong>Save &rarr; Saved Summary ($212,500)</strong><small>Reconciles +$17,550 USD, shows Market badge &amp; Undo</small></span>
+        </button>
+        <button class="step-btn" data-step="5">
+          <span class="step-num">5</span>
+          <span><strong>Holding Details &amp; Safe Delete</strong><small>4.9% portfolio share bar, EUR&rarr;USD value, isolated Delete</small></span>
+        </button>
+        <button class="step-btn" data-step="6">
+          <span class="step-num">6</span>
+          <span><strong>Manual Liability Variation</strong><small>Progressive disclosure simplifies form to 3 calm inputs</small></span>
+        </button>
+        <button class="step-btn" data-step="7">
+          <span class="step-num">7</span>
+          <span><strong>Statistics / Allocation</strong><small>Animated donut sweep + 1-decimal % &amp; terracotta debt</small></span>
+        </button>
+        <button class="step-btn" data-step="8">
+          <span class="step-num">8</span>
+          <span><strong>Portfolios (Viewing vs ★ Default)</strong><small>1-tap switch, non-bank folder icons &amp; subtotals</small></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <p class="eyebrow">Stress &amp; Edge-Case Scenarios</p>
+      <div class="preset-grid">
+        <button class="preset-btn" data-preset="fifty">📚 50 Holdings + Search</button>
+        <button class="preset-btn" data-preset="negative">↘ Negative Net Worth</button>
+        <button class="preset-btn" data-preset="empty">❐ Empty Portfolio</button>
+        <button class="preset-btn" data-preset="offline-stock">✈ Offline Unpriced Save</button>
+        <button class="preset-btn" data-preset="valuables">✦ 22K Gold Valuables</button>
+        <button class="preset-btn" data-preset="reset">↺ Reset Reconciled Demo</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live Android Phone -->
+  <section aria-label="Interactive Android Phone">
+    <div class="phone-frame" id="live-phone" data-theme="light">
+      <div class="sys-status">
+        <span>9:41</span>
+        <span class="punch-hole"></span>
+        <span id="status-right">100%</span>
+      </div>
+      <div class="app-root" id="phone-app"></div>
+      <div class="phone-modal-backdrop" id="phone-modal" hidden></div>
+      <div class="sys-gesture"><span></span></div>
+    </div>
+  </section>
+
+  <!-- Right Rail: Live State & Design Delta -->
+  <aside aria-label="Prototype Controls and Live State">
+    <div class="panel-card">
+      <p class="eyebrow">Environment &amp; Formatting</p>
+      <h2>Live conditions</h2>
+      <div class="ctrl-row">
+        <span>Base currency</span>
+        <select class="ctrl-select" id="sel-base-currency">
+          <option value="USD" selected>USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="GBP">GBP (£)</option>
+          <option value="INR">INR (₹ · Lakh/Cr)</option>
+        </select>
+      </div>
+      <div class="ctrl-row">
+        <span>Simple net worth</span>
+        <select class="ctrl-select" id="sel-compact">
+          <option value="exact" selected>Exact ($212,500.00)</option>
+          <option value="compact">Compact ($212.5K)</option>
+        </select>
+      </div>
+      <div class="ctrl-row">
+        <span>Layout direction</span>
+        <select class="ctrl-select" id="sel-dir">
+          <option value="ltr" selected>LTR (English)</option>
+          <option value="rtl">RTL (Arabic mirror)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <p class="eyebrow">What Changed vs. Current Okanzo</p>
+      <p><strong>1. Warm Mineral Surfaces:</strong> Alabaster <code>#FAF8F3</code> &amp; warm stone <code>#F2EEE5</code> replace cold sage-grey.</p>
+      <p><strong>2. Non-Alarmist Liabilities:</strong> Warm Terracotta <code>#8C4A27</code> / <code>#F2B896</code> replaces validation-error crimson <code>#BA1A1A</code>.</p>
+      <p><strong>3. Provenance &amp; Context:</strong> Holding Details adds <em>Market quote · 18m ago</em> vs. <em>Manual valuation</em>, converted base value, <code>%</code> share bar, and isolated Delete.</p>
+      <p><strong>4. Scale &amp; Clarity:</strong> 50-holding Quick-Find, 1-decimal <code>%</code> on Home &amp; Statistics, and <code>✓ Viewing</code> vs. <code>★ Default</code> on Portfolios.</p>
+    </div>
+
+    <div class="panel-card">
+      <p class="eyebrow">Reconciled State Inspector</p>
+      <div class="state-log" id="live-state-box"></div>
+    </div>
+  </aside>
+</main>
+
+<!-- ========================================================================
+     MODE 2: HIGH-FIDELITY RENDERS STORYBOARD (11 CONNECTED FRAMES)
+     ======================================================================== -->
+<section class="renders-gallery" id="renders-view" hidden>
+  <div class="gallery-band">
+    <div class="gallery-band-hdr">
+      <div>
+        <p class="eyebrow">Band 1 · End-to-End Flow Renders</p>
+        <h2>Home &rarr; Add Holding (Stock &amp; Manual Variation) &rarr; Save &rarr; Holding Details</h2>
+      </div>
+      <span class="brand-sub">Reconciled Personal Portfolio: $194,950.00 + €16,250 ASML ($17,550 USD) = $212,500.00</span>
+    </div>
+    <div class="renders-row" id="renders-band-flow"></div>
+  </div>
+
+  <div class="gallery-band">
+    <div class="gallery-band-hdr">
+      <div>
+        <p class="eyebrow">Band 2 · Five Core Connected Screens</p>
+        <h2>Home Overview · Portfolios · Statistics / Allocation</h2>
+      </div>
+      <span class="brand-sub">Consistent Base Currency (USD) &amp; Multi-Currency Holdings (USD, EUR, GBP)</span>
+    </div>
+    <div class="renders-row" id="renders-band-screens"></div>
+  </div>
+
+  <div class="gallery-band">
+    <div class="gallery-band-hdr">
+      <div>
+        <p class="eyebrow">Band 3 · Theme, Privacy &amp; Offline Resilience Renders</p>
+        <h2>Midnight Dark · Hidden Balances · Offline Pending Quote · Empty &amp; Negative States</h2>
+      </div>
+      <span class="brand-sub">WCAG AA Contrast · 0% Fake Live Quotes · Quantities Masked Under Hide Balances</span>
+    </div>
+    <div class="renders-row" id="renders-band-states"></div>
+  </div>
+</section>
+
+<script>
+'use strict';
+
+/* ============================================================================
+   PURE DOMAIN & RECONCILIATION MODULE (Liftable to Flutter / MVVM)
+   ============================================================================ */
+const FX_TO_USD = { USD: 1.0, EUR: 1.08, GBP: 1.26, INR: 1 / 84.0 };
+const CURRENCY_SYM = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
+
+const ASSET_TYPES = [
+  { id: 'realEstate', label: 'Real estate', icon: 'home', mode: 'flat', hint: 'Property value' },
+  { id: 'mutualFund', label: 'Mutual fund / ETF', icon: 'pie', mode: 'market', hint: 'Funds and indexes' },
+  { id: 'stock', label: 'Stock', icon: 'up', mode: 'market', hint: 'Company shares' },
+  { id: 'bankDeposit', label: 'Bank / deposit', icon: 'bank', mode: 'flat', hint: 'Savings and deposits' },
+  { id: 'crypto', label: 'Cryptocurrency', icon: 'coin', mode: 'market', hint: 'Coins and tokens' },
+  { id: 'metals', label: 'Valuables', icon: 'gem', mode: 'metal', hint: 'Gold, silver, gems & jewellery' },
+  { id: 'cash', label: 'Cash', icon: 'card', mode: 'flat', hint: 'Money on hand' },
+  { id: 'bond', label: 'Bond', icon: 'doc', mode: 'flat', hint: 'Current holding value' }
+];
+
+const LIABILITY_TYPES = [
+  { id: 'mortgage', label: 'Mortgage', icon: 'home', mode: 'flat', hint: 'Property borrowing' },
+  { id: 'tax', label: 'Tax due', icon: 'doc', mode: 'flat', hint: 'Outstanding taxes' },
+  { id: 'creditCard', label: 'Credit card', icon: 'card', mode: 'flat', hint: 'Outstanding card balance' },
+  { id: 'loan', label: 'Loan', icon: 'bank', mode: 'flat', hint: 'Personal or auto borrowing' },
+  { id: 'pendingPayment', label: 'Pending payment', icon: 'doc', mode: 'flat', hint: 'Invoice or obligation owed' }
+];
+
+const ASSET_CHART_COLORS = ['#3D6249', '#6B8F78', '#B69354', '#5A7D8C', '#869F6A', '#8D7B99'];
+const LIAB_CHART_COLORS = ['#8C4A27', '#C07D4F', '#A3635D', '#CCA26E'];
+
+const MARKET_CATALOG = [
+  { symbol: 'ASML.AS', name: 'ASML Holding N.V.', type: 'stock', exchange: 'Euronext Amsterdam (.AS)', currency: 'EUR', price: 650.00 },
+  { symbol: 'MSFT', name: 'Microsoft Corp.', type: 'stock', exchange: 'US (NYSE / Nasdaq)', currency: 'USD', price: 421.25 },
+  { symbol: 'AAPL', name: 'Apple Inc.', type: 'stock', exchange: 'US (NYSE / Nasdaq)', currency: 'USD', price: 228.50 },
+  { symbol: 'RELIANCE.NS', name: 'Reliance Industries Ltd.', type: 'stock', exchange: 'NSE India (.NS)', currency: 'INR', price: 1340.00 },
+  { symbol: 'VWCE.DE', name: 'Vanguard FTSE All-World ETF', type: 'mutualFund', exchange: 'Xetra / Euronext', currency: 'EUR', price: 125.00 },
+  { symbol: 'AGG', name: 'iShares Core U.S. Aggregate Bond ETF', type: 'mutualFund', exchange: 'US (NYSE / Nasdaq)', currency: 'USD', price: 98.50 },
+  { symbol: 'BTC-USD', name: 'Bitcoin USD', type: 'crypto', exchange: 'Crypto Pair', currency: 'USD', price: 88000.00 },
+  { symbol: 'ETH-USD', name: 'Ethereum USD', type: 'crypto', exchange: 'Crypto Pair', currency: 'USD', price: 3250.00 }
+];
+
+function convertCurrency(amount, from, to) {
+  if (!Number.isFinite(amount)) return 0;
+  if (from === to) return amount;
+  const usd = amount * (FX_TO_USD[from] || 1);
+  return usd / (FX_TO_USD[to] || 1);
+}
+
+function formatMoney(amount, currency = 'USD', { masked = false, compact = false } = {}) {
+  const sym = CURRENCY_SYM[currency] || '$';
+  if (masked) return `${sym} ••••`;
+  const neg = amount < -0.004;
+  const abs = Math.abs(amount);
+  if (compact && abs >= 1000) {
+    if (currency === 'INR' && abs >= 10000000) return `${neg ? '−' : ''}₹${(abs / 10000000).toFixed(2)} Cr`;
+    if (currency === 'INR' && abs >= 100000) return `${neg ? '−' : ''}₹${(abs / 100000).toFixed(2)} L`;
+    if (abs >= 1000000) return `${neg ? '−' : ''}${sym}${(abs / 1000000).toFixed(2)}M`;
+    return `${neg ? '−' : ''}${sym}${(abs / 1000).toFixed(1)}K`;
+  }
+  const formatted = new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(abs);
+  return `${neg ? '−' : ''}${sym}${formatted}`;
+}
+
+function pct1(part, total) {
+  if (!total || total <= 0 || !part || part <= 0) return '0.0%';
+  const p = (part / total) * 100;
+  if (p > 0 && p < 0.1) return '<0.1%';
+  return `${p.toFixed(1)}%`;
+}
+
+function initialPortfolios() {
+  return [
+    { id: 'personal', name: 'Personal', isDefault: true },
+    { id: 'family', name: 'Family Household', isDefault: false },
+    { id: 'graduate', name: 'Graduate & Auto', isDefault: false },
+    { id: 'retirement', name: 'Retirement Plan', isDefault: false }
+  ];
+}
+
+function initialHoldings({ includeAsml = true } = {}) {
+  const list = [
+    // Personal Portfolio (Reconciles to $360,500 Assets - $148,000 Liabilities = $212,500 Net Worth when ASML is included)
+    { id: 1, portfolio: 'personal', kind: 'asset', type: 'realEstate', name: 'Cedar Park Townhome', currency: 'USD', amount: 215000, priced: true, updatedAgo: '3d ago' },
+    { id: 2, portfolio: 'personal', kind: 'asset', type: 'mutualFund', name: 'Vanguard FTSE All-World ETF', symbol: 'VWCE.DE', exchange: 'Xetra / Euronext', quantity: 400, price: 125, currency: 'EUR', amount: 50000, priced: true, updatedAgo: '18m ago' },
+    { id: 3, portfolio: 'personal', kind: 'asset', type: 'mutualFund', name: 'iShares Core U.S. Bond ETF', symbol: 'AGG', exchange: 'US (NYSE / Nasdaq)', quantity: 180, price: 98.50, currency: 'USD', amount: 17730, priced: true, updatedAgo: '18m ago' },
+    { id: 5, portfolio: 'personal', kind: 'asset', type: 'stock', name: 'Microsoft Corp.', customName: 'MSFT Long-term', symbol: 'MSFT', exchange: 'US (NYSE / Nasdaq)', quantity: 40, price: 421.25, currency: 'USD', amount: 16850, priced: true, updatedAgo: '18m ago' },
+    { id: 6, portfolio: 'personal', kind: 'asset', type: 'bankDeposit', name: 'Marcus High-Yield Reserve', currency: 'USD', amount: 22182, priced: true, updatedAgo: 'Yesterday' },
+    { id: 7, portfolio: 'personal', kind: 'asset', type: 'bankDeposit', name: 'Barclays Rainy-Day Saver', currency: 'GBP', amount: 5000, priced: true, updatedAgo: '5d ago' },
+    { id: 8, portfolio: 'personal', kind: 'asset', type: 'crypto', name: 'Bitcoin USD', customName: 'Hardware Wallet BTC', symbol: 'BTC-USD', quantity: 0.08425, price: 88000, currency: 'USD', amount: 7414, priced: true, updatedAgo: '18m ago' },
+    { id: 9, portfolio: 'personal', kind: 'asset', type: 'metals', name: 'Sovereign Gold Coins', metal: 'Gold', purity: '22K', quantity: 45, price: 77.20, customPrice: true, currency: 'USD', amount: 3474, priced: true, updatedAgo: '2d ago' },
+    { id: 10, portfolio: 'personal', kind: 'liability', type: 'mortgage', name: 'Cedar Park Fixed Mortgage', currency: 'USD', amount: 138200, priced: true, updatedAgo: '1w ago' },
+    { id: 11, portfolio: 'personal', kind: 'liability', type: 'tax', name: 'Estimated Q4 Tax', currency: 'USD', amount: 7100, priced: true, updatedAgo: '2d ago' },
+    { id: 12, portfolio: 'personal', kind: 'liability', type: 'creditCard', name: 'Amex Euro Statement', currency: 'EUR', amount: 2500, priced: true, updatedAgo: 'Yesterday' },
+
+    // Family Household ($1,428,900.00 Net Worth)
+    { id: 20, portfolio: 'family', kind: 'asset', type: 'realEstate', name: ' Maplewood Family Residence', currency: 'USD', amount: 1120000, priced: true, updatedAgo: '2w ago' },
+    { id: 21, portfolio: 'family', kind: 'asset', type: 'mutualFund', name: 'Global Retirement Index', symbol: 'VWCE.DE', quantity: 3800, price: 125, currency: 'EUR', amount: 475000, priced: true, updatedAgo: '18m ago' },
+    { id: 22, portfolio: 'family', kind: 'asset', type: 'bankDeposit', name: 'Joint Treasury Reserve', currency: 'USD', amount: 57400, priced: true, updatedAgo: '4d ago' },
+    { id: 23, portfolio: 'family', kind: 'liability', type: 'mortgage', name: 'Maplewood 15Y Mortgage', currency: 'USD', amount: 261500, priced: true, updatedAgo: '1w ago' },
+
+    // Graduate & Auto (Negative Net Worth: -$18,450.00)
+    { id: 30, portfolio: 'graduate', kind: 'asset', type: 'cash', name: 'Checking Buffer', currency: 'USD', amount: 6800, priced: true, updatedAgo: 'Today' },
+    { id: 31, portfolio: 'graduate', kind: 'asset', type: 'bankDeposit', name: 'Relocation Stipend', currency: 'USD', amount: 13000, priced: true, updatedAgo: '3d ago' },
+    { id: 32, portfolio: 'graduate', kind: 'liability', type: 'loan', name: 'M.S. Tuition Loan', currency: 'USD', amount: 31450, priced: true, updatedAgo: '1w ago' },
+    { id: 33, portfolio: 'graduate', kind: 'liability', type: 'loan', name: 'Civic Auto Note', currency: 'USD', amount: 6800, priced: true, updatedAgo: '1w ago' }
+  ];
+  if (includeAsml) {
+    list.splice(3, 0, {
+      id: 4, portfolio: 'personal', kind: 'asset', type: 'stock',
+      name: 'ASML Holding N.V.', customName: 'European Semis — ASML',
+      symbol: 'ASML.AS', exchange: 'Euronext Amsterdam (.AS)',
+      quantity: 25, price: 650, currency: 'EUR', amount: 16250, priced: true, updatedAgo: '18m ago'
+    });
+  }
+  return list;
+}
+
+function summarizePortfolio(holdings, portfolioId, baseCurrency) {
+  const rows = holdings.filter(h => h.portfolio === portfolioId);
+  let totalAssets = 0, totalLiabilities = 0, unpricedCount = 0;
+  const assetGroups = {}, liabilityGroups = {};
+
+  for (const h of rows) {
+    const converted = h.priced ? convertCurrency(h.amount, h.currency, baseCurrency) : 0;
+    if (!h.priced) unpricedCount++;
+    if (h.kind === 'asset') {
+      totalAssets += converted;
+      (assetGroups[h.type] ||= { items: [], total: 0 }).items.push({ ...h, converted });
+      assetGroups[h.type].total += converted;
+    } else {
+      totalLiabilities += converted;
+      (liabilityGroups[h.type] ||= { items: [], total: 0 }).items.push({ ...h, converted });
+      liabilityGroups[h.type].total += converted;
+    }
+  }
+  return {
+    totalAssets,
+    totalLiabilities,
+    netWorth: totalAssets - totalLiabilities,
+    assetCount: rows.filter(r => r.kind === 'asset').length,
+    liabilityCount: rows.filter(r => r.kind === 'liability').length,
+    unpricedCount,
+    assetGroups,
+    liabilityGroups
+  };
+}
+
+/* ============================================================================
+   INTERACTIVE STUDIO STATE & RENDERER
+   ============================================================================ */
+const ico = name => `<svg class="ico" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function blankDraft(kind = 'asset', type = kind === 'asset' ? 'stock' : 'mortgage') {
+  return {
+    id: null, kind, type, currency: type === 'stock' ? 'EUR' : 'USD',
+    exchange: 'Euronext Amsterdam (.AS)', symbol: '', quoteName: '',
+    quantity: '', price: null, amount: '', name: '', customName: '',
+    customNameOpen: false, metal: 'Gold', purity: '22K', useTotalValue: false,
+    dirty: false
+  };
+}
+
+const app = {
+  topMode: new URLSearchParams(location.search).get('mode') === 'renders' ? 'renders' : 'studio',
+  theme: 'light',
+  masked: false,
+  offline: false,
+  compact: false,
+  dir: 'ltr',
+  baseCurrency: 'USD',
+  screen: 'home', // 'home' | 'portfolios' | 'statistics' | 'editor'
+  homeTab: 'asset',
+  activePortfolio: 'personal',
+  portfolios: initialPortfolios(),
+  holdings: initialHoldings({ includeAsml: true }),
+  expanded: { 'personal:asset:stock': true, 'personal:liability:mortgage': true },
+  searchOpen: false,
+  searchQuery: '',
+  addExpanded: false,
+  draft: blankDraft('asset', 'stock'),
+  errors: {},
+  selectedStatOverview: null,
+  selectedStatAsset: null,
+  selectedStatLiab: null,
+  modal: null, // { type: 'details'|'saved'|'delete'|'discard'|'picker'|'portfolio-name', data: ... }
+  lastSavedUndo: null,
+  nextId: 200,
+  refreshing: false
+};
+
+function displayTitle(h) {
+  return (h.customName && h.customName.trim()) ? h.customName.trim() : h.name;
+}
+
+function holdingSubtitle(h, baseCurrency, masked) {
+  const fxNote = h.currency !== baseCurrency ? ` · ${h.currency}` : '';
+  if (h.kind === 'liability') return (h.currency !== baseCurrency ? `${h.currency} (${formatMoney(h.amount, h.currency, { masked })})` : h.updatedAgo || 'Manual valuation');
+  const t = ASSET_TYPES.find(a => a.id === h.type);
+  if (t?.mode === 'market') {
+    const core = masked ? (h.symbol || '') : `${h.quantity} × ${h.symbol}`;
+    const age = h.priced ? ` · ${h.updatedAgo || '18m ago'}` : ' · Quote pending';
+    return `${core}${fxNote}${age}`.trim();
+  }
+  if (t?.mode === 'metal') {
+    const core = masked ? `${h.metal} · ${h.purity || ''}` : `${h.metal} · ${h.purity || ''} · ${h.quantity} g`;
+    return `${core}${fxNote}`.trim();
+  }
+  return `${h.currency !== baseCurrency ? `${h.currency} · ` : ''}Manual valuation · ${h.updatedAgo || 'Saved'}`;
+}
+
+function renderNavBar(current, blurred = false) {
+  const items = [
+    ['home', 'Home', 'home'],
+    ['statistics', 'Statistics', 'pie'],
+    ['portfolios', 'Portfolios', 'folder']
+  ];
+  return `<nav class="m3-navbar${blurred ? ' is-blurred' : ''}" aria-label="Primary destinations">
+    ${items.map(([id, label, iconName]) => `
+      <button class="nav-dest" data-nav="${id}" ${current === id ? 'aria-current="page"' : ''}>
+        <span class="nav-pill">${ico(iconName)}</span>
+        <span>${label}</span>
+      </button>`).join('')}
+  </nav>`;
+}
+
+function renderHomeView(st) {
+  const p = st.portfolios.find(x => x.id === st.activePortfolio) || st.portfolios[0];
+  const sum = summarizePortfolio(st.holdings, p.id, st.baseCurrency);
+  const neg = sum.netWorth < -0.005;
+  const equityFrac = neg ? 1 : (sum.totalAssets > 0 ? Math.max(0, Math.min(1, sum.netWorth / sum.totalAssets)) : 0);
+  const typeDefs = st.homeTab === 'asset' ? ASSET_TYPES : LIABILITY_TYPES;
+  const groupMap = st.homeTab === 'asset' ? sum.assetGroups : sum.liabilityGroups;
+  const secTotal = st.homeTab === 'asset' ? sum.totalAssets : sum.totalLiabilities;
+  const needle = st.searchQuery.trim().toLowerCase();
+
+  const visibleGroups = [];
+  let itemCount = 0;
+  for (const def of typeDefs) {
+    const g = groupMap[def.id];
+    if (!g) continue;
+    const filtered = !needle ? g.items : g.items.filter(h =>
+      displayTitle(h).toLowerCase().includes(needle) ||
+      h.name.toLowerCase().includes(needle) ||
+      (h.symbol || '').toLowerCase().includes(needle) ||
+      h.currency.toLowerCase().includes(needle)
+    );
+    if (!filtered.length) continue;
+    const subTotal = filtered.reduce((acc, x) => acc + x.converted, 0);
+    itemCount += filtered.length;
+    visibleGroups.push({ def, items: filtered, total: subTotal });
+  }
+
+  const allKeys = visibleGroups.map(g => `${p.id}:${st.homeTab}:${g.def.id}`);
+  const allExpanded = allKeys.length > 0 && allKeys.every(k => st.expanded[k]);
+
+  return `
+    <header class="m3-appbar">
+      <button class="portfolio-chip" data-act="open-portfolio-switcher" title="Switch portfolio">
+        ${ico('folder')}
+        <span>${esc(p.name)}</span>
+        ${ico('chev')}
+      </button>
+      <div class="appbar-actions">
+        <button class="icon-btn" data-act="refresh" title="Refresh quotes">${st.refreshing ? `<span class="spin">${ico('refresh')}</span>` : ico('refresh')}</button>
+        <button class="icon-btn${st.masked ? ' is-active' : ''}" data-act="toggle-mask" title="${st.masked ? 'Show balances' : 'Hide balances'}">${ico(st.masked ? 'eye-off' : 'eye')}</button>
+      </div>
+    </header>
+
+    <div class="scroll-view has-fab">
+      ${st.offline ? `<div class="banner-note">${ico('offline')}<div><strong>Offline — cached quotes &amp; FX active</strong><br>Manual valuations &amp; unpriced market tickers still save on device.</div></div>` : ''}
+
+      <div class="nw-label-row">
+        <span class="nw-caption">Net worth</span>
+        <span class="fx-pill">Base · ${st.baseCurrency}${sum.unpricedCount ? ` · ${sum.unpricedCount} pending` : ''}</span>
+      </div>
+      <div class="nw-headline tabular value-swap${neg && !st.masked ? ' is-negative' : ''}">
+        ${formatMoney(sum.netWorth, st.baseCurrency, { masked: st.masked, compact: st.compact })}
+      </div>
+
+      <div class="ledger-pair">
+        <div class="ledger-tile asset">
+          <div class="ledger-tile-lbl">${ico('up')} Assets</div>
+          <div class="ledger-tile-val tabular">${st.masked ? '••••' : formatMoney(sum.totalAssets, st.baseCurrency)}</div>
+        </div>
+        <div class="ledger-tile liability">
+          <div class="ledger-tile-lbl">${ico('down')} Liabilities</div>
+          <div class="ledger-tile-val tabular">${st.masked ? '••••' : formatMoney(sum.totalLiabilities, st.baseCurrency)}</div>
+        </div>
+      </div>
+
+      ${(sum.totalAssets > 0 || sum.totalLiabilities > 0) ? `
+      <div class="coverage-block">
+        <div class="coverage-track">
+          <div class="coverage-fill${neg ? ' negative' : ''}" style="width:${(equityFrac * 100).toFixed(1)}%"></div>
+        </div>
+        <div class="coverage-legend tabular">
+          ${neg
+            ? `<span style="color:var(--liab);font-weight:600;">Liabilities exceed assets</span><span>${st.liabilityCount || sum.liabilityCount} obligations</span>`
+            : `<span>Net equity ${pct1(sum.netWorth, sum.totalAssets)}</span><span>Obligations ${pct1(sum.totalLiabilities, sum.totalAssets)}</span>`}
+        </div>
+      </div>` : ''}
+
+      <div class="seg-bar" role="tablist">
+        <button class="seg-btn" role="tab" aria-selected="${st.homeTab === 'asset'}" data-act="home-tab" data-val="asset">Assets</button>
+        <button class="seg-btn" role="tab" aria-selected="${st.homeTab === 'liability'}" data-act="home-tab" data-val="liability">Liabilities</button>
+      </div>
+
+      <div class="list-toolbar">
+        <span class="list-toolbar-title">${st.homeTab === 'asset' ? 'What you own' : 'What you owe'} · ${itemCount} ${itemCount === 1 ? 'holding' : 'holdings'}</span>
+        ${(sum.assetCount + sum.liabilityCount > 0) ? `
+        <div class="toolbar-btns">
+          <button class="mini-icon-btn" data-act="toggle-search" aria-expanded="${st.searchOpen}" title="Filter holdings">${ico('search')}</button>
+          <button class="mini-icon-btn" data-act="toggle-expand-all" title="${allExpanded ? 'Collapse all' : 'Expand all'}">${ico('unfold')}</button>
+        </div>` : ''}
+      </div>
+
+      <div class="disclosure-box${st.searchOpen ? ' is-open' : ''}">
+        <div class="disclosure-inner">
+          <div class="filter-bar-wrap">
+            <div class="filter-input-box">
+              ${ico('search')}
+              <input id="home-filter-input" value="${esc(st.searchQuery)}" placeholder="Filter by name, ticker, or currency…" data-input="search" />
+              ${st.searchQuery ? `<button class="mini-icon-btn" style="width:28px;height:28px;" data-act="clear-search">${ico('close')}</button>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${visibleGroups.length === 0 ? `
+        <div style="text-align:center;padding:34px 18px;background:var(--soft);border-radius:20px;border:1px solid var(--line);">
+          <div style="color:var(--accent);margin-bottom:8px;">${ico('folder')}</div>
+          <div style="font-weight:650;font-size:15px;">${needle ? 'No matching holdings' : (st.homeTab === 'asset' ? 'No assets yet' : 'No liabilities')}</div>
+          <p style="font-size:12.5px;color:var(--muted);margin:6px 0 0;">${needle ? 'Try another name, symbol, or currency code.' : 'Records stay encrypted on this device with zero cloud accounts.'}</p>
+        </div>
+      ` : `
+        <div class="category-panel">
+          ${visibleGroups.map(({ def, items, total }) => {
+            const key = `${p.id}:${st.homeTab}:${def.id}`;
+            const open = Boolean(needle) || Boolean(st.expanded[key]);
+            const allPending = items.every(i => !i.priced);
+            const share = !allPending && secTotal > 0 ? pct1(total, secTotal) : '';
+            return `
+              <div class="cat-group${open ? ' is-open' : ''}">
+                <button class="cat-header" data-act="toggle-cat" data-key="${key}">
+                  <span class="type-avatar${st.homeTab === 'liability' ? ' liab' : ''}">${ico(def.icon)}</span>
+                  <span class="cat-meta">
+                    <span class="cat-name">${def.label}</span>
+                    <span class="cat-sub tabular">${items.length} ${items.length === 1 ? 'holding' : 'holdings'}${share ? ` · ${share}` : ''}</span>
+                  </span>
+                  <span class="cat-total tabular">${allPending ? `<span class="pill-pending">Price pending</span>` : (st.masked ? '••••' : formatMoney(total, st.baseCurrency))}</span>
+                  <span class="cat-chev">${ico('chev')}</span>
+                </button>
+                <div class="disclosure-box${open ? ' is-open' : ''}">
+                  <div class="disclosure-inner">
+                    <div class="holding-indent">
+                      <div class="holding-subbar"><span>Your holdings</span></div>
+                      ${items.map(item => `
+                        <button class="h-item-btn" data-act="open-holding" data-id="${item.id}">
+                          <span style="min-width:0;flex:1;">
+                            <span class="h-item-title">${esc(displayTitle(item))}${item.isNew ? '<span class="pill-new">New</span>' : ''}</span>
+                            <span class="h-item-sub">${esc(holdingSubtitle(item, st.baseCurrency, st.masked))}</span>
+                          </span>
+                          <span class="h-item-amt tabular">${!item.priced ? `<span class="pill-pending">Price pending</span>` : (st.masked ? '••••' : formatMoney(item.converted, st.baseCurrency))}</span>
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+      `}
+    </div>
+
+    <div class="scrim-blur${st.addExpanded ? ' is-open' : ''}" data-act="close-add"></div>
+    <div class="fab-dock">
+      <div class="add-morph${st.addExpanded ? ' is-open' : ''}">
+        <div class="add-choices-wrap">
+          <div class="add-choices-inner">
+            <div class="add-choices-pad">
+              <button class="add-choice-btn" data-act="start-editor" data-kind="asset">
+                <span class="choice-badge own">${ico('up')}</span>
+                <span><strong>An asset</strong><small>Something you own</small></span>
+              </button>
+              <button class="add-choice-btn" data-act="start-editor" data-kind="liability">
+                <span class="choice-badge owe">${ico('down')}</span>
+                <span><strong>A liability</strong><small>Something you owe</small></span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <button class="add-trigger-btn" data-act="toggle-add">
+          <span class="plus-ico">${ico('plus')}</span>
+          <span>${st.addExpanded ? 'Close' : 'Add holding'}</span>
+        </button>
+      </div>
+    </div>
+    ${renderNavBar('home', st.addExpanded)}
+  `;
+}
+
+function renderPortfoliosView(st) {
+  return `
+    <header class="m3-appbar">
+      <span style="font-size:21px;font-weight:650;letter-spacing:-0.02em;">Portfolios</span>
+      <div class="appbar-actions">
+        <button class="icon-btn${st.masked ? ' is-active' : ''}" data-act="toggle-mask" title="Hide balances">${ico(st.masked ? 'eye-off' : 'eye')}</button>
+      </div>
+    </header>
+    <div class="scroll-view has-fab">
+      <p style="font-size:12px;color:var(--muted);margin:0 0 14px;">Named local collections · Tap any portfolio to view its holdings.</p>
+      ${st.portfolios.map(p => {
+        const sum = summarizePortfolio(st.holdings, p.id, st.baseCurrency);
+        const selected = p.id === st.activePortfolio;
+        const neg = sum.netWorth < -0.005;
+        return `
+          <div class="portfolio-card${selected ? ' is-selected' : ''}" data-act="select-portfolio" data-id="${p.id}">
+            <div style="display:flex;align-items:center;gap:9px;">
+              <span style="color:${selected ? 'var(--accent)' : 'var(--muted)'};">${ico('folder')}</span>
+              <strong style="flex:1;font-size:15.5px;">${esc(p.name)}</strong>
+              ${!p.isDefault ? `<button class="mini-icon-btn" data-act="make-default" data-id="${p.id}" title="Set as default">${ico('star')}</button>` : ''}
+              <button class="mini-icon-btn" data-act="rename-portfolio" data-id="${p.id}" title="Rename portfolio">${ico('edit')}</button>
+            </div>
+            ${(selected || p.isDefault) ? `
+              <div class="p-badges">
+                ${selected ? `<span class="p-tag viewing">${ico('check')} Viewing</span>` : ''}
+                ${p.isDefault ? `<span class="p-tag default">${ico('star')} Default</span>` : ''}
+              </div>` : ''}
+            <div class="tabular" style="font-size:26px;font-weight:600;letter-spacing:-0.03em;margin-top:11px;color:${neg && !st.masked ? 'var(--liab)' : 'var(--accent)'};">
+              ${formatMoney(sum.netWorth, st.baseCurrency, { masked: st.masked, compact: st.compact })}
+            </div>
+            <div style="font-size:12.5px;color:var(--muted);margin-top:2px;">
+              ${sum.assetCount} ${sum.assetCount === 1 ? 'asset' : 'assets'} · ${sum.liabilityCount} ${sum.liabilityCount === 1 ? 'liability' : 'liabilities'}
+            </div>
+            ${(sum.assetCount + sum.liabilityCount > 0) ? `
+              <div class="tabular" style="font-size:11.5px;color:var(--muted);margin-top:7px;">
+                Assets ${st.masked ? '••••' : formatMoney(sum.totalAssets, st.baseCurrency)} &nbsp;·&nbsp; Liabilities ${st.masked ? '••••' : formatMoney(sum.totalLiabilities, st.baseCurrency)}
+              </div>` : ''}
+          </div>`;
+      }).join('')}
+    </div>
+    <div class="fab-dock">
+      <button class="btn-primary" style="width:auto;padding:0 18px;border-radius:18px;box-shadow:0 8px 22px rgba(28,50,36,0.22);" data-act="new-portfolio">
+        ${ico('plus')} New portfolio
+      </button>
+    </div>
+    ${renderNavBar('portfolios')}
+  `;
+}
+
+function renderDonutCard({ id, title, subtitle, slices, centerLabel, centerAmount, baseCurrency, masked, selectedIdx, isLiab = false }) {
+  const total = slices.reduce((s, x) => s + x.value, 0);
+  const r = 68, circ = 2 * Math.PI * r;
+  let offset = 0;
+  const activeSlice = (selectedIdx !== null && slices[selectedIdx]) ? slices[selectedIdx] : null;
+  const arcs = slices.map((s, idx) => {
+    const frac = total > 0 ? s.value / total : 0;
+    const len = Math.max(0, frac * circ - (slices.length > 1 ? 2.5 : 0));
+    const dashOffset = -offset;
+    offset += frac * circ;
+    const dim = selectedIdx !== null && selectedIdx !== idx;
+    const sw = selectedIdx === idx ? 26 : 22;
+    return `<circle class="donut-arc" cx="98" cy="98" r="${r}" stroke="${s.color}" stroke-width="${sw}"
+      stroke-dasharray="${len.toFixed(2)} ${circ.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}"
+      style="opacity:${dim ? 0.3 : 1}" data-act="select-slice" data-chart="${id}" data-idx="${idx}" />`;
+  }).join('');
+
+  return `
+    <div class="chart-card${isLiab ? ' liab-card' : ''}">
+      <div style="display:flex;align-items:center;gap:7px;font-weight:650;font-size:15px;">
+        <span style="color:${isLiab ? 'var(--liab)' : 'var(--accent)'};">${ico(isLiab ? 'down' : 'up')}</span>
+        <span>${esc(title)}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);">${esc(subtitle)}</div>
+      <div class="donut-wrap">
+        <svg class="donut-svg" viewBox="0 0 196 196">${arcs}</svg>
+        <div class="donut-center">
+          <span style="font-size:11px;color:var(--muted);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(activeSlice ? activeSlice.label : centerLabel)}</span>
+          <strong class="tabular" style="font-size:16.5px;margin-top:2px;">${formatMoney(activeSlice ? activeSlice.value : centerAmount, baseCurrency, { masked, compact: true })}</strong>
+          ${activeSlice ? `<span class="tabular" style="font-size:11px;color:var(--muted);">${pct1(activeSlice.value, total)}</span>` : ''}
+        </div>
+      </div>
+      <div>
+        ${slices.map((s, idx) => `
+          <button class="legend-row${selectedIdx === idx ? ' is-selected' : ''}" data-act="select-slice" data-chart="${id}" data-idx="${idx}">
+            <span class="swatch-dot" style="background:${s.color}"></span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;">${esc(s.label)}</span>
+            <span class="tabular" style="font-size:12px;color:var(--muted);">${pct1(s.value, total)}</span>
+            <span class="tabular" style="font-size:13px;font-weight:600;">${formatMoney(s.value, baseCurrency, { masked })}</span>
+          </button>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderStatisticsView(st) {
+  const p = st.portfolios.find(x => x.id === st.activePortfolio) || st.portfolios[0];
+  const sum = summarizePortfolio(st.holdings, p.id, st.baseCurrency);
+  const hasAny = sum.totalAssets > 0 || sum.totalLiabilities > 0;
+
+  const assetSlices = ASSET_TYPES
+    .filter(t => sum.assetGroups[t.id]?.total > 0)
+    .map((t, i) => ({ label: t.label, value: sum.assetGroups[t.id].total, color: ASSET_CHART_COLORS[i % ASSET_CHART_COLORS.length] }));
+  const liabSlices = LIABILITY_TYPES
+    .filter(t => sum.liabilityGroups[t.id]?.total > 0)
+    .map((t, i) => ({ label: t.label, value: sum.liabilityGroups[t.id].total, color: LIAB_CHART_COLORS[i % LIAB_CHART_COLORS.length] }));
+
+  return `
+    <header class="m3-appbar">
+      <button class="portfolio-chip" data-act="open-portfolio-switcher">
+        ${ico('folder')}<span>${esc(p.name)}</span>${ico('chev')}
+      </button>
+      <div class="appbar-actions">
+        <button class="icon-btn${st.masked ? ' is-active' : ''}" data-act="toggle-mask" title="Hide balances">${ico(st.masked ? 'eye-off' : 'eye')}</button>
+      </div>
+    </header>
+    <div class="scroll-view">
+      ${!hasAny ? `
+        <div style="text-align:center;padding:48px 20px;background:var(--soft);border-radius:20px;">
+          <div style="color:var(--accent);margin-bottom:10px;">${ico('pie')}</div>
+          <strong>Nothing to chart yet</strong>
+          <p style="font-size:12.5px;color:var(--muted);margin-top:6px;">Add assets or liabilities to see their breakdown in ${st.baseCurrency}.</p>
+        </div>
+      ` : `
+        ${renderDonutCard({
+          id: 'overview', title: 'Overview', subtitle: 'Assets vs. liabilities (current snapshot, no P&L history)',
+          slices: [
+            ...(sum.totalAssets > 0 ? [{ label: 'Assets', value: sum.totalAssets, color: '#3D6249' }] : []),
+            ...(sum.totalLiabilities > 0 ? [{ label: 'Liabilities', value: sum.totalLiabilities, color: '#8C4A27' }] : [])
+          ],
+          centerLabel: 'Net worth', centerAmount: sum.netWorth,
+          baseCurrency: st.baseCurrency, masked: st.masked, selectedIdx: st.selectedStatOverview
+        })}
+        ${assetSlices.length ? renderDonutCard({
+          id: 'assets', title: 'Assets', subtitle: 'Allocation by category',
+          slices: assetSlices, centerLabel: 'Assets', centerAmount: sum.totalAssets,
+          baseCurrency: st.baseCurrency, masked: st.masked, selectedIdx: st.selectedStatAsset
+        }) : ''}
+        ${liabSlices.length ? renderDonutCard({
+          id: 'liabilities', title: 'Liabilities', subtitle: 'Obligations by category',
+          slices: liabSlices, centerLabel: 'Liabilities', centerAmount: sum.totalLiabilities,
+          baseCurrency: st.baseCurrency, masked: st.masked, selectedIdx: st.selectedStatLiab, isLiab: true
+        }) : ''}
+      `}
+    </div>
+    ${renderNavBar('statistics')}
+  `;
+}
+
+function computeDraftEstimate(d, offline) {
+  const defs = d.kind === 'asset' ? ASSET_TYPES : LIABILITY_TYPES;
+  const def = defs.find(x => x.id === d.type) || defs[0];
+  if (d.kind === 'liability' || def.mode === 'flat' || (def.mode === 'metal' && d.useTotalValue)) {
+    const val = parseFloat(d.amount) || 0;
+    return { nativeAmount: val, priced: true, mode: 'flat' };
+  }
+  const qty = parseFloat(d.quantity) || 0;
+  if (def.mode === 'metal') {
+    const rate = d.price ?? (offline ? null : 77.20);
+    return { nativeAmount: rate ? qty * rate : 0, priced: rate !== null, mode: 'metal', rate };
+  }
+  return { nativeAmount: d.price !== null ? qty * d.price : 0, priced: d.price !== null, mode: 'market' };
+}
+
+function validateDraft(d) {
+  const errs = {};
+  const defs = d.kind === 'asset' ? ASSET_TYPES : LIABILITY_TYPES;
+  const def = defs.find(x => x.id === d.type) || defs[0];
+  if (d.kind === 'liability' || def.mode === 'flat' || (def.mode === 'metal' && d.useTotalValue)) {
+    if (d.amount === '' || isNaN(Number(d.amount)) || Number(d.amount) < 0) errs.amount = 'Enter a valid amount (zero or greater).';
+    if (!d.name.trim()) errs.name = 'Enter a name (up to 60 characters).';
+  } else if (def.mode === 'market') {
+    if (!d.symbol.trim()) errs.symbol = 'Choose a listing or enter a ticker.';
+    if (!d.quantity || !(Number(d.quantity) > 0)) errs.quantity = 'Enter a positive quantity.';
+  } else if (def.mode === 'metal') {
+    if (!d.name.trim()) errs.name = 'Enter a name.';
+    if (!d.quantity || !(Number(d.quantity) > 0)) errs.quantity = 'Enter weight in grams.';
+  }
+  return errs;
+}
+
+function renderEditorView(st) {
+  const d = st.draft;
+  const p = st.portfolios.find(x => x.id === st.activePortfolio) || st.portfolios[0];
+  const defs = d.kind === 'asset' ? ASSET_TYPES : LIABILITY_TYPES;
+  const def = defs.find(x => x.id === d.type) || defs[0];
+  const est = computeDraftEstimate(d, st.offline);
+  const errs = validateDraft(d);
+  const ready = Object.keys(errs).length === 0;
+  const convertedBase = est.priced ? convertCurrency(est.nativeAmount, d.currency, st.baseCurrency) : null;
+  const isOwe = d.kind === 'liability';
+
+  let calcCaption = '';
+  if (est.mode === 'market') {
+    calcCaption = d.price !== null
+      ? `${d.quantity || '0'} × ${formatMoney(d.price, d.currency)}${d.currency !== st.baseCurrency ? ` · ≈ ${formatMoney(convertedBase, st.baseCurrency)} ${st.baseCurrency}` : ''}`
+      : `${d.quantity || '0'} × ${d.symbol || 'ticker'} · ${st.offline ? 'Offline — saves as Price pending' : 'Select listing to fetch price'}`;
+  } else if (est.mode === 'metal') {
+    calcCaption = est.rate ? `${d.quantity || '0'} g × ${formatMoney(est.rate, d.currency)}/g` : 'Price pending offline';
+  } else {
+    calcCaption = d.currency !== st.baseCurrency
+      ? `≈ ${formatMoney(convertedBase, st.baseCurrency)} in base ${st.baseCurrency}`
+      : `${isOwe ? 'Remaining obligation' : 'Current value'} in ${d.currency}`;
+  }
+
+  return `
+    <header class="m3-appbar" style="min-height:48px;">
+      <button class="icon-btn" data-act="editor-back" title="Back">${ico('back')}</button>
+      <span style="font-size:11px;letter-spacing:0.18em;font-weight:700;color:var(--muted);">OKANZO</span>
+      <span style="font-size:11px;font-weight:650;color:var(--muted);">${esc(p.name.toUpperCase())}</span>
+    </header>
+
+    <div class="scroll-view">
+      ${d.id === null ? `
+        <div class="kind-tabs" role="tablist">
+          <button class="kind-tab" role="tab" aria-selected="${d.kind === 'asset'}" data-act="switch-kind" data-kind="asset">Asset / I own</button>
+          <button class="kind-tab owe" role="tab" aria-selected="${d.kind === 'liability'}" data-act="switch-kind" data-kind="liability">Liability / I owe</button>
+        </div>` : ''}
+
+      <p class="eyebrow">To ${esc(p.name)}</p>
+      <h1 class="editor-h1">${d.id === null ? 'Add' : 'Edit'} ${d.kind}</h1>
+      <p class="editor-lead">${isOwe ? 'Keep what you owe in calm perspective.' : 'Progressive disclosure shows only fields needed for this holding type.'}</p>
+
+      ${st.offline && est.mode === 'market' ? `
+        <div class="banner-note">${ico('offline')}<div><strong>Quote service offline.</strong> Enter any valid ticker &amp; quantity; Okanzo saves it safely as <em>Price pending</em>.</div></div>` : ''}
+
+      ${est.mode === 'flat' ? `
+        <div class="f-group">
+          <span class="f-label">${isOwe ? 'Outstanding amount' : 'Value'}</span>
+          <div class="prominent-amount${isOwe ? ' owe' : ''}">
+            <span>${CURRENCY_SYM[d.currency]}</span>
+            <input class="tabular" data-draft="amount" value="${esc(d.amount)}" placeholder="0.00" inputmode="decimal" />
+          </div>
+          <span class="f-hint">${isOwe ? 'Remaining balance owed. Zero is allowed.' : 'Your estimate of its value today.'}</span>
+          ${st.errors.amount ? `<span class="f-err">${esc(st.errors.amount)}</span>` : ''}
+        </div>` : ''}
+
+      <div class="pair-grid">
+        <div class="f-group">
+          <span class="f-label">Type</span>
+          <button class="f-picker" data-act="open-type-picker">
+            <span style="display:flex;align-items:center;gap:7px;min-width:0;">
+              <span style="color:${isOwe ? 'var(--liab)' : 'var(--accent)'};">${ico(def.icon)}</span>
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${def.label}</span>
+            </span>
+            ${ico('chev')}
+          </button>
+        </div>
+        <div class="f-group">
+          <span class="f-label">Currency</span>
+          <button class="f-picker" data-act="open-currency-picker">
+            <span><strong>${CURRENCY_SYM[d.currency]}</strong> ${d.currency}</span>
+            ${ico('chev')}
+          </button>
+        </div>
+      </div>
+
+      ${est.mode === 'market' && d.type !== 'crypto' ? `
+        <div class="f-group">
+          <span class="f-label">Exchange</span>
+          <div class="f-box" style="background:var(--soft);">${esc(d.exchange)}</div>
+        </div>` : ''}
+
+      ${est.mode === 'market' ? `
+        <div class="f-group">
+          <span class="f-label">${d.type === 'crypto' ? 'Coin or ticker' : 'Company or ticker'}</span>
+          <button class="f-picker" data-act="open-market-picker" ${st.errors.symbol ? 'aria-invalid="true"' : ''}>
+            ${d.symbol
+              ? `<span style="min-width:0;"><strong>${esc(d.symbol)}</strong> · <span style="color:var(--muted);">${esc(d.quoteName || 'Manual ticker')}</span></span>`
+              : `<span style="color:var(--muted);">Search e.g. ASML, MSFT, VWCE, BTC…</span>`}
+            ${ico('search')}
+          </button>
+          ${st.errors.symbol ? `<span class="f-err">${esc(st.errors.symbol)}</span>` : ''}
+        </div>
+        <div class="pair-grid">
+          <div class="f-group">
+            <span class="f-label">Quantity</span>
+            <input class="f-box tabular" data-draft="quantity" value="${esc(d.quantity)}" placeholder="${d.type === 'crypto' ? 'e.g. 0.08425' : 'e.g. 25'}" inputmode="decimal" />
+            <span class="f-hint">${d.type === 'crypto' ? 'Up to 8 decimals supported' : 'Shares / units held'}</span>
+          </div>
+          <div class="f-group">
+            <span class="f-label">Market quote</span>
+            <div class="f-box tabular" style="background:var(--soft);color:var(--muted);">
+              ${d.price !== null ? formatMoney(d.price, d.currency) : 'Pending'}
+            </div>
+            <span class="f-hint">${d.price !== null ? 'Fetched once · cached locally' : 'Unavailable offline'}</span>
+          </div>
+        </div>
+        <div class="f-group" style="border-top:1px solid var(--line);padding-top:10px;">
+          <button style="width:100%;display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted);padding:4px 0;" data-act="toggle-custom-name">
+            <span>Custom name <em style="opacity:.75">(optional)</em></span>
+            <span>${d.customNameOpen || d.customName ? '−' : '+'}</span>
+          </button>
+          <div class="disclosure-box${d.customNameOpen || d.customName ? ' is-open' : ''}">
+            <div class="disclosure-inner" style="padding-top:6px;">
+              <input class="f-box" data-draft="customName" maxlength="60" value="${esc(d.customName)}" placeholder="${esc(d.quoteName || 'e.g. European Semis — ASML')}" />
+              <span class="f-hint" style="display:flex;justify-content:space-between;"><span>Overrides list title</span><span class="tabular">${d.customName.length}/60</span></span>
+            </div>
+          </div>
+        </div>
+      ` : est.mode === 'metal' ? `
+        <div class="pair-grid">
+          <div class="f-group"><span class="f-label">Item</span><div class="f-box" style="background:var(--soft);">✦ ${esc(d.metal)}</div></div>
+          <div class="f-group"><span class="f-label">Purity</span><div class="f-box" style="background:var(--soft);">${esc(d.purity)}</div></div>
+        </div>
+        <div class="f-group">
+          <span class="f-label">Name</span>
+          <input class="f-box" data-draft="name" maxlength="60" value="${esc(d.name)}" placeholder="e.g. Sovereign Gold Coins" />
+        </div>
+        <div class="pair-grid">
+          <div class="f-group"><span class="f-label">Weight (g)</span><input class="f-box tabular" data-draft="quantity" value="${esc(d.quantity)}" placeholder="45" /></div>
+          <div class="f-group"><span class="f-label">Rate / g</span><div class="f-box tabular" style="background:var(--soft);">${est.rate ? formatMoney(est.rate, d.currency) : 'Pending'}</div></div>
+        </div>
+      ` : `
+        <div class="f-group">
+          <span class="f-label">Name</span>
+          <input class="f-box" data-draft="name" maxlength="60" value="${esc(d.name)}" placeholder="${isOwe ? 'e.g. Cedar Park Fixed Mortgage' : 'e.g. Marcus High-Yield Reserve'}" />
+          <span class="f-hint" style="display:flex;justify-content:space-between;"><span>Descriptive holding label</span><span class="tabular">${d.name.length}/60</span></span>
+          ${st.errors.name ? `<span class="f-err">${esc(st.errors.name)}</span>` : ''}
+        </div>
+      `}
+    </div>
+
+    <footer class="editor-footer">
+      <div class="est-row">
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:12px;font-weight:600;color:var(--muted);">${isOwe ? 'Outstanding amount' : 'Estimated value'}</div>
+          <div class="tabular" style="font-size:11px;color:var(--muted);margin-top:2px;">${esc(calcCaption)}</div>
+        </div>
+        <div class="est-val tabular${isOwe ? ' owe' : ''}" id="live-est-readout">
+          ${est.priced ? formatMoney(est.nativeAmount, d.currency) : 'Price pending'}
+        </div>
+      </div>
+      <button class="btn-primary" data-act="save-holding" ${!ready ? 'disabled' : ''}>
+        Save ${d.kind}
+      </button>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:7px;text-align:center;">
+        ${!ready ? 'Complete required fields above to enable Save.' : (!est.priced ? 'Ready to save offline without a quote; refresh anytime.' : 'Encrypted on device · Back warns before discarding changes.')}
+      </div>
+    </footer>
+  `;
+}
+
+function renderGlanceModal(st, h, { savedStatus = null } = {}) {
+  const p = st.portfolios.find(x => x.id === h.portfolio) || st.portfolios[0];
+  const sum = summarizePortfolio(st.holdings, h.portfolio, st.baseCurrency);
+  const defs = h.kind === 'asset' ? ASSET_TYPES : LIABILITY_TYPES;
+  const def = defs.find(x => x.id === h.type) || defs[0];
+  const marketDerived = h.kind === 'asset' && def.mode === 'market';
+  const secTotal = h.kind === 'asset' ? sum.totalAssets : sum.totalLiabilities;
+  const converted = h.priced ? convertCurrency(h.amount, h.currency, st.baseCurrency) : null;
+  const sharePct = (h.priced && secTotal > 0) ? pct1(converted, secTotal) : null;
+  const shareFrac = (h.priced && secTotal > 0) ? Math.min(1, converted / secTotal) : 0;
+
+  return `
+    <div class="glance-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span class="eyebrow" style="margin:0;">${esc(savedStatus || `${h.kind} / ${def.label}`)}</span>
+        <button class="mini-icon-btn" data-act="close-modal" title="Close">${ico('close')}</button>
+      </div>
+      <div style="font-size:21px;font-weight:600;letter-spacing:-0.02em;margin-top:4px;">${esc(displayTitle(h))}</div>
+      ${h.customName && h.name !== h.customName ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">${esc(h.name)}</div>` : ''}
+
+      <div style="margin-top:10px;">
+        <span class="source-pill">
+          ${ico(marketDerived ? 'refresh' : 'edit')}
+          <span>${marketDerived ? `Market quote · ${h.priced ? (h.updatedAgo || 'Just now') : 'Offline pending'}` : `Manual valuation · ${h.updatedAgo || 'Just now'}`}</span>
+        </span>
+      </div>
+
+      <div class="tabular" style="font-size:32px;font-weight:600;text-align:center;margin:14px 0 12px;color:${h.kind === 'liability' ? 'var(--liab)' : 'var(--accent)'};">
+        ${h.priced ? formatMoney(h.amount, h.currency, { masked: st.masked }) : 'Price pending'}
+      </div>
+
+      ${!h.priced ? `<div class="banner-note">${ico('offline')}<div><strong>Saved without a latest price.</strong> Excluded from totals until refreshed online.</div></div>` : ''}
+
+      ${(h.priced && (h.currency !== st.baseCurrency || sharePct)) ? `
+        <div class="kv-box" style="padding:11px 14px;margin-bottom:12px;">
+          ${h.currency !== st.baseCurrency ? `
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;">
+              <span style="color:var(--muted);">Portfolio value (${st.baseCurrency})</span>
+              <strong class="tabular">${formatMoney(converted, st.baseCurrency, { masked: st.masked })}</strong>
+            </div>` : ''}
+          ${sharePct ? `
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;">
+              <span style="color:var(--muted);">Share of portfolio ${h.kind === 'asset' ? 'assets' : 'liabilities'}</span>
+              <strong class="tabular">${sharePct}</strong>
+            </div>
+            <div class="coverage-track" style="height:5px;background:var(--soft-high);">
+              <div class="coverage-fill${h.kind === 'liability' ? ' negative' : ''}" style="width:${(shareFrac * 100).toFixed(1)}%"></div>
+            </div>` : ''}
+        </div>` : ''}
+
+      <div class="kv-box">
+        <div class="kv-row"><span style="color:var(--muted);">Portfolio</span><strong>${esc(p.name)}</strong></div>
+        <div class="kv-row"><span style="color:var(--muted);">Category</span><strong>${def.label}</strong></div>
+        <div class="kv-row"><span style="color:var(--muted);">Native currency</span><strong>${h.currency}</strong></div>
+        ${h.symbol ? `
+          <div class="kv-row"><span style="color:var(--muted);">Ticker</span><strong class="tabular">${esc(h.symbol)}</strong></div>
+          <div class="kv-row"><span style="color:var(--muted);">Quantity</span><strong class="tabular">${st.masked ? '••••' : h.quantity}</strong></div>
+          <div class="kv-row"><span style="color:var(--muted);">Unit price</span><strong class="tabular">${h.priced ? formatMoney(h.price, h.currency, { masked: st.masked }) : 'Pending'}</strong></div>
+        ` : ''}
+        ${h.metal ? `
+          <div class="kv-row"><span style="color:var(--muted);">Item &amp; purity</span><strong>${esc(h.metal)} · ${esc(h.purity)}</strong></div>
+          <div class="kv-row"><span style="color:var(--muted);">Weight</span><strong class="tabular">${st.masked ? '••••' : `${h.quantity} g`}</strong></div>
+        ` : ''}
+      </div>
+
+      ${savedStatus ? `
+        <div style="display:grid;gap:9px;margin-top:16px;">
+          <button class="btn-primary" data-act="close-modal">Back to portfolio</button>
+          <button class="btn-outlined" data-act="Inspect-as-details" data-id="${h.id}">Open holding details</button>
+          <button style="padding:8px;font-size:12.5px;color:var(--muted);" data-act="undo-save">Undo this change</button>
+        </div>
+      ` : `
+        <div style="margin-top:16px;">
+          <button class="btn-primary" data-act="edit-holding" data-id="${h.id}">Edit ${h.kind}</button>
+          <hr style="border:0;border-top:1px solid var(--line);margin:15px 0 13px;" />
+          <button class="btn-danger" data-act="prompt-delete" data-id="${h.id}">${ico('trash')} Delete ${h.kind}</button>
+        </div>
+      `}
+    </div>`;
+}
+
+function renderModal(st) {
+  if (!st.modal) return '';
+  const m = st.modal;
+  if (m.type === 'details' || m.type === 'saved') {
+    const h = st.holdings.find(x => x.id === m.id) || m.holding;
+    if (!h) return '';
+    return renderGlanceModal(st, h, { savedStatus: m.type === 'saved' ? m.status : null });
+  }
+  if (m.type === 'delete') {
+    const h = st.holdings.find(x => x.id === m.id);
+    if (!h) return '';
+    return `<div class="glance-card">
+      <p class="eyebrow">Delete ${h.kind}</p>
+      <h2 style="margin:4px 0 8px;font-size:21px;">Delete holding?</h2>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 18px;"><strong>${esc(displayTitle(h))}</strong> will be permanently removed from this portfolio.</p>
+      <div style="display:grid;gap:9px;">
+        <button class="btn-primary" data-act="close-modal">Keep holding</button>
+        <button class="btn-danger" data-act="confirm-delete" data-id="${h.id}">${ico('trash')} Delete</button>
+      </div>
+    </div>`;
+  }
+  if (m.type === 'discard') {
+    return `<div class="glance-card">
+      <p class="eyebrow">Unsaved draft</p>
+      <h2 style="margin:4px 0 8px;font-size:21px;">Discard changes?</h2>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 18px;">This holding has not been saved yet.</p>
+      <div style="display:grid;gap:9px;">
+        <button class="btn-primary" data-act="close-modal">Keep editing</button>
+        <button class="btn-danger" data-act="confirm-discard">Discard draft</button>
+      </div>
+    </div>`;
+  }
+  if (m.type === 'portfolio-switcher') {
+    return `<div class="glance-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><span class="eyebrow">Switch portfolio</span><button class="mini-icon-btn" data-act="close-modal">${ico('close')}</button></div>
+      <h2 style="margin:4px 0 12px;font-size:20px;">Choose active portfolio</h2>
+      <div style="display:grid;gap:7px;">
+        ${st.portfolios.map(p => {
+          const sum = summarizePortfolio(st.holdings, p.id, st.baseCurrency);
+          return `<button class="f-picker" style="padding:12px;" data-act="select-portfolio-home" data-id="${p.id}">
+            <span><strong>${esc(p.name)}</strong>${p.isDefault ? ' · ★ Default' : ''}<br><small style="color:var(--muted);" class="tabular">${formatMoney(sum.netWorth, st.baseCurrency, { masked: st.masked })}</small></span>
+            ${p.id === st.activePortfolio ? ico('check') : ''}
+          </button>`;
+        }).join('')}
+      </div>
+      <button class="btn-outlined" style="margin-top:12px;" data-nav="portfolios">Manage portfolios</button>
+    </div>`;
+  }
+  if (m.type === 'type-picker') {
+    const defs = st.draft.kind === 'asset' ? ASSET_TYPES : LIABILITY_TYPES;
+    return `<div class="glance-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><span class="eyebrow">${st.draft.kind === 'asset' ? 'What you own' : 'What you owe'}</span><button class="mini-icon-btn" data-act="close-modal">${ico('close')}</button></div>
+      <h2 style="margin:4px 0 12px;font-size:20px;">Choose a type</h2>
+      <div style="display:grid;gap:6px;">
+        ${defs.map(t => `<button class="f-picker" data-act="pick-type" data-val="${t.id}">
+          <span style="display:flex;align-items:center;gap:10px;">
+            <span style="color:var(--accent);">${ico(t.icon)}</span>
+            <span><strong>${t.label}</strong><br><small style="color:var(--muted);">${t.hint}</small></span>
+          </span>
+          ${st.draft.type === t.id ? ico('check') : ''}
+        </button>`).join('')}
+      </div>
+    </div>`;
+  }
+  if (m.type === 'currency-picker') {
+    return `<div class="glance-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><span class="eyebrow">Holding currency</span><button class="mini-icon-btn" data-act="close-modal">${ico('close')}</button></div>
+      <h2 style="margin:4px 0 12px;font-size:20px;">Choose currency</h2>
+      <div style="display:grid;gap:6px;">
+        ${Object.keys(FX_TO_USD).map(code => `<button class="f-picker" data-act="pick-currency" data-val="${code}">
+          <span><strong>${CURRENCY_SYM[code]} ${code}</strong></span>
+          ${st.draft.currency === code ? ico('check') : ''}
+        </button>`).join('')}
+      </div>
+    </div>`;
+  }
+  if (m.type === 'market-picker') {
+    const matches = MARKET_CATALOG.filter(q => q.type === st.draft.type);
+    return `<div class="glance-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><span class="eyebrow">Market search</span><button class="mini-icon-btn" data-act="close-modal">${ico('close')}</button></div>
+      <h2 style="margin:4px 0 8px;font-size:20px;">Select listing or enter ticker</h2>
+      <input class="f-box" id="manual-ticker-input" placeholder="Type ticker e.g. SAP.DE or pick below…" style="margin-bottom:10px;" />
+      <button class="btn-outlined" style="margin-bottom:10px;min-height:40px;" data-act="use-typed-ticker">Use typed ticker</button>
+      ${st.offline ? `<div class="banner-note">${ico('offline')}<div>Offline: public search unavailable. Enter any ticker above to save offline.</div></div>` : `
+        <div style="display:grid;gap:6px;">
+          ${matches.map(q => `<button class="f-picker" data-act="pick-quote" data-sym="${q.symbol}">
+            <span><strong>${q.symbol}</strong> · ${q.name}<br><small style="color:var(--muted);">${q.exchange} · ${formatMoney(q.price, q.currency)}</small></span>
+          </button>`).join('')}
+        </div>`}
+    </div>`;
+  }
+  if (m.type === 'portfolio-form') {
+    return `<div class="glance-card">
+      <p class="eyebrow">Local portfolio</p>
+      <h2 style="margin:4px 0 10px;font-size:20px;">${m.editId ? 'Rename portfolio' : 'New portfolio'}</h2>
+      <input class="f-box" id="portfolio-name-input" maxlength="40" value="${esc(m.initial || '')}" placeholder="e.g. Business Reserve" />
+      <div style="display:grid;gap:8px;margin-top:14px;">
+        <button class="btn-primary" data-act="save-portfolio-name" data-edit="${m.editId || ''}">${m.editId ? 'Save name' : 'Create portfolio'}</button>
+        <button class="btn-outlined" data-act="close-modal">Cancel</button>
+      </div>
+    </div>`;
+  }
+  return '';
+}
+
+function renderPhoneScreen(st) {
+  if (st.screen === 'portfolios') return renderPortfoliosView(st);
+  if (st.screen === 'statistics') return renderStatisticsView(st);
+  if (st.screen === 'editor') return renderEditorView(st);
+  return renderHomeView(st);
+}
+
+let prevScreenKey = '';
+function renderStudio({ preserveInput = false } = {}) {
+  document.getElementById('studio-view').hidden = app.topMode !== 'studio';
+  document.getElementById('renders-view').hidden = app.topMode !== 'renders';
+  document.getElementById('btn-mode-studio').setAttribute('aria-pressed', String(app.topMode === 'studio'));
+  document.getElementById('btn-mode-renders').setAttribute('aria-pressed', String(app.topMode === 'renders'));
+
+  document.getElementById('pill-theme').setAttribute('aria-pressed', String(app.theme === 'dark'));
+  document.getElementById('pill-mask').setAttribute('aria-pressed', String(app.masked));
+  document.getElementById('pill-offline').setAttribute('aria-pressed', String(app.offline));
+  document.getElementById('pill-motion').setAttribute('aria-pressed', String(document.body.dataset.reducedMotion === 'true'));
+
+  if (app.topMode === 'renders') {
+    renderAllStaticFrames();
+    return;
+  }
+
+  const phone = document.getElementById('live-phone');
+  phone.dataset.theme = app.theme;
+  phone.dir = app.dir;
+  document.getElementById('status-right').textContent = app.offline ? '✈ Offline · 100%' : '100%';
+
+  if (!preserveInput) {
+    const key = `${app.screen}:${app.activePortfolio}:${app.homeTab}:${app.draft.kind}:${app.draft.type}`;
+    const host = document.getElementById('phone-app');
+    host.innerHTML = `<div class="screen-stage${key !== prevScreenKey ? ' animate-enter' : ''}">${renderPhoneScreen(app)}</div>`;
+    prevScreenKey = key;
+  } else {
+    // Update live footer estimate without clobbering active input caret
+    const estEl = document.getElementById('live-est-readout');
+    if (estEl && app.screen === 'editor') {
+      const est = computeDraftEstimate(app.draft, app.offline);
+      estEl.textContent = est.priced ? formatMoney(est.nativeAmount, app.draft.currency) : 'Price pending';
+      const saveBtn = document.querySelector('[data-act="save-holding"]');
+      if (saveBtn) saveBtn.disabled = Object.keys(validateDraft(app.draft)).length > 0;
+    }
+  }
+
+  const modalEl = document.getElementById('phone-modal');
+  const modalHtml = renderModal(app);
+  modalEl.hidden = !modalHtml;
+  modalEl.innerHTML = modalHtml;
+
+  const sum = summarizePortfolio(app.holdings, app.activePortfolio, app.baseCurrency);
+  document.getElementById('live-state-box').textContent = JSON.stringify({
+    screen: app.screen,
+    theme: app.theme,
+    portfolio: app.activePortfolio,
+    baseCurrency: app.baseCurrency,
+    netWorth: Number(sum.netWorth.toFixed(2)),
+    totalAssets: Number(sum.totalAssets.toFixed(2)),
+    totalLiabilities: Number(sum.totalLiabilities.toFixed(2)),
+    holdingsInPortfolio: sum.assetCount + sum.liabilityCount,
+    hideBalances: app.masked,
+    offline: app.offline
+  }, null, 2);
+}
+
+/* ============================================================================
+   GUIDED WALKTHROUGH STEPS & SCENARIO PRESETS
+   ============================================================================ */
+function runGuidedStep(step) {
+  document.querySelectorAll('.step-btn').forEach(b => b.classList.toggle('active', Number(b.dataset.step) === step));
+  app.modal = null;
+  app.searchOpen = false;
+  app.searchQuery = '';
+
+  if (step === 1) {
+    app.portfolios = initialPortfolios();
+    app.holdings = initialHoldings({ includeAsml: true });
+    app.activePortfolio = 'personal';
+    app.screen = 'home';
+    app.homeTab = 'asset';
+    app.addExpanded = false;
+    app.expanded = { 'personal:asset:stock': true };
+  } else if (step === 2) {
+    app.holdings = initialHoldings({ includeAsml: false });
+    app.activePortfolio = 'personal';
+    app.screen = 'home';
+    app.addExpanded = true;
+  } else if (step === 3) {
+    app.holdings = initialHoldings({ includeAsml: false });
+    app.activePortfolio = 'personal';
+    app.addExpanded = false;
+    app.screen = 'editor';
+    app.draft = {
+      ...blankDraft('asset', 'stock'),
+      currency: 'EUR', exchange: 'Euronext Amsterdam (.AS)',
+      symbol: 'ASML.AS', quoteName: 'ASML Holding N.V.',
+      quantity: '25', price: 650, customName: 'European Semis — ASML', customNameOpen: true, dirty: true
+    };
+  } else if (step === 4) {
+    app.holdings = initialHoldings({ includeAsml: true });
+    const asml = app.holdings.find(h => h.id === 4);
+    if (asml) asml.isNew = true;
+    app.activePortfolio = 'personal';
+    app.screen = 'home';
+    app.expanded = { 'personal:asset:stock': true };
+    app.modal = { type: 'saved', id: 4, status: 'Asset added.' };
+  } else if (step === 5) {
+    app.holdings = initialHoldings({ includeAsml: true });
+    app.activePortfolio = 'personal';
+    app.screen = 'home';
+    app.expanded = { 'personal:asset:stock': true };
+    app.modal = { type: 'details', id: 4 };
+  } else if (step === 6) {
+    app.activePortfolio = 'personal';
+    app.screen = 'editor';
+    app.draft = {
+      ...blankDraft('liability', 'mortgage'),
+      currency: 'USD', amount: '138200', name: 'Cedar Park Fixed Mortgage', dirty: true
+    };
+  } else if (step === 7) {
+    app.holdings = initialHoldings({ includeAsml: true });
+    app.activePortfolio = 'personal';
+    app.screen = 'statistics';
+  } else if (step === 8) {
+    app.holdings = initialHoldings({ includeAsml: true });
+    app.activePortfolio = 'personal';
+    app.screen = 'portfolios';
+  }
+  renderStudio();
+}
+
+function applyPreset(preset) {
+  app.modal = null; app.addExpanded = false; app.offline = false; app.masked = false;
+  if (preset === 'reset') {
+    app.portfolios = initialPortfolios();
+    app.holdings = initialHoldings({ includeAsml: true });
+    app.activePortfolio = 'personal';
+    app.screen = 'home'; app.homeTab = 'asset';
+    app.searchOpen = false; app.searchQuery = '';
+  } else if (preset === 'fifty') {
+    const base = initialHoldings({ includeAsml: true });
+    const extras = [];
+    const sampleTickers = ['SAP.DE', 'NVDA', 'AAPL', 'AIR.PA', '7203.T', 'SHOP.TO', 'RELIANCE.NS', 'VOO'];
+    for (let i = 1; i <= 41; i++) {
+      const sym = sampleTickers[i % sampleTickers.length];
+      extras.push({
+        id: 500 + i, portfolio: 'personal', kind: 'asset',
+        type: i % 3 === 0 ? 'mutualFund' : 'stock',
+        name: `Global Holding #${i} (${sym})`, symbol: sym,
+        quantity: 10 + i, price: 120, currency: 'USD', amount: (10 + i) * 120, priced: true, updatedAgo: '18m ago'
+      });
+    }
+    app.holdings = [...base, ...extras];
+    app.activePortfolio = 'personal'; app.screen = 'home'; app.homeTab = 'asset';
+    app.searchOpen = true; app.searchQuery = '';
+  } else if (preset === 'negative') {
+    app.holdings = initialHoldings({ includeAsml: true });
+    app.activePortfolio = 'graduate'; app.screen = 'home'; app.homeTab = 'liability';
+  } else if (preset === 'empty') {
+    app.holdings = initialHoldings({ includeAsml: true });
+    app.activePortfolio = 'retirement'; app.screen = 'home'; app.homeTab = 'asset';
+  } else if (preset === 'offline-stock') {
+    app.offline = true;
+    app.activePortfolio = 'personal'; app.screen = 'editor';
+    app.draft = {
+      ...blankDraft('asset', 'stock'),
+      currency: 'EUR', symbol: 'SAP.DE', quoteName: '', quantity: '15', price: null, dirty: true
+    };
+  } else if (preset === 'valuables') {
+    app.activePortfolio = 'personal'; app.screen = 'editor';
+    app.draft = {
+      ...blankDraft('asset', 'metals'),
+      currency: 'USD', metal: 'Gold', purity: '22K', name: 'Sovereign Gold Coins', quantity: '45', price: 77.20, dirty: true
+    };
+  }
+  renderStudio();
+}
+
+/* ============================================================================
+   STATIC RENDERS STORYBOARD GENERATOR (11 FULL PHONE FRAMES)
+   ============================================================================ */
+function makeFrameSnapshot(customizer, captionTitle, captionBody) {
+  const snap = {
+    theme: app.theme, masked: false, offline: false, compact: false, dir: 'ltr',
+    baseCurrency: 'USD', screen: 'home', homeTab: 'asset', activePortfolio: 'personal',
+    portfolios: initialPortfolios(), holdings: initialHoldings({ includeAsml: true }),
+    expanded: { 'personal:asset:stock': true }, searchOpen: false, searchQuery: '',
+    addExpanded: false, draft: blankDraft('asset', 'stock'), errors: {},
+    selectedStatOverview: null, selectedStatAsset: 0, selectedStatLiab: null, modal: null, refreshing: false
+  };
+  customizer(snap);
+  const modalHtml = renderModal(snap);
+  return `
+    <div class="render-slot">
+      <div class="phone-frame" data-theme="${snap.theme}">
+        <div class="sys-status"><span>9:41</span><span class="punch-hole"></span><span>${snap.offline ? '✈ Offline' : '100%'}</span></div>
+        <div class="app-root">
+          <div class="screen-stage">${renderPhoneScreen(snap)}</div>
+          ${modalHtml ? `<div class="phone-modal-backdrop">${modalHtml}</div>` : ''}
+        </div>
+        <div class="sys-gesture"><span></span></div>
+      </div>
+      <div class="render-caption"><strong>${captionTitle}</strong>${captionBody}</div>
+    </div>`;
+}
+
+function renderAllStaticFrames() {
+  // Band 1: E2E Flow (4 frames)
+  document.getElementById('renders-band-flow').innerHTML = [
+    makeFrameSnapshot(s => {
+      s.holdings = initialHoldings({ includeAsml: false });
+      s.addExpanded = true;
+    }, 'Step 1 · Home + In-Place Add Morph', 'Pre-save Personal ($194,950). Tapping "+ Add holding" morphs in place over a blurred warm scrim.'),
+    makeFrameSnapshot(s => {
+      s.screen = 'editor';
+      s.draft = {
+        ...blankDraft('asset', 'stock'),
+        currency: 'EUR', symbol: 'ASML.AS', quoteName: 'ASML Holding N.V.',
+        quantity: '25', price: 650, customName: 'European Semis — ASML', customNameOpen: true
+      };
+    }, 'Step 2 · Add Asset (Stock Progressive Form)', 'ASML.AS selected with €650 quote, 25 shares, custom name, and live €16,250 (≈ $17,550 USD) sticky footer.'),
+    makeFrameSnapshot(s => {
+      s.screen = 'editor';
+      s.draft = { ...blankDraft('liability', 'mortgage'), currency: 'USD', amount: '138200', name: 'Cedar Park Fixed Mortgage' };
+    }, 'Step 3 · Manual Liability Variation', 'Progressive disclosure collapses exchange, ticker, and quantity—leaving 3 calm inputs with terracotta emphasis.'),
+    makeFrameSnapshot(s => {
+      s.modal = { type: 'details', id: 4 };
+    }, 'Step 4 · Holding Details (Post-Save $212,500)', 'Surfaces Market quote provenance, converted $17,550 USD value, 4.9% portfolio share bar, and isolated Delete.')
+  ].join('');
+
+  // Band 2: 5 Connected Screens (3 frames complementing Editor & Details above)
+  document.getElementById('renders-band-screens').innerHTML = [
+    makeFrameSnapshot(s => {
+      s.expanded = { 'personal:asset:stock': true, 'personal:asset:crypto': true };
+    }, 'Screen 1 · Home Overview (Warm Minimalism)', 'Alabaster #FAF8F3 canvas, unboxed $212,500 headline, equity coverage bar, 1-decimal category %, and Quick-Find.'),
+    makeFrameSnapshot(s => {
+      s.screen = 'portfolios';
+    }, 'Screen 2 · Portfolios (Viewing vs ★ Default)', 'Folder iconography (no bank-account metaphor), 1-tap switching, 7-figure Family & negative Graduate totals.'),
+    makeFrameSnapshot(s => {
+      s.screen = 'statistics';
+    }, 'Screen 5 · Statistics / Allocation', 'Interactive DonutCharts with 1-decimal % + exact amounts on every row and warm terracotta Liability slices.')
+  ].join('');
+
+  // Band 3: States & Dark Variant (4 frames)
+  document.getElementById('renders-band-states').innerHTML = [
+    makeFrameSnapshot(s => {
+      s.theme = 'dark';
+      s.expanded = { 'personal:asset:stock': true };
+    }, 'State A · Midnight Dark Variant', 'Deep mineral #16201D canvas, #C1E1BD botanical primary, and #F2B896 warm terracotta liabilities (>= 4.5:1).'),
+    makeFrameSnapshot(s => {
+      s.masked = true;
+      s.expanded = { 'personal:asset:stock': true };
+    }, 'State B · Hide Balances Active', 'Masks monetary figures ($ ••••) and omits holding quantities (25 × hidden) while keeping names, counts & % shares.'),
+    makeFrameSnapshot(s => {
+      s.offline = true;
+      s.holdings = [
+        { id: 99, portfolio: 'personal', kind: 'asset', type: 'stock', name: 'SAP SE', symbol: 'SAP.DE', quantity: 15, price: null, currency: 'EUR', amount: 0, priced: false },
+        { id: 4, portfolio: 'personal', kind: 'asset', type: 'stock', name: 'ASML Holding N.V.', customName: 'European Semis — ASML', symbol: 'ASML.AS', quantity: 25, price: 650, currency: 'EUR', amount: 16250, priced: true, updatedAgo: '14h ago' },
+        { id: 6, portfolio: 'personal', kind: 'asset', type: 'bankDeposit', name: 'Marcus High-Yield Reserve', currency: 'USD', amount: 22182, priced: true, updatedAgo: 'Yesterday' }
+      ];
+      s.expanded = { 'personal:asset:stock': true };
+    }, 'State C · Offline & Unavailable Quote', 'Never portrays stale/missing quotes as $0.00 live values—marks unquoted SAP.DE honestly as "Price pending" alongside 14h cached quotes.'),
+    makeFrameSnapshot(s => {
+      s.activePortfolio = 'retirement';
+    }, 'State D · Empty Portfolio Zero-State', 'Calm, unhurried local-first empty state without bank-linking prompts or cloud account friction.')
+  ].join('');
+}
+
+/* ============================================================================
+   EVENT WIRING
+   ============================================================================ */
+document.addEventListener('click', e => {
+  const topBtn = e.target.closest('[data-top-mode]');
+  if (topBtn) {
+    app.topMode = topBtn.dataset.topMode;
+    const url = new URL(location.href);
+    url.searchParams.set('mode', app.topMode);
+    history.replaceState(null, '', url);
+    renderStudio();
+    return;
+  }
+
+  const tog = e.target.closest('[data-toggle]');
+  if (tog) {
+    const k = tog.dataset.toggle;
+    if (k === 'theme') app.theme = app.theme === 'light' ? 'dark' : 'light';
+    if (k === 'mask') app.masked = !app.masked;
+    if (k === 'offline') app.offline = !app.offline;
+    if (k === 'motion') document.body.dataset.reducedMotion = String(document.body.dataset.reducedMotion !== 'true');
+    renderStudio();
+    return;
+  }
+
+  const stepBtn = e.target.closest('[data-step]');
+  if (stepBtn) { runGuidedStep(Number(stepBtn.dataset.step)); return; }
+
+  const presetBtn = e.target.closest('[data-preset]');
+  if (presetBtn) { applyPreset(presetBtn.dataset.preset); return; }
+
+  const navBtn = e.target.closest('[data-nav]');
+  if (navBtn) {
+    app.modal = null; app.addExpanded = false; app.screen = navBtn.dataset.nav;
+    renderStudio(); return;
+  }
+
+  const actEl = e.target.closest('[data-act]');
+  if (!actEl) return;
+  const act = actEl.dataset.act;
+
+  if (act === 'toggle-mask') { app.masked = !app.masked; renderStudio(); }
+  else if (act === 'refresh') {
+    app.refreshing = true; renderStudio();
+    setTimeout(() => {
+      app.refreshing = false;
+      if (!app.offline) {
+        app.holdings.forEach(h => {
+          if (!h.priced) { h.price = 210; h.amount = (Number(h.quantity) || 1) * 210; h.priced = true; h.updatedAgo = 'Just now'; }
+        });
+      }
+      renderStudio();
+    }, 360);
+  }
+  else if (act === 'home-tab') { app.homeTab = actEl.dataset.val; renderStudio(); }
+  else if (act === 'toggle-cat') { app.expanded[actEl.dataset.key] = !app.expanded[actEl.dataset.key]; renderStudio(); }
+  else if (act === 'toggle-search') {
+    app.searchOpen = !app.searchOpen;
+    if (!app.searchOpen) app.searchQuery = '';
+    renderStudio();
+    if (app.searchOpen) document.getElementById('home-filter-input')?.focus();
+  }
+  else if (act === 'clear-search') { app.searchQuery = ''; renderStudio(); document.getElementById('home-filter-input')?.focus(); }
+  else if (act === 'toggle-expand-all') {
+    const defs = app.homeTab === 'asset' ? ASSET_TYPES : LIABILITY_TYPES;
+    const sum = summarizePortfolio(app.holdings, app.activePortfolio, app.baseCurrency);
+    const map = app.homeTab === 'asset' ? sum.assetGroups : sum.liabilityGroups;
+    const keys = defs.filter(d => map[d.id]).map(d => `${app.activePortfolio}:${app.homeTab}:${d.id}`);
+    const allOpen = keys.every(k => app.expanded[k]);
+    keys.forEach(k => { app.expanded[k] = !allOpen; });
+    renderStudio();
+  }
+  else if (act === 'toggle-add') { app.addExpanded = !app.addExpanded; renderStudio(); }
+  else if (act === 'close-add') { app.addExpanded = false; renderStudio(); }
+  else if (act === 'start-editor') {
+    const kind = actEl.dataset.kind;
+    app.addExpanded = false; app.errors = {};
+    app.draft = blankDraft(kind, kind === 'asset' ? 'stock' : 'mortgage');
+    app.screen = 'editor'; renderStudio();
+  }
+  else if (act === 'switch-kind') {
+    const kind = actEl.dataset.kind;
+    app.errors = {};
+    app.draft = blankDraft(kind, kind === 'asset' ? 'stock' : 'mortgage');
+    renderStudio();
+  }
+  else if (act === 'editor-back') {
+    if (app.draft.dirty) { app.modal = { type: 'discard' }; renderStudio(); }
+    else { app.screen = 'home'; renderStudio(); }
+  }
+  else if (act === 'confirm-discard') {
+    app.modal = null; app.draft.dirty = false; app.screen = 'home'; renderStudio();
+  }
+  else if (act === 'open-type-picker') { app.modal = { type: 'type-picker' }; renderStudio(); }
+  else if (act === 'pick-type') {
+    app.draft.type = actEl.dataset.val; app.draft.symbol = ''; app.draft.quoteName = ''; app.draft.price = null;
+    app.draft.dirty = true; app.errors = {}; app.modal = null; renderStudio();
+  }
+  else if (act === 'open-currency-picker') { app.modal = { type: 'currency-picker' }; renderStudio(); }
+  else if (act === 'pick-currency') { app.draft.currency = actEl.dataset.val; app.draft.dirty = true; app.modal = null; renderStudio(); }
+  else if (act === 'open-market-picker') { app.modal = { type: 'market-picker' }; renderStudio(); }
+  else if (act === 'pick-quote') {
+    const q = MARKET_CATALOG.find(x => x.symbol === actEl.dataset.sym);
+    if (q) {
+      app.draft.symbol = q.symbol; app.draft.quoteName = q.name; app.draft.exchange = q.exchange;
+      app.draft.currency = q.currency; app.draft.price = app.offline ? null : q.price;
+      app.draft.dirty = true;
+    }
+    app.modal = null; renderStudio();
+  }
+  else if (act === 'use-typed-ticker') {
+    const val = (document.getElementById('manual-ticker-input')?.value || '').trim().toUpperCase();
+    if (val) {
+      app.draft.symbol = val; app.draft.quoteName = ''; app.draft.price = null; app.draft.dirty = true;
+      app.modal = null; renderStudio();
+    }
+  }
+  else if (act === 'toggle-custom-name') { app.draft.customNameOpen = !app.draft.customNameOpen; renderStudio(); }
+  else if (act === 'save-holding') {
+    const errs = validateDraft(app.draft);
+    app.errors = errs;
+    if (Object.keys(errs).length) { renderStudio(); return; }
+    const d = app.draft;
+    const est = computeDraftEstimate(d, app.offline);
+    const record = {
+      id: d.id ?? app.nextId++,
+      portfolio: app.activePortfolio,
+      kind: d.kind, type: d.type,
+      name: est.mode === 'market' ? (d.quoteName || d.symbol) : d.name.trim(),
+      customName: d.customName.trim(),
+      symbol: est.mode === 'market' ? d.symbol : undefined,
+      exchange: est.mode === 'market' ? d.exchange : undefined,
+      metal: est.mode === 'metal' ? d.metal : undefined,
+      purity: est.mode === 'metal' ? d.purity : undefined,
+      quantity: est.mode !== 'flat' ? Number(d.quantity) : undefined,
+      price: est.mode === 'market' ? d.price : (est.mode === 'metal' ? est.rate : undefined),
+      currency: d.currency,
+      amount: est.nativeAmount,
+      priced: est.priced,
+      updatedAgo: 'Just now',
+      isNew: d.id === null
+    };
+    const existingIdx = app.holdings.findIndex(x => x.id === record.id);
+    app.lastSavedUndo = existingIdx >= 0 ? { mode: 'update', prev: { ...app.holdings[existingIdx] } } : { mode: 'insert', id: record.id };
+    if (existingIdx >= 0) app.holdings[existingIdx] = record;
+    else app.holdings.unshift(record);
+
+    app.expanded[`${app.activePortfolio}:${record.kind}:${record.type}`] = true;
+    app.homeTab = record.kind;
+    app.screen = 'home';
+    app.modal = { type: 'saved', id: record.id, status: `${record.kind === 'asset' ? 'Asset' : 'Liability'} ${existingIdx >= 0 ? 'updated' : 'added'}.` };
+    renderStudio();
+  }
+  else if (act === 'undo-save') {
+    if (app.lastSavedUndo?.mode === 'insert') {
+      app.holdings = app.holdings.filter(x => x.id !== app.lastSavedUndo.id);
+    } else if (app.lastSavedUndo?.mode === 'update') {
+      const idx = app.holdings.findIndex(x => x.id === app.lastSavedUndo.prev.id);
+      if (idx >= 0) app.holdings[idx] = app.lastSavedUndo.prev;
+    }
+    app.lastSavedUndo = null; app.modal = null; renderStudio();
+  }
+  else if (act === 'Inspect-as-details' || act === 'open-holding') {
+    app.modal = { type: 'details', id: Number(actEl.dataset.id) }; renderStudio();
+  }
+  else if (act === 'edit-holding') {
+    const h = app.holdings.find(x => x.id === Number(actEl.dataset.id));
+    if (h) {
+      app.modal = null; app.screen = 'editor';
+      app.draft = {
+        id: h.id, kind: h.kind, type: h.type, currency: h.currency,
+        exchange: h.exchange || 'US (NYSE / Nasdaq)', symbol: h.symbol || '',
+        quoteName: h.name, quantity: h.quantity ? String(h.quantity) : '',
+        price: h.price ?? null, amount: String(h.amount), name: h.name,
+        customName: h.customName || '', customNameOpen: Boolean(h.customName),
+        metal: h.metal || 'Gold', purity: h.purity || '22K', useTotalValue: false, dirty: false
+      };
+      renderStudio();
+    }
+  }
+  else if (act === 'prompt-delete') { app.modal = { type: 'delete', id: Number(actEl.dataset.id) }; renderStudio(); }
+  else if (act === 'confirm-delete') {
+    const id = Number(actEl.dataset.id);
+    app.holdings = app.holdings.filter(x => x.id !== id);
+    app.modal = null; renderStudio();
+  }
+  else if (act === 'close-modal') { app.modal = null; renderStudio(); }
+  else if (act === 'open-portfolio-switcher') { app.modal = { type: 'portfolio-switcher' }; renderStudio(); }
+  else if (act === 'select-portfolio-home') {
+    app.activePortfolio = actEl.dataset.id; app.modal = null; renderStudio();
+  }
+  else if (act === 'select-portfolio') {
+    if (e.target.closest('button')) return;
+    app.activePortfolio = actEl.dataset.id; renderStudio();
+  }
+  else if (act === 'make-default') {
+    const id = actEl.dataset.id;
+    app.portfolios.forEach(p => { p.isDefault = p.id === id; });
+    app.activePortfolio = id; renderStudio();
+  }
+  else if (act === 'new-portfolio') { app.modal = { type: 'portfolio-form', initial: '' }; renderStudio(); }
+  else if (act === 'rename-portfolio') {
+    const p = app.portfolios.find(x => x.id === actEl.dataset.id);
+    if (p) { app.modal = { type: 'portfolio-form', editId: p.id, initial: p.name }; renderStudio(); }
+  }
+  else if (act === 'save-portfolio-name') {
+    const val = (document.getElementById('portfolio-name-input')?.value || '').trim();
+    if (!val) return;
+    const editId = actEl.dataset.edit;
+    if (editId) {
+      const p = app.portfolios.find(x => x.id === editId);
+      if (p) p.name = val;
+    } else {
+      const id = 'p-' + (++app.nextId);
+      app.portfolios.push({ id, name: val, isDefault: false });
+      app.activePortfolio = id;
+    }
+    app.modal = null; renderStudio();
+  }
+  else if (act === 'select-slice') {
+    const chart = actEl.dataset.chart, idx = Number(actEl.dataset.idx);
+    if (chart === 'overview') app.selectedStatOverview = app.selectedStatOverview === idx ? null : idx;
+    if (chart === 'assets') app.selectedStatAsset = app.selectedStatAsset === idx ? null : idx;
+    if (chart === 'liabilities') app.selectedStatLiab = app.selectedStatLiab === idx ? null : idx;
+    renderStudio();
+  }
+});
+
+document.addEventListener('input', e => {
+  if (e.target.dataset.input === 'search') {
+    app.searchQuery = e.target.value;
+    const caret = e.target.selectionStart;
+    renderStudio();
+    const next = document.getElementById('home-filter-input');
+    if (next) { next.focus(); next.setSelectionRange(caret, caret); }
+    return;
+  }
+  if (e.target.dataset.draft) {
+    const field = e.target.dataset.draft;
+    app.draft[field] = e.target.value;
+    app.draft.dirty = true;
+    renderStudio({ preserveInput: true });
+  }
+});
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'sel-base-currency') { app.baseCurrency = e.target.value; renderStudio(); }
+  if (e.target.id === 'sel-compact') { app.compact = e.target.value === 'compact'; renderStudio(); }
+  if (e.target.id === 'sel-dir') { app.dir = e.target.value; renderStudio(); }
+});
+
+renderStudio();
+</script>
+</body>
+</html>

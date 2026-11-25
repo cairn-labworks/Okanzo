@@ -356,8 +356,16 @@ before Quantity. Use **Enter / Next** to move through the fields and **Save**
 to see a centered confirmation matching the holding glance on Home. The live
 estimate (or outstanding liability amount) stays above the editor action.
 
-This is a design reference, not app code: all data is fictional, quotes and FX
-are simulated, and changes stay in memory. It is not bundled into the Flutter
+Open [the Warm Minimalism end-to-end flow prototype](docs/prototypes/warm-minimalism-e2e.prototype.html)
+directly in a browser to explore the approved **Mineral Ledger** design across
+all five connected screens (**Home**, **Portfolios**, **Add / edit holding**,
+**Holding details**, and **Statistics**), including an 8-step guided walkthrough
+(`?mode=studio`), an 11-frame storyboard gallery (`?mode=renders`), **Midnight**
+dark appearance, **Hide Balances**, 50-holding search, negative net worth,
+empty portfolios, and offline unpriced market holdings.
+
+These are design references, not app code: all data is fictional, quotes and FX
+are simulated, and changes stay in memory. They are not bundled into the Flutter
 application.
 
 ## Quality checks
