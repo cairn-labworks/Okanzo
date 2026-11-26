@@ -236,7 +236,9 @@ class _HomeScreenState extends State<HomeScreen> {
       hideBalances: state.hideBalances,
       baseCurrency: state.summary.baseCurrency,
       convertedValue: line.convertedValue,
+      isConversionApproximate: line.isConversionApproximate,
       portfolioSectionTotal: state.summary.totalAssets,
+      isSectionTotalApproximate: state.hasApproximateAssetConversions,
     );
     if (!mounted) return;
     if (action == HoldingDetailsAction.edit) {
@@ -260,7 +262,9 @@ class _HomeScreenState extends State<HomeScreen> {
       hideBalances: state.hideBalances,
       baseCurrency: state.summary.baseCurrency,
       convertedValue: line.convertedValue,
+      isConversionApproximate: line.isConversionApproximate,
       portfolioSectionTotal: state.summary.totalLiabilities,
+      isSectionTotalApproximate: state.hasApproximateLiabilityConversions,
     );
     if (!mounted) return;
     if (action == HoldingDetailsAction.edit) {
@@ -921,6 +925,7 @@ class _HomeBounceRefreshState extends State<_HomeBounceRefresh>
   late final AnimationController _bounceController;
   late final Animation<double> _bounceAnim;
   bool _pullLatched = false;
+  bool _refreshInFlight = false;
 
   @override
   void initState() {
@@ -960,6 +965,7 @@ class _HomeBounceRefreshState extends State<_HomeBounceRefresh>
     _bounceController.addStatusListener((AnimationStatus status) {
       if (status == AnimationStatus.completed &&
           !widget.isRefreshing &&
+          !_refreshInFlight &&
           mounted) {
         if (MediaQuery.disableAnimationsOf(context)) {
           _bannerController.value = 0.0;
@@ -971,11 +977,26 @@ class _HomeBounceRefreshState extends State<_HomeBounceRefresh>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _bounceController.stop();
+      _bounceController.value = 0.0;
+      _bannerController.stop();
+      _bannerController.value = (widget.isRefreshing || _refreshInFlight)
+          ? 1.0
+          : 0.0;
+    }
+  }
+
+  @override
   void didUpdateWidget(covariant _HomeBounceRefresh oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!oldWidget.isRefreshing && widget.isRefreshing) {
       _startRefreshVisuals();
-    } else if (oldWidget.isRefreshing && !widget.isRefreshing) {
+    } else if (oldWidget.isRefreshing &&
+        !widget.isRefreshing &&
+        !_refreshInFlight) {
       _finishRefreshVisuals();
     }
   }
@@ -1005,14 +1026,34 @@ class _HomeBounceRefreshState extends State<_HomeBounceRefresh>
     }
   }
 
+  Future<void> _triggerRefresh() async {
+    if (_refreshInFlight) return;
+    _refreshInFlight = true;
+    _startRefreshVisuals();
+    try {
+      await widget.onRefresh();
+    } finally {
+      _refreshInFlight = false;
+      if (mounted && !widget.isRefreshing) {
+        _finishRefreshVisuals();
+      }
+    }
+  }
+
   bool _onScrollNotification(ScrollNotification notification) {
-    if (notification.metrics.axis != Axis.vertical) return false;
+    if (notification.depth != 0 || notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
     final double pixels = notification.metrics.pixels;
-    if (pixels < -_triggerPullPx && !_pullLatched && !widget.isRefreshing) {
+    if (notification is ScrollUpdateNotification &&
+        notification.dragDetails != null &&
+        pixels < -_triggerPullPx &&
+        !_pullLatched &&
+        !widget.isRefreshing &&
+        !_refreshInFlight) {
       _pullLatched = true;
-      _startRefreshVisuals();
-      unawaited(widget.onRefresh());
-    } else if (pixels >= -4.0 && !widget.isRefreshing) {
+      unawaited(_triggerRefresh());
+    } else if (pixels >= -4.0 && !widget.isRefreshing && !_refreshInFlight) {
       _pullLatched = false;
     }
     return false;

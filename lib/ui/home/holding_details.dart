@@ -16,7 +16,9 @@ Future<HoldingDetailsAction?> showHoldingDetails(
   required bool hideBalances,
   String? baseCurrency,
   double? convertedValue,
+  bool isConversionApproximate = false,
   double? portfolioSectionTotal,
+  bool isSectionTotalApproximate = false,
 }) async {
   assert((asset == null) != (liability == null));
   final bool isAsset = asset != null;
@@ -36,7 +38,9 @@ Future<HoldingDetailsAction?> showHoldingDetails(
         hideBalances: hideBalances,
         baseCurrency: baseCurrency,
         convertedValue: convertedValue,
+        isConversionApproximate: isConversionApproximate,
         portfolioSectionTotal: portfolioSectionTotal,
+        isSectionTotalApproximate: isSectionTotalApproximate,
         closeKey: const ValueKey<String>('close-holding-details'),
         primaryLabel: (isAsset ? 'Edit asset' : 'Edit liability').tr(context),
         onPrimary: () => Navigator.of(context).pop(HoldingDetailsAction.edit),

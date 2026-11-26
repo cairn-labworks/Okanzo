@@ -18,7 +18,7 @@ class NetWorthCalculator {
     bool approximate = false;
 
     double convertValue(double value, String currency) {
-      if (currency != baseCurrency && !converter.canConvert(currency)) {
+      if (!converter.canConvertPair(currency, baseCurrency)) {
         approximate = true;
       }
       return converter.convert(value, currency, baseCurrency);

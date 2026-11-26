@@ -57,6 +57,16 @@ class HomeState {
   bool get hasAnyAssets => assetGroups.isNotEmpty;
 
   bool get hasAnyLiabilities => liabilityGroups.isNotEmpty;
+
+  bool get hasApproximateAssetConversions => assetGroups.any(
+    (AssetCategoryGroup group) =>
+        group.items.any((AssetLine line) => line.isConversionApproximate),
+  );
+
+  bool get hasApproximateLiabilityConversions => liabilityGroups.any(
+    (LiabilityCategoryGroup group) =>
+        group.items.any((LiabilityLine line) => line.isConversionApproximate),
+  );
 }
 
 /// Drives the home screen: keeps the active portfolio, its holdings and the

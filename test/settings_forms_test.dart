@@ -5168,4 +5168,218 @@ void main() {
       expect(container.settingsRepository.current.baseCurrency, 'INR');
     },
   );
+
+  testWidgets(
+    'Holding Details suppresses unconverted Portfolio value and derived share when FX rates are missing',
+    (WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await container.settingsRepository.setBaseCurrency('USD');
+      await container.settingsRepository.setHideBalances(false);
+      container.fxRepository.rates = const CurrencyConverter.empty();
+      container.assetRepository.items = const <AssetEntity>[
+        AssetEntity(
+          id: 1,
+          portfolioId: 1,
+          type: AssetType.cash,
+          name: 'Euro Reserve',
+          currency: 'EUR',
+          manualValue: 500,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+        AssetEntity(
+          id: 2,
+          portfolioId: 1,
+          type: AssetType.realEstate,
+          name: 'US Property',
+          currency: 'USD',
+          manualValue: 1500,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+      container.liabilityRepository.items = const <LiabilityEntity>[
+        LiabilityEntity(
+          id: 1,
+          portfolioId: 1,
+          type: LiabilityType.loan,
+          name: 'Euro Loan',
+          currency: 'EUR',
+          amount: 250,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+
+      await open(
+        tester,
+        HomeScreen(
+          onOpenAssetEditor: (_, _) {},
+          onOpenLiabilityEditor: (_, _) {},
+          onManagePortfolios: () {},
+          onOpenSettings: () {},
+        ),
+      );
+
+      // 1. Offline EUR asset must not present 1:1 €500 as $500 USD or a fake share.
+      await _tap(tester, find.text('Cash'));
+      await _tap(tester, find.text('Euro Reserve'));
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(
+                const ValueKey<String>('holding-glance-headline-value'),
+              ),
+            )
+            .data,
+        CurrencyUtil.format(500, 'EUR'),
+      );
+      expect(find.text('Portfolio value (USD)'), findsNothing);
+      expect(find.text('Share of portfolio assets'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('holding-portfolio-share-bar')),
+        findsNothing,
+      );
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('close-holding-details')),
+      );
+
+      // 2. Sibling USD asset also suppresses derived share while section total is approximate.
+      await _tap(tester, find.text('Real estate'));
+      await _tap(tester, find.text('US Property'));
+      expect(find.text('Portfolio value (USD)'), findsNothing);
+      expect(find.text('Share of portfolio assets'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('holding-portfolio-share-bar')),
+        findsNothing,
+      );
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('close-holding-details')),
+      );
+
+      // 3. Offline EUR liability also suppresses unconverted Portfolio value and share.
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('home-liabilities-tab')),
+      );
+      await _tap(tester, find.text('Loan'));
+      await _tap(tester, find.text('Euro Loan'));
+      expect(find.text('Portfolio value (USD)'), findsNothing);
+      expect(find.text('Share of portfolio liabilities'), findsNothing);
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('close-holding-details')),
+      );
+    },
+  );
+
+  testWidgets(
+    'Flinging back to the top of a long holdings list does not trigger refresh on ballistic overscroll',
+    (WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 640);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      container.assetRepository.items = <AssetEntity>[
+        for (int i = 0; i < 24; i++)
+          AssetEntity(
+            id: i + 1,
+            portfolioId: 1,
+            type: AssetType.values[i % AssetType.values.length],
+            name: 'Asset $i',
+            currency: 'USD',
+            quantity: 1,
+            lastPrice: 100,
+            pricePerUnit: 100,
+            manualValue: 100,
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+      ];
+
+      await open(
+        tester,
+        HomeScreen(
+          onOpenAssetEditor: (_, _) {},
+          onOpenLiabilityEditor: (_, _) {},
+          onManagePortfolios: () {},
+          onOpenSettings: () {},
+        ),
+      );
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('home-expand-all-toggle')),
+      );
+
+      final ScrollableState scrollable = tester.state<ScrollableState>(
+        find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.drag(find.byType(ListView), const Offset(0, -450));
+      await tester.pumpAndSettle();
+      expect(scrollable.position.pixels, greaterThan(300));
+
+      // Fling toward the top: finger lifts while pixels > 0, then ballistic
+      // momentum overscrolls past -48px.
+      await tester.fling(find.byType(ListView), const Offset(0, 180), 4500);
+      double minPixels = scrollable.position.pixels;
+      for (int i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        if (scrollable.position.pixels < minPixels) {
+          minPixels = scrollable.position.pixels;
+        }
+      }
+      await tester.pumpAndSettle();
+
+      expect(minPixels, lessThan(-48.0));
+      expect(container.assetRepository.portfolioRefreshes, 0);
+      expect(container.fxRepository.refreshes, 0);
+    },
+  );
+
+  testWidgets(
+    'Home pull-to-refresh clears Refreshing Quotes banner when refresh completes immediately under reduced motion',
+    (WidgetTester tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+
+      container.assetRepository.pendingPortfolioRefresh = null;
+      container.assetRepository.items = const <AssetEntity>[];
+      container.liabilityRepository.items = const <LiabilityEntity>[];
+
+      await open(
+        tester,
+        HomeScreen(
+          onOpenAssetEditor: (_, _) {},
+          onOpenLiabilityEditor: (_, _) {},
+          onManagePortfolios: () {},
+          onOpenSettings: () {},
+        ),
+      );
+
+      await tester.fling(find.byType(ListView), const Offset(0, 300), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(container.fxRepository.refreshes, 1);
+      expect(container.assetRepository.portfolioRefreshes, 1);
+      expect(find.text('Refreshing Quotes'), findsNothing);
+      await tester.pumpAndSettle();
+      expect(find.text('Updated 2 price(s)'), findsOneWidget);
+    },
+  );
 }

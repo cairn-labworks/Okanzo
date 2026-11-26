@@ -28,7 +28,9 @@ class HoldingGlanceDialog extends StatelessWidget {
     required this.hideBalances,
     this.baseCurrency,
     this.convertedValue,
+    this.isConversionApproximate = false,
     this.portfolioSectionTotal,
+    this.isSectionTotalApproximate = false,
     this.status,
     this.notice,
     this.canClose = true,
@@ -46,7 +48,9 @@ class HoldingGlanceDialog extends StatelessWidget {
   final bool hideBalances;
   final String? baseCurrency;
   final double? convertedValue;
+  final bool isConversionApproximate;
   final double? portfolioSectionTotal;
+  final bool isSectionTotalApproximate;
   final String? status;
   final Widget? notice;
   final bool canClose;
@@ -163,11 +167,14 @@ class HoldingGlanceDialog extends StatelessWidget {
         : sourceCore;
     final bool showConverted =
         isPriced &&
+        !isConversionApproximate &&
         baseCurrency != null &&
         convertedValue != null &&
         currency != baseCurrency;
     final String sharePct =
         (isPriced &&
+            !isConversionApproximate &&
+            !isSectionTotalApproximate &&
             convertedValue != null &&
             portfolioSectionTotal != null &&
             portfolioSectionTotal! > 0)

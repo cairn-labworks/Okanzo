@@ -8,23 +8,37 @@ import '../../domain/model/liability_type.dart';
 /// the portfolio's base currency so the expanded row can show the same currency
 /// as the group total.
 class AssetLine {
-  const AssetLine({required this.asset, required this.convertedValue});
+  const AssetLine({
+    required this.asset,
+    required this.convertedValue,
+    this.isConversionApproximate = false,
+  });
 
   final AssetEntity asset;
 
   /// [asset.value] expressed in the base currency.
   final double convertedValue;
+
+  /// True when [convertedValue] fell back 1:1 because an FX rate was missing.
+  final bool isConversionApproximate;
 }
 
 /// A single liability within a category, paired with its value converted to the
 /// base currency.
 class LiabilityLine {
-  const LiabilityLine({required this.liability, required this.convertedValue});
+  const LiabilityLine({
+    required this.liability,
+    required this.convertedValue,
+    this.isConversionApproximate = false,
+  });
 
   final LiabilityEntity liability;
 
   /// [liability.value] expressed in the base currency.
   final double convertedValue;
+
+  /// True when [convertedValue] fell back 1:1 because an FX rate was missing.
+  final bool isConversionApproximate;
 }
 
 /// Pairs each asset with its value converted to [baseCurrency], so the expanded
@@ -42,6 +56,9 @@ List<AssetLine> buildAssetLines(
         asset.currency,
         baseCurrency,
       ),
+      isConversionApproximate:
+          asset.isPriced &&
+          !converter.canConvertPair(asset.currency, baseCurrency),
     ),
 ];
 
@@ -56,6 +73,10 @@ List<LiabilityLine> buildLiabilityLines(
       liability: liability,
       convertedValue: converter.convert(
         liability.value,
+        liability.currency,
+        baseCurrency,
+      ),
+      isConversionApproximate: !converter.canConvertPair(
         liability.currency,
         baseCurrency,
       ),

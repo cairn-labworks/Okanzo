@@ -15,6 +15,9 @@ class CurrencyConverter {
     return rate != null && rate.isFinite && rate > 0;
   }
 
+  bool canConvertPair(String from, String to) =>
+      from == to || (canConvert(from) && canConvert(to));
+
   double convert(double amount, String from, String to) {
     if (from == to) return amount;
     final double? fromRate = _rateFor(from);
