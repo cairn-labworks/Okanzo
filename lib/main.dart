@@ -13,7 +13,6 @@ import 'domain/model/theme_mode.dart';
 import 'l10n/app_localizations.dart';
 import 'ui/lock/lock_screen.dart';
 import 'ui/navigation/app_shell.dart';
-import 'ui/theme/dynamic_color.dart';
 import 'ui/theme/theme.dart';
 import 'util/app_lock_coordinator.dart';
 import 'util/biometric_authenticator.dart';
@@ -114,50 +113,41 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
           return const SizedBox.shrink();
         }
         _updateBackHandling();
-        return DynamicColorBuilder(
-          builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-            // Wallpaper colours apply to light mode; dark is always Midnight.
-            final bool useDynamic =
-                settings.dynamicColor &&
-                settings.appearanceMode != AppThemeMode.dark;
-            return MaterialApp(
-              title: 'Okanzo',
-              debugShowCheckedModeBanner: false,
-              onNavigationNotification: (NavigationNotification notification) {
-                _navigatorCanHandlePop = notification.canHandlePop;
-                _updateBackHandling();
-                return true;
-              },
-              localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: AppLocalizations.supportedLocales,
-              locale: AppLocalizations.localeForLanguage(settings.language),
-              theme: buildTheme(
-                brightness: Brightness.light,
-                dynamicScheme: useDynamic ? lightDynamic : null,
-                appTheme: AppTheme.classic,
-              ),
-              darkTheme: buildTheme(
-                brightness: Brightness.dark,
-                appTheme: AppTheme.midnight,
-              ),
-              themeMode: switch (settings.appearanceMode) {
-                AppThemeMode.system => ThemeMode.system,
-                AppThemeMode.light => ThemeMode.light,
-                AppThemeMode.dark => ThemeMode.dark,
-              },
-              builder: (BuildContext context, Widget? navigator) => AppLockGate(
-                appLockEnabled: settings.appLockEnabled,
-                coordinator: container.appLock,
-                child: navigator!,
-              ),
-              home: const AppShell(),
-            );
+        return MaterialApp(
+          title: 'Okanzo',
+          debugShowCheckedModeBanner: false,
+          onNavigationNotification: (NavigationNotification notification) {
+            _navigatorCanHandlePop = notification.canHandlePop;
+            _updateBackHandling();
+            return true;
           },
+          localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: AppLocalizations.localeForLanguage(settings.language),
+          theme: buildTheme(
+            brightness: Brightness.light,
+            appTheme: AppTheme.classic,
+          ),
+          darkTheme: buildTheme(
+            brightness: Brightness.dark,
+            appTheme: AppTheme.midnight,
+          ),
+          themeMode: switch (settings.appearanceMode) {
+            AppThemeMode.system => ThemeMode.system,
+            AppThemeMode.light => ThemeMode.light,
+            AppThemeMode.dark => ThemeMode.dark,
+          },
+          builder: (BuildContext context, Widget? navigator) => AppLockGate(
+            appLockEnabled: settings.appLockEnabled,
+            coordinator: container.appLock,
+            child: navigator!,
+          ),
+          home: const AppShell(),
         );
       },
     );

@@ -12,12 +12,12 @@ class FinanceColors extends ThemeExtension<FinanceColors> {
 
   static const FinanceColors light = FinanceColors(
     positive: positiveGreen,
-    negative: negativeRed,
+    negative: negativeTerracotta,
   );
 
   static const FinanceColors dark = FinanceColors(
     positive: positiveGreenDark,
-    negative: negativeRedDark,
+    negative: negativeTerracottaDark,
   );
 
   final Color positive;
@@ -145,18 +145,16 @@ const double shapeLarge = 20;
 const double shapeExtraLarge = 28;
 
 /// Builds the app theme for the selected [appTheme]. [AppTheme.classic] adapts
-/// to [brightness] and an optional platform [dynamicScheme] (Material You),
-/// while [AppTheme.midnight] keeps the fixed deep-green palette.
+/// to [brightness], while [AppTheme.midnight] keeps the fixed deep-green palette.
 ThemeData buildTheme({
   required Brightness brightness,
-  ColorScheme? dynamicScheme,
   AppTheme appTheme = AppTheme.classic,
 }) {
   final bool midnight = appTheme == AppTheme.midnight;
   final bool dark = midnight || brightness == Brightness.dark;
   final ColorScheme scheme = midnight
       ? midnightColors
-      : (dynamicScheme ?? (dark ? darkColors : lightColors));
+      : (dark ? darkColors : lightColors);
   final AppStyle appStyle = midnight ? AppStyle.midnight : AppStyle.classic;
   final Typography typography = Typography.material2021(
     platform: defaultTargetPlatform,

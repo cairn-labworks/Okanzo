@@ -119,6 +119,38 @@ void main() {
     }
   });
 
+  test(
+    'Warm Minimalism ledger, filter and provenance strings are translated',
+    () {
+      const List<String> keys = <String>[
+        'Net equity {percent}',
+        'Obligations {percent}',
+        'Liabilities exceed assets',
+        'Filter holdings',
+        'Filter by name, ticker, or currency…',
+        'Clear filter',
+        'No matching holdings',
+        'Try another name, ticker, or currency code.',
+        'Expand all',
+        'Collapse all',
+        'Market quote',
+        'Manual valuation',
+        'Portfolio value ({currency})',
+        'Share of portfolio assets',
+        'Share of portfolio liabilities',
+        'Viewing',
+      ];
+      for (final Locale locale in AppLocalizations.supportedLocales.skip(1)) {
+        final AppLocalizations strings = AppLocalizations(locale);
+        for (final String key in keys) {
+          final String translated = strings.text(key);
+          expect(translated.trim(), isNotEmpty, reason: '$locale: $key');
+          expect(translated, isNot(key), reason: '$locale: $key');
+        }
+      }
+    },
+  );
+
   test('all catalogs provide messages and preserve every placeholder', () {
     final RegExp tokens = RegExp(r'\{\w+\}');
     List<String> placeholders(String text) =>

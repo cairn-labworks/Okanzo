@@ -299,6 +299,17 @@ void main() {
     });
   });
 
+  group('oneDecimalPercentageLabel', () {
+    test('formats 1-decimal shares and <0.1% floor consistently', () {
+      expect(oneDecimalPercentageLabel(0, 100), '');
+      expect(oneDecimalPercentageLabel(5, 0), '');
+      expect(oneDecimalPercentageLabel(0.05, 100), '<0.1%');
+      expect(oneDecimalPercentageLabel(17550, 360500), '4.9%');
+      expect(oneDecimalPercentageLabel(215000, 360500), '59.6%');
+      expect(oneDecimalPercentageLabel(100, 100), '100.0%');
+    });
+  });
+
   group('selectDonutCenterAmount', () {
     test('keeps exact text when scaling stays readable in the donut hole', () {
       expect(

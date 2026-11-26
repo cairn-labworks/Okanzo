@@ -312,10 +312,12 @@ void main() {
       addTearDown(() => Intl.defaultLocale = original);
       Intl.defaultLocale = 'en_US';
       await openSettings(tester, repository);
-      expect(find.text('Use device language'), findsOneWidget);
+      expect(find.text('Use device language'), findsNothing);
+      expect(find.text('System default'), findsOneWidget);
       final Element settingsPage = tester.element(find.byType(SettingsScreen));
 
       await openPicker(tester);
+      expect(find.text('Use device language'), findsOneWidget);
       final ListView list = tester.widget<ListView>(
         find.descendant(
           of: find.byType(AlertDialog),

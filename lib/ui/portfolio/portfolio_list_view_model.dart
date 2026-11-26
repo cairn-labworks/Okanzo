@@ -13,6 +13,7 @@ import '../../data/repository/net_worth_calculator.dart';
 import '../../data/repository/portfolio_repository.dart';
 import '../../data/repository/settings_repository.dart';
 import '../../domain/model/net_worth_summary.dart';
+import '../../util/category_order.dart';
 
 /// One portfolio as shown in the portfolio manager.
 class PortfolioRow {
@@ -22,6 +23,9 @@ class PortfolioRow {
     required this.baseCurrency,
     required this.assetCount,
     required this.liabilityCount,
+    this.totalAssets = 0,
+    this.totalLiabilities = 0,
+    this.isViewing = false,
   });
 
   final PortfolioEntity portfolio;
@@ -29,6 +33,9 @@ class PortfolioRow {
   final String baseCurrency;
   final int assetCount;
   final int liabilityCount;
+  final double totalAssets;
+  final double totalLiabilities;
+  final bool isViewing;
 }
 
 class PortfolioListViewModel extends ChangeNotifier {
@@ -64,6 +71,7 @@ class PortfolioListViewModel extends ChangeNotifier {
   final Map<int, List<LiabilityEntity>> _liabilitiesByPortfolio =
       <int, List<LiabilityEntity>>{};
   String? _baseCurrency;
+  int? _selectedPortfolioId;
   bool _hideBalances = false;
   CurrencyConverter _converter = const CurrencyConverter.empty();
   List<PortfolioRow> _rows = const <PortfolioRow>[];
@@ -78,6 +86,7 @@ class PortfolioListViewModel extends ChangeNotifier {
 
   void _start() {
     _baseCurrency = _settingsRepository.current.baseCurrency;
+    _selectedPortfolioId = _settingsRepository.current.selectedPortfolioId;
     _hideBalances = _settingsRepository.current.hideBalances;
     _portfolioSub = _portfolioRepository.observeAll().listen((
       List<PortfolioEntity> portfolios,
@@ -87,11 +96,14 @@ class PortfolioListViewModel extends ChangeNotifier {
     });
     _settingsSub = _settingsRepository.settings.listen((AppSettings settings) {
       final bool currencyChanged = settings.baseCurrency != _baseCurrency;
+      final bool selectedChanged =
+          settings.selectedPortfolioId != _selectedPortfolioId;
       final bool hideChanged = settings.hideBalances != _hideBalances;
-      if (!currencyChanged && !hideChanged) return;
+      if (!currencyChanged && !selectedChanged && !hideChanged) return;
       _baseCurrency = settings.baseCurrency;
+      _selectedPortfolioId = settings.selectedPortfolioId;
       _hideBalances = settings.hideBalances;
-      if (currencyChanged) {
+      if (currencyChanged || selectedChanged) {
         _recomputeFromCache();
       } else if (!_disposed) {
         notifyListeners();
@@ -133,6 +145,10 @@ class PortfolioListViewModel extends ChangeNotifier {
     if (_disposed) return;
     final String baseCurrency =
         _baseCurrency ?? _settingsRepository.current.baseCurrency;
+    final int? activeId = resolveActivePortfolio(
+      _portfolios,
+      _selectedPortfolioId,
+    )?.id;
     final List<PortfolioRow> rows = <PortfolioRow>[];
     for (final PortfolioEntity portfolio in _portfolios) {
       final List<AssetEntity> assets =
@@ -152,12 +168,18 @@ class PortfolioListViewModel extends ChangeNotifier {
           baseCurrency: baseCurrency,
           assetCount: assets.length,
           liabilityCount: liabilities.length,
+          totalAssets: summary.totalAssets,
+          totalLiabilities: summary.totalLiabilities,
+          isViewing: portfolio.id == activeId,
         ),
       );
     }
     _rows = rows;
     notifyListeners();
   }
+
+  Future<void> selectPortfolio(int id) =>
+      _settingsRepository.setSelectedPortfolioId(id);
 
   Future<void> create(String name) async {
     await _portfolioRepository.create(name);

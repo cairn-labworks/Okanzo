@@ -281,7 +281,6 @@ void main({bool deviceViewport = false, CaptureScreenshot? capture}) {
   setUp(() async {
     SharedPreferences.setMockInitialValues(<String, Object>{
       'base_currency': 'USD',
-      'dynamic_color': false,
       'theme_mode': AppThemeMode.light.storageName,
       'app_theme': AppTheme.classic.storageName,
       'last_seen_version': AppReleaseNotes.currentVersion,

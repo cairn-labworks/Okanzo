@@ -178,7 +178,6 @@ void main() {
         'app_theme',
         'theme_mode',
         'app_language',
-        'dynamic_color',
         'base_currency',
         'hide_balances',
         'simple_net_worth',
@@ -208,7 +207,6 @@ void main() {
       final SettingsRepository settings = SettingsRepository(preferences);
       try {
         await settings.setLanguage(AppLanguage.english);
-        await settings.setDynamicColor(false);
         await settings.setBaseCurrency('USD');
         await settings.setHideBalances(true);
         await settings.setSimpleNetWorth(false);
@@ -280,7 +278,6 @@ void main() {
       expect(find.text('Language, theme & colour'), findsNothing);
       expect(find.text('App theme'), findsNothing);
       expect(find.text('Light / dark'), findsNothing);
-      await _tap(tester, find.text('Theme'));
       await _tap(
         tester,
         find.byKey(const ValueKey<AppThemeMode>(AppThemeMode.light)),
@@ -289,7 +286,6 @@ void main() {
         Theme.of(tester.element(find.byType(SettingsScreen))).brightness,
         Brightness.light,
       );
-      await _tap(tester, find.text('Theme'));
       await _tap(
         tester,
         find.byKey(const ValueKey<AppThemeMode>(AppThemeMode.system)),
@@ -298,7 +294,6 @@ void main() {
         container.settingsRepository.current.appearanceMode,
         AppThemeMode.system,
       );
-      await _tap(tester, find.text('Theme'));
       await _tap(
         tester,
         find.byKey(const ValueKey<AppThemeMode>(AppThemeMode.dark)),

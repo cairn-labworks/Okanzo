@@ -104,7 +104,6 @@ void main() {
         );
         expect(reopened.current.themeMode, mode);
         expect(reopened.current.baseCurrency, 'INR');
-        expect(reopened.current.dynamicColor, isTrue);
         expect(reopened.current.hideBalances, isTrue);
       },
     );

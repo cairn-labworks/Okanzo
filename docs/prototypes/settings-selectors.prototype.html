@@ -1,0 +1,1266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Okanzo — Settings Selector Options Prototype</title>
+  <!--
+    Prototype question ("What should this look like?"):
+    Four radically different UI variations for Settings selectors (App language, Theme, Base currency),
+    plus Today's baseline, switchable via ?variant=A|B|C|D|current and the floating bottom bar.
+  -->
+  <style>
+    :root {
+      --ease-out: cubic-bezier(0.215, 0.61, 0.355, 1);
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #121716;
+      color: #edf2ee;
+      padding: 28px 24px 112px;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible {
+      outline: 2px solid #c1e1bd;
+      outline-offset: 2px;
+    }
+
+    /* Theme tokens matching lib/ui/theme/colors.dart & theme.dart */
+    .phone[data-palette="light"] {
+      --bg: #FAF8F3;
+      --surface-low: #F2EEE5;
+      --surface-high: #E7E1D4;
+      --card: #F2EEE5;
+      --field-bg: #FAF8F3;
+      --ink: #1D2621;
+      --muted: #5F6B63;
+      --line: #DFD9CC;
+      --box-line: #C9C2B2;
+      --primary: #2E4F3B;
+      --on-primary: #FFFFFF;
+      --secondary-box: #E2ECE4;
+      --sheet-bg: #FAF8F3;
+      --scrim: rgba(20, 28, 24, 0.38);
+      --Switch-off: #D9D3C5;
+    }
+    .phone[data-palette="dark"] {
+      --bg: #172220;
+      --surface-low: #20302A;
+      --surface-high: #293D35;
+      --card: #20302A;
+      --field-bg: #172220;
+      --ink: #E8F0E9;
+      --muted: #88A196;
+      --line: #2A3934;
+      --box-line: #3B5446;
+      --primary: #C1E1BD;
+      --on-primary: #172A1E;
+      --secondary-box: #24372E;
+      --sheet-bg: #1D2B27;
+      --scrim: rgba(7, 12, 11, 0.62);
+      --Switch-off: #2A3934;
+    }
+
+    .shell {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+    .eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.6px;
+      color: #8fa69b;
+      margin: 0 0 6px;
+      font-weight: 600;
+    }
+    .top-bar h1 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: -0.7px;
+      font-weight: 600;
+    }
+    .subtitle {
+      margin: 6px 0 0;
+      color: #9cb0a6;
+      font-size: 13.5px;
+      max-width: 680px;
+      line-height: 1.5;
+    }
+    .palette-toggle {
+      display: inline-flex;
+      background: #1c2523;
+      border: 1px solid #2d3d38;
+      border-radius: 999px;
+      padding: 4px;
+      gap: 4px;
+    }
+    .palette-toggle button {
+      border: 0;
+      background: transparent;
+      color: #9cb0a6;
+      padding: 7px 14px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 500;
+      transition: all 180ms var(--ease-out);
+    }
+    .palette-toggle button[aria-pressed="true"] {
+      background: #c1e1bd;
+      color: #16261c;
+      font-weight: 600;
+    }
+
+    .variant-banner {
+      background: #1a2421;
+      border: 1px solid #2b3b36;
+      border-radius: 18px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .variant-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: #273a32;
+      color: #c1e1bd;
+      margin-right: 8px;
+    }
+    .variant-title {
+      font-size: 17px;
+      font-weight: 600;
+      margin: 0 0 4px;
+    }
+    .variant-why {
+      margin: 0;
+      font-size: 13px;
+      color: #a3b6ad;
+      line-height: 1.45;
+      max-width: 760px;
+    }
+    .state-readout {
+      font-size: 12px;
+      color: #c1e1bd;
+      background: #141d1b;
+      border: 1px solid #283833;
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    /* Two phones side-by-side on wide screens, compact stacked on narrow side panels */
+    .stage {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 370px));
+      justify-content: center;
+      gap: 20px;
+    }
+    .phone-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .col-caption {
+      font-size: 11px;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+      color: #8fa69b;
+      font-weight: 600;
+      padding-left: 6px;
+    }
+    .phone {
+      background: var(--bg);
+      color: var(--ink);
+      border-radius: 30px;
+      border: 1px solid var(--box-line);
+      min-height: 390px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.36);
+      transition: background 180ms var(--ease-out), color 180ms var(--ease-out);
+      display: flex;
+      flex-direction: column;
+    }
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 14px 26px 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      opacity: 0.85;
+    }
+    .app-bar {
+      height: 44px;
+      padding: 0 20px 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .back-btn {
+      width: 36px;
+      height: 36px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--ink);
+      display: grid;
+      place-items: center;
+    }
+    .brand-tag {
+      font-size: 10.5px;
+      letter-spacing: 1.2px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .screen-body {
+      padding: 10px 24px 28px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .page-heading {
+      font-size: 30px;
+      font-weight: 600;
+      letter-spacing: -0.9px;
+      margin: 0 0 22px;
+      line-height: 1.15;
+    }
+
+    /* Switch control */
+    .m3-switch {
+      width: 44px;
+      height: 26px;
+      border-radius: 999px;
+      background: var(--Switch-off);
+      border: 1px solid var(--box-line);
+      position: relative;
+      flex-shrink: 0;
+      transition: background 180ms var(--ease-out);
+    }
+    .m3-switch[data-on="true"] {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+    .m3-switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--bg);
+      transition: transform 180ms var(--ease-out);
+    }
+    .m3-switch[data-on="true"]::after {
+      transform: translateX(18px);
+      background: var(--on-primary);
+    }
+
+    /* ---------------- CURRENT (BASELINE) ---------------- */
+    .raw-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 0;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+    }
+    .row-copy strong {
+      display: block;
+      font-size: 14.5px;
+      font-weight: 500;
+    }
+    .row-copy small {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 3px;
+      line-height: 1.35;
+    }
+    .cramped-blob-chip {
+      max-width: 118px;
+      background: var(--surface-low);
+      border-radius: 24px;
+      padding: 8px 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--ink);
+      flex-shrink: 0;
+    }
+    .cramped-blob-chip span.txt {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ---------------- VARIANT A: GROUPED INSET + TRAILING VALUE + SHEET ---------------- */
+    .inset-group {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .group-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px 16px;
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+      transition: background 150ms ease;
+    }
+    .group-row:hover { background: rgba(128, 150, 136, 0.08); }
+    .group-row + .group-row {
+      border-top: 1px solid var(--line);
+    }
+    .trailing-value {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--primary);
+      font-size: 13.5px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .trailing-value .chev {
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 400;
+    }
+    .leading-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      background: var(--secondary-box);
+      color: var(--primary);
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .group-row-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    /* ---------------- VARIANT B: INLINE SEGMENTED THEME + TACTILE OUTLINED PILLS ---------------- */
+    .seg-block {
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .seg-track {
+      margin-top: 12px;
+      background: var(--field-bg);
+      border: 1px solid var(--box-line);
+      border-radius: 14px;
+      padding: 3px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      position: relative;
+    }
+    .seg-btn {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      padding: 9px 6px;
+      border-radius: 11px;
+      font-size: 12.5px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 180ms var(--ease-out);
+    }
+    .seg-btn[aria-selected="true"] {
+      background: var(--surface-high);
+      color: var(--ink);
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+    }
+    .tactile-pill {
+      background: var(--field-bg);
+      border: 1px solid var(--box-line);
+      border-radius: 12px;
+      padding: 7px 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--ink);
+      flex-shrink: 0;
+    }
+    .tactile-pill .code-tag {
+      background: var(--secondary-box);
+      color: var(--primary);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .tactile-pill .unfold {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    /* ---------------- VARIANT C: VISUAL THEME TILES + FULL-WIDTH SELECTOR FIELDS ---------------- */
+    .field-card-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .field-label-top {
+      font-size: 12.5px;
+      font-weight: 600;
+      margin: 0 0 3px;
+    }
+    .field-sub-top {
+      font-size: 11.5px;
+      color: var(--muted);
+      margin: 0 0 9px;
+    }
+    .full-selector-box {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--box-line);
+      border-radius: 14px;
+      padding: 13px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--ink);
+      text-align: left;
+    }
+    .full-selector-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .theme-tiles {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+    }
+    .theme-tile {
+      border: 1.5px solid var(--line);
+      background: var(--card);
+      border-radius: 14px;
+      padding: 10px 8px;
+      text-align: center;
+      color: var(--ink);
+      transition: all 180ms var(--ease-out);
+    }
+    .theme-tile[aria-selected="true"] {
+      border-color: var(--primary);
+      background: var(--secondary-box);
+    }
+    .swatch {
+      height: 32px;
+      border-radius: 8px;
+      margin-bottom: 7px;
+      border: 1px solid rgba(128, 128, 128, 0.28);
+      position: relative;
+      overflow: hidden;
+    }
+    .swatch-light { background: linear-gradient(135deg, #FAF8F3 55%, #2E4F3B 55%); }
+    .swatch-dark { background: linear-gradient(135deg, #172220 55%, #C1E1BD 55%); }
+    .swatch-sys { background: linear-gradient(90deg, #FAF8F3 50%, #172220 50%); }
+    .theme-tile span {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* ---------------- VARIANT D: INLINE ACCORDION DISCLOSURE ---------------- */
+    .accordion-drawer {
+      background: var(--field-bg);
+      border-top: 1px solid var(--line);
+      padding: 10px 12px 12px;
+    }
+    .inline-option {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      padding: 9px 10px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      text-align: left;
+    }
+    .inline-option[aria-selected="true"] {
+      background: var(--secondary-box);
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .mini-search {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--box-line);
+      border-radius: 9px;
+      padding: 7px 10px;
+      color: var(--ink);
+      font-size: 12.5px;
+      margin-bottom: 7px;
+    }
+
+    /* Bottom sheet / modal inside phone */
+    .sheet-scrim {
+      position: absolute;
+      inset: 0;
+      background: var(--scrim);
+      display: flex;
+      align-items: flex-end;
+      z-index: 10;
+    }
+    .sheet-scrim.dialog-mode {
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .sheet {
+      width: 100%;
+      background: var(--sheet-bg);
+      border-top: 1px solid var(--box-line);
+      border-radius: 24px 24px 0 0;
+      padding: 10px 18px 22px;
+      max-height: 76%;
+      display: flex;
+      flex-direction: column;
+    }
+    .sheet-scrim.dialog-mode .sheet {
+      border: 1px solid var(--box-line);
+      border-radius: 22px;
+      padding: 18px;
+    }
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      border-radius: 99px;
+      background: var(--muted);
+      opacity: 0.4;
+      margin: 0 auto 12px;
+    }
+    .sheet-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .sheet-head h3 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 600;
+    }
+    .sheet-close {
+      border: 0;
+      background: var(--surface-low);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+    .sheet-list {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    /* Floating bottom switcher bar (prototype UI.md spec), responsive to narrow side panels */
+    .prototype-switcher {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: calc(100vw - 24px);
+      z-index: 999;
+      background: #f3f6f4;
+      color: #141e19;
+      border-radius: 999px;
+      padding: 5px 7px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.22);
+    }
+    .nav-arrow {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 0;
+      background: #e2e8e4;
+      color: #141e19;
+      font-weight: 700;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+    }
+    .nav-arrow:hover { background: #d1ddd5; }
+    .variant-pills {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 0 2px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .variant-pills::-webkit-scrollbar { display: none; }
+    .v-pill {
+      border: 0;
+      background: transparent;
+      color: #495950;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .v-pill[aria-current="true"] {
+      background: #1b3125;
+      color: #d6f0d2;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="top-bar">
+      <div>
+        <p class="eyebrow">Okanzo · Settings Selector Exploration</p>
+        <h1>Four ways to fix the Settings dropdowns</h1>
+        <p class="subtitle">
+          Tap <strong>App language</strong>, <strong>Theme</strong>, or <strong>Base currency</strong> on either phone to test the live interaction. Use the bottom bar or <code>&larr;</code> / <code>&rarr;</code> keys to flip variants.
+        </p>
+      </div>
+      <div class="palette-toggle" role="group" aria-label="Preview palette">
+        <button type="button" id="pal-light" aria-pressed="true">Mineral Ledger (Light)</button>
+        <button type="button" id="pal-dark" aria-pressed="false">Midnight Precision (Dark)</button>
+      </div>
+    </header>
+
+    <section class="variant-banner" id="variant-banner"></section>
+
+    <main class="stage" id="stage"></main>
+  </div>
+
+  <nav class="prototype-switcher" aria-label="Prototype variant switcher">
+    <button type="button" class="nav-arrow" id="prev-variant" title="Previous variant (←)">&larr;</button>
+    <div class="variant-pills" id="variant-pills"></div>
+    <button type="button" class="nav-arrow" id="next-variant" title="Next variant (→)">&rarr;</button>
+  </nav>
+
+  <script>
+    const VARIANTS = [
+      {
+        key: 'A',
+        short: 'A · Clean List',
+        name: 'Option A — Grouped Inset Card + Quiet Trailing Value & Bottom Sheet',
+        why: 'Removes clunky dropdown button boxes completely. Rows sit inside the same rounded inset card as the Settings Hub, show the full active value on the right with a subtle chevron (never truncated at 120px), and open a clean rounded bottom sheet.'
+      },
+      {
+        key: 'B',
+        short: 'B · Segmented + Pill',
+        name: 'Option B — Inline 3-Way Segmented Theme + Outlined Tactile Pills (Recommended)',
+        why: 'Theme only has 3 modes (Light, Midnight, System), so it becomes an instant 1-tap sliding control with zero popup. Multi-item pickers (App language & Base currency) get a crisp 1px-bordered pill with badge + double-chevron.'
+      },
+      {
+        key: 'C',
+        short: 'C · Swatches + Fields',
+        name: 'Option C — Visual Theme Swatch Cards + Full-Width Selector Fields',
+        why: 'Matches Okanzo’s Asset/Liability editor fields: full-width 48px selector boxes that never clip long language or currency names, paired with visual Light / Midnight / System preview cards.'
+      },
+      {
+        key: 'D',
+        short: 'D · Accordion',
+        name: 'Option D — In-Place Expandable Accordion Pickers (Zero Modals)',
+        why: 'Tapping App language, Theme, or Base currency expands the options smoothly right inside the card (180ms easeOutCubic) with inline search for currencies/languages—no modal dialogs or sheets at all.'
+      },
+      {
+        key: 'current',
+        short: 'Today',
+        name: 'Current App — Ungrouped Rows + Borderless 120px Truncated Chip + AlertDialog',
+        why: 'For comparison: drill-in rows sit ungrouped on the page, PickerChip has no border and a 120px cap (“System d… ⌄”), and tapping opens a stock radio AlertDialog.'
+      }
+    ];
+
+    const LANGUAGES = [
+      { id: 'system', label: 'System default', detail: 'Use device language (English)' },
+      { id: 'en', label: 'English', detail: 'English' },
+      { id: 'de', label: 'Deutsch', detail: 'German' },
+      { id: 'es', label: 'Español', detail: 'Spanish' },
+      { id: 'fr', label: 'Français', detail: 'French' },
+      { id: 'hi', label: 'हिन्दी', detail: 'Hindi' },
+      { id: 'ja', label: '日本語', detail: 'Japanese' },
+      { id: 'ar', label: 'العربية', detail: 'Arabic (RTL)' }
+    ];
+
+    const THEMES = [
+      { id: 'light', label: 'Light', sub: 'Mineral Ledger' },
+      { id: 'dark', label: 'Dark', sub: 'Midnight' },
+      { id: 'system', label: 'System', sub: 'Follow device' }
+    ];
+
+    const CURRENCIES = [
+      { code: 'USD', sym: '$', name: 'US Dollar' },
+      { code: 'EUR', sym: '€', name: 'Euro' },
+      { code: 'INR', sym: '₹', name: 'Indian Rupee' },
+      { code: 'GBP', sym: '£', name: 'British Pound' },
+      { code: 'JPY', sym: '¥', name: 'Japanese Yen' },
+      { code: 'CHF', sym: 'Fr', name: 'Swiss Franc' }
+    ];
+
+    const params = new URLSearchParams(window.location.search);
+    const state = {
+      variant: VARIANTS.some(v => v.key === params.get('variant')) ? params.get('variant') : 'B',
+      palette: params.get('palette') === 'dark' ? 'dark' : 'light',
+      language: 'system',
+      themeMode: 'light',
+      dynamicColor: false,
+      currency: 'USD',
+      simpleNetWorth: true,
+      activeSheet: null, // null | { phone: 'appearance'|'currency', kind: 'language'|'theme'|'currency' }
+      openAccordion: 'theme', // for Variant D
+      search: ''
+    };
+
+    function syncUrl() {
+      const next = new URL(window.location.href);
+      next.searchParams.set('variant', state.variant);
+      next.searchParams.set('palette', state.palette);
+      window.history.replaceState({}, '', next);
+    }
+
+    function langObj() { return LANGUAGES.find(l => l.id === state.language) || LANGUAGES[0]; }
+    function themeObj() { return THEMES.find(t => t.id === state.themeMode) || THEMES[0]; }
+    function currObj() { return CURRENCIES.find(c => c.code === state.currency) || CURRENCIES[0]; }
+
+    function setThemeMode(id) {
+      state.themeMode = id;
+      if (id === 'light' || id === 'dark') state.palette = id;
+      state.activeSheet = null;
+      syncUrl();
+      render();
+    }
+
+    function renderSwitch(on) {
+      return `<span class="m3-switch" data-on="${on}"></span>`;
+    }
+
+    function renderAppearanceBody() {
+      const v = state.variant;
+      const lang = langObj();
+      const th = themeObj();
+      const isDark = state.palette === 'dark';
+
+      if (v === 'current') {
+        return `
+          <h2 class="page-heading">Appearance</h2>
+          <button class="raw-row" data-open-sheet="appearance:language">
+            <span class="row-copy"><strong>App language</strong><small>Use device language</small></span>
+            <span class="cramped-blob-chip"><span class="txt">${lang.label}</span><span>▾</span></span>
+          </button>
+          <button class="raw-row" data-open-sheet="appearance:theme">
+            <span class="row-copy"><strong>Theme</strong><small>Light or Midnight dark</small></span>
+            <span class="cramped-blob-chip"><span class="txt">${th.label}</span><span>▾</span></span>
+          </button>
+          <button class="raw-row" data-toggle="dynamicColor">
+            <span class="row-copy"><strong>Dynamic color</strong><small>${isDark ? 'Not used in dark mode' : 'Use wallpaper colors in light mode'}</small></span>
+            ${renderSwitch(state.dynamicColor && !isDark)}
+          </button>
+        `;
+      }
+
+      if (v === 'A') {
+        return `
+          <h2 class="page-heading">Appearance</h2>
+          <div class="inset-group">
+            <button class="group-row" data-open-sheet="appearance:language">
+              <span class="group-row-left">
+                <span class="leading-badge">🌐</span>
+                <span class="row-copy"><strong>App language</strong><small>Interface &amp; formatting</small></span>
+              </span>
+              <span class="trailing-value">${lang.label} <span class="chev">›</span></span>
+            </button>
+            <button class="group-row" data-open-sheet="appearance:theme">
+              <span class="group-row-left">
+                <span class="leading-badge">◐</span>
+                <span class="row-copy"><strong>Theme</strong><small>Light or Midnight dark</small></span>
+              </span>
+              <span class="trailing-value">${th.label} <span class="chev">›</span></span>
+            </button>
+            <button class="group-row" data-toggle="dynamicColor">
+              <span class="group-row-left">
+                <span class="leading-badge">✦</span>
+                <span class="row-copy"><strong>Dynamic color</strong><small>${isDark ? 'Not used in dark mode' : 'Android 12+ wallpaper tint'}</small></span>
+              </span>
+              ${renderSwitch(state.dynamicColor && !isDark)}
+            </button>
+          </div>
+        `;
+      }
+
+      if (v === 'B') {
+        return `
+          <h2 class="page-heading">Appearance</h2>
+          <div class="inset-group">
+            <div class="seg-block">
+              <span class="row-copy"><strong>Theme</strong><small>Light or Midnight dark</small></span>
+              <div class="seg-track" role="tablist" aria-label="Theme">
+                ${THEMES.map(m => `
+                  <button type="button" class="seg-btn" role="tab" aria-selected="${state.themeMode === m.id}" data-pick-theme="${m.id}">
+                    <span>${m.id === 'light' ? '☀' : m.id === 'dark' ? '☾' : '◐'}</span>
+                    <span>${m.label}</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+            <button class="group-row" data-open-sheet="appearance:language">
+              <span class="row-copy"><strong>App language</strong></span>
+              <span class="tactile-pill">
+                <span>🌐</span>
+                <span>${lang.label}</span>
+                <span class="unfold">⇅</span>
+              </span>
+            </button>
+          </div>
+        `;
+      }
+
+      if (v === 'C') {
+        return `
+          <h2 class="page-heading">Appearance</h2>
+          <div class="field-card-stack">
+            <div>
+              <p class="field-label-top">Theme</p>
+              <p class="field-sub-top">Choose how Okanzo surfaces render</p>
+              <div class="theme-tiles">
+                <button type="button" class="theme-tile" aria-selected="${state.themeMode === 'light'}" data-pick-theme="light">
+                  <div class="swatch swatch-light"></div>
+                  <span>Light</span>
+                </button>
+                <button type="button" class="theme-tile" aria-selected="${state.themeMode === 'dark'}" data-pick-theme="dark">
+                  <div class="swatch swatch-dark"></div>
+                  <span>Midnight</span>
+                </button>
+                <button type="button" class="theme-tile" aria-selected="${state.themeMode === 'system'}" data-pick-theme="system">
+                  <div class="swatch swatch-sys"></div>
+                  <span>System</span>
+                </button>
+              </div>
+            </div>
+            <div>
+              <p class="field-label-top">App language</p>
+              <p class="field-sub-top">Translated across 21 locales</p>
+              <button type="button" class="full-selector-box" data-open-sheet="appearance:language">
+                <span class="full-selector-left"><span class="leading-badge">🌐</span> <span>${lang.label}</span></span>
+                <span style="color:var(--muted);">▾</span>
+              </button>
+            </div>
+            <div class="inset-group">
+              <button class="group-row" data-toggle="dynamicColor">
+                <span class="row-copy"><strong>Dynamic color</strong><small>${isDark ? 'Not used in dark mode' : 'Use wallpaper colors in light mode'}</small></span>
+                ${renderSwitch(state.dynamicColor && !isDark)}
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      // Variant D: Inline Accordion
+      const openLang = state.openAccordion === 'language';
+      const openTheme = state.openAccordion === 'theme';
+      const q = state.search.trim().toLowerCase();
+      const filteredLangs = LANGUAGES.filter(l => !q || l.label.toLowerCase().includes(q) || l.detail.toLowerCase().includes(q));
+      return `
+        <h2 class="page-heading">Appearance</h2>
+        <div class="inset-group">
+          <button class="group-row" data-accordion="language">
+            <span class="row-copy"><strong>App language</strong><small>${lang.label}</small></span>
+            <span class="trailing-value"><span class="chev">${openLang ? '▴' : '▾'}</span></span>
+          </button>
+          ${openLang ? `
+            <div class="accordion-drawer">
+              <input class="mini-search" placeholder="Filter languages…" value="${state.search}" data-search-input />
+              ${filteredLangs.slice(0, 5).map(l => `
+                <button type="button" class="inline-option" aria-selected="${state.language === l.id}" data-pick-lang="${l.id}">
+                  <span>${l.label}</span>
+                  <span>${state.language === l.id ? '✓' : ''}</span>
+                </button>
+              `).join('')}
+            </div>
+          ` : ''}
+          <button class="group-row" data-accordion="theme">
+            <span class="row-copy"><strong>Theme</strong><small>${th.label} (${th.sub})</small></span>
+            <span class="trailing-value"><span class="chev">${openTheme ? '▴' : '▾'}</span></span>
+          </button>
+          ${openTheme ? `
+            <div class="accordion-drawer">
+              ${THEMES.map(m => `
+                <button type="button" class="inline-option" aria-selected="${state.themeMode === m.id}" data-pick-theme="${m.id}">
+                  <span>${m.label} · <small style="opacity:.75">${m.sub}</small></span>
+                  <span>${state.themeMode === m.id ? '✓' : ''}</span>
+                </button>
+              `).join('')}
+            </div>
+          ` : ''}
+          <button class="group-row" data-toggle="dynamicColor">
+            <span class="row-copy"><strong>Dynamic color</strong><small>${isDark ? 'Not used in dark mode' : 'Android 12+ wallpaper tint'}</small></span>
+            ${renderSwitch(state.dynamicColor && !isDark)}
+          </button>
+        </div>
+      `;
+    }
+
+    function renderCurrencyBody() {
+      const v = state.variant;
+      const cur = currObj();
+
+      if (v === 'current') {
+        return `
+          <h2 class="page-heading">Currency</h2>
+          <button class="raw-row" data-open-sheet="currency:currency">
+            <span class="row-copy"><strong>Base currency</strong><small>${cur.name}</small></span>
+            <span class="cramped-blob-chip"><span>${cur.sym}</span><span class="txt">${cur.code}</span><span>▾</span></span>
+          </button>
+          <button class="raw-row" data-toggle="simpleNetWorth">
+            <span class="row-copy"><strong>Simple net worth</strong><small>Shorten the home net worth using currency-specific units</small></span>
+            ${renderSwitch(state.simpleNetWorth)}
+          </button>
+        `;
+      }
+
+      if (v === 'A') {
+        return `
+          <h2 class="page-heading">Currency</h2>
+          <div class="inset-group">
+            <button class="group-row" data-open-sheet="currency:currency">
+              <span class="group-row-left">
+                <span class="leading-badge">${cur.sym}</span>
+                <span class="row-copy"><strong>Base currency</strong><small>${cur.name}</small></span>
+              </span>
+              <span class="trailing-value">${cur.code} <span class="chev">›</span></span>
+            </button>
+            <button class="group-row" data-toggle="simpleNetWorth">
+              <span class="group-row-left">
+                <span class="leading-badge">1.2M</span>
+                <span class="row-copy"><strong>Simple net worth</strong><small>Compact units on Home headline</small></span>
+              </span>
+              ${renderSwitch(state.simpleNetWorth)}
+            </button>
+          </div>
+        `;
+      }
+
+      if (v === 'B') {
+        return `
+          <h2 class="page-heading">Currency</h2>
+          <div class="inset-group">
+            <button class="group-row" data-open-sheet="currency:currency">
+              <span class="row-copy"><strong>Base currency</strong><small>${cur.name}</small></span>
+              <span class="tactile-pill">
+                <span class="code-tag">${cur.sym}</span>
+                <span>${cur.code}</span>
+                <span class="unfold">⇅</span>
+              </span>
+            </button>
+            <button class="group-row" data-toggle="simpleNetWorth">
+              <span class="row-copy"><strong>Simple net worth</strong><small>Shorten the home net worth using currency-specific units</small></span>
+              ${renderSwitch(state.simpleNetWorth)}
+            </button>
+          </div>
+        `;
+      }
+
+      if (v === 'C') {
+        return `
+          <h2 class="page-heading">Currency</h2>
+          <div class="field-card-stack">
+            <div>
+              <p class="field-label-top">Base currency</p>
+              <p class="field-sub-top">All portfolios and totals convert into this currency</p>
+              <button type="button" class="full-selector-box" data-open-sheet="currency:currency">
+                <span class="full-selector-left">
+                  <span class="leading-badge">${cur.sym}</span>
+                  <span><strong>${cur.code}</strong> · ${cur.name}</span>
+                </span>
+                <span style="color:var(--muted);">▾</span>
+              </button>
+            </div>
+            <div class="inset-group">
+              <button class="group-row" data-toggle="simpleNetWorth">
+                <span class="row-copy"><strong>Simple net worth</strong><small>Shorten the home net worth using currency-specific units</small></span>
+                ${renderSwitch(state.simpleNetWorth)}
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      // Variant D: Inline Accordion
+      const openCur = state.openAccordion === 'currency';
+      const q = state.search.trim().toLowerCase();
+      const filteredCur = CURRENCIES.filter(c => !q || c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q));
+      return `
+        <h2 class="page-heading">Currency</h2>
+        <div class="inset-group">
+          <button class="group-row" data-accordion="currency">
+            <span class="row-copy"><strong>Base currency</strong><small>${cur.sym} ${cur.code} · ${cur.name}</small></span>
+            <span class="trailing-value"><span class="chev">${openCur ? '▴' : '▾'}</span></span>
+          </button>
+          ${openCur ? `
+            <div class="accordion-drawer">
+              <input class="mini-search" placeholder="Search currency code or name…" value="${state.search}" data-search-input />
+              ${filteredCur.map(c => `
+                <button type="button" class="inline-option" aria-selected="${state.currency === c.code}" data-pick-curr="${c.code}">
+                  <span><strong>${c.code}</strong> · ${c.name} (${c.sym})</span>
+                  <span>${state.currency === c.code ? '✓' : ''}</span>
+                </button>
+              `).join('')}
+            </div>
+          ` : ''}
+          <button class="group-row" data-toggle="simpleNetWorth">
+            <span class="row-copy"><strong>Simple net worth</strong><small>Shorten the home net worth using currency-specific units</small></span>
+            ${renderSwitch(state.simpleNetWorth)}
+          </button>
+        </div>
+      `;
+    }
+
+    function renderSheetFor(phoneId) {
+      if (!state.activeSheet || state.activeSheet.phone !== phoneId) return '';
+      const kind = state.activeSheet.kind;
+      const isDialog = state.variant === 'current';
+      const searchable = kind === 'language' || kind === 'currency';
+      const q = state.search.trim().toLowerCase();
+      let title = 'Select';
+      let itemsHtml = '';
+      if (kind === 'language') {
+        title = 'App language';
+        const langs = LANGUAGES.filter(l => !q || l.label.toLowerCase().includes(q) || l.detail.toLowerCase().includes(q));
+        itemsHtml = langs.length ? langs.map(l => `
+          <button type="button" class="inline-option" aria-selected="${state.language === l.id}" data-pick-lang="${l.id}">
+            <span>${l.label} <small style="opacity:.7">· ${l.detail}</small></span>
+            <span>${state.language === l.id ? (isDialog ? '◉' : '✓') : (isDialog ? '○' : '')}</span>
+          </button>
+        `).join('') : '<div style="padding:12px 6px;font-size:12.5px;color:var(--muted);">No matching options.</div>';
+      } else if (kind === 'theme') {
+        title = 'Theme';
+        itemsHtml = THEMES.map(m => `
+          <button type="button" class="inline-option" aria-selected="${state.themeMode === m.id}" data-pick-theme="${m.id}">
+            <span>${m.label} <small style="opacity:.7">· ${m.sub}</small></span>
+            <span>${state.themeMode === m.id ? (isDialog ? '◉' : '✓') : (isDialog ? '○' : '')}</span>
+          </button>
+        `).join('');
+      } else if (kind === 'currency') {
+        title = 'Base currency';
+        const currs = CURRENCIES.filter(c => !q || c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q));
+        itemsHtml = currs.length ? currs.map(c => `
+          <button type="button" class="inline-option" aria-selected="${state.currency === c.code}" data-pick-curr="${c.code}">
+            <span><strong>${c.sym} ${c.code}</strong> · ${c.name}</span>
+            <span>${state.currency === c.code ? '✓' : ''}</span>
+          </button>
+        `).join('') : '<div style="padding:12px 6px;font-size:12.5px;color:var(--muted);">No matching options.</div>';
+      }
+      return `
+        <div class="sheet-scrim ${isDialog ? 'dialog-mode' : ''}" data-close-sheet>
+          <div class="sheet" onclick="event.stopPropagation()">
+            ${isDialog ? '' : '<div class="sheet-handle"></div>'}
+            <div class="sheet-head">
+              <h3>${title}</h3>
+              <div style="display:flex;gap:6px;align-items:center;">
+                ${searchable ? `<button type="button" class="sheet-close" data-toggle-sheet-search aria-label="Search">🔍</button>` : ''}
+                <button type="button" class="sheet-close" data-close-sheet>Close</button>
+              </div>
+            </div>
+            ${searchable && (state.sheetSearchOpen || kind === 'currency') ? `
+              <input class="mini-search" placeholder="Search ${kind === 'currency' ? 'currency code or name' : 'languages'}…" value="${state.search}" data-search-input />
+            ` : ''}
+            <div class="sheet-list">${itemsHtml}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPhone(phoneId, caption, innerHtml) {
+      return `
+        <div class="phone-col">
+          <div class="col-caption">${caption}</div>
+          <article class="phone" data-palette="${state.palette}">
+            <div class="status-bar"><span>9:41</span><span>5G · 100%</span></div>
+            <div class="app-bar">
+              <button type="button" class="back-btn" aria-label="Back">&larr;</button>
+              <span class="brand-tag">OKANZO</span>
+            </div>
+            <div class="screen-body">${innerHtml}</div>
+            ${renderSheetFor(phoneId)}
+          </article>
+        </div>
+      `;
+    }
+
+    function render() {
+      const meta = VARIANTS.find(v => v.key === state.variant) || VARIANTS[0];
+      document.getElementById('pal-light').setAttribute('aria-pressed', String(state.palette === 'light'));
+      document.getElementById('pal-dark').setAttribute('aria-pressed', String(state.palette === 'dark'));
+
+      document.getElementById('variant-banner').innerHTML = `
+        <div>
+          <p class="variant-title"><span class="variant-badge">Variant ${meta.key}</span>${meta.name}</p>
+          <p class="variant-why">${meta.why}</p>
+        </div>
+        <div class="state-readout">
+          Lang: <strong>${langObj().label}</strong> · Theme: <strong>${themeObj().label}</strong> · Base: <strong>${currObj().code}</strong>
+        </div>
+      `;
+
+      document.getElementById('stage').innerHTML =
+        renderPhone('appearance', 'Settings → Appearance Drill-In', renderAppearanceBody()) +
+        renderPhone('currency', 'Settings → Currency Drill-In', renderCurrencyBody());
+
+      document.getElementById('variant-pills').innerHTML = VARIANTS.map(v => `
+        <button type="button" class="v-pill" aria-current="${v.key === state.variant}" data-set-variant="${v.key}">
+          ${v.short}
+        </button>
+      `).join('');
+    }
+
+    function stepVariant(delta) {
+      const idx = VARIANTS.findIndex(v => v.key === state.variant);
+      const next = (idx + delta + VARIANTS.length) % VARIANTS.length;
+      state.variant = VARIANTS[next].key;
+      state.activeSheet = null;
+      syncUrl();
+      render();
+    }
+
+    document.addEventListener('click', e => {
+      const setV = e.target.closest('[data-set-variant]');
+      if (setV) {
+        state.variant = setV.dataset.setVariant;
+        state.activeSheet = null;
+        syncUrl();
+        render();
+        return;
+      }
+      if (e.target.closest('#pal-light')) { state.palette = 'light'; syncUrl(); render(); return; }
+      if (e.target.closest('#pal-dark')) { state.palette = 'dark'; syncUrl(); render(); return; }
+      if (e.target.closest('#prev-variant')) { stepVariant(-1); return; }
+      if (e.target.closest('#next-variant')) { stepVariant(1); return; }
+
+      const openSheet = e.target.closest('[data-open-sheet]');
+      if (openSheet) {
+        const [phone, kind] = openSheet.dataset.openSheet.split(':');
+        state.activeSheet = { phone, kind };
+        state.search = '';
+        state.sheetSearchOpen = false;
+        render();
+        return;
+      }
+      if (e.target.closest('[data-toggle-sheet-search]')) {
+        state.sheetSearchOpen = !state.sheetSearchOpen;
+        if (!state.sheetSearchOpen) state.search = '';
+        render();
+        const input = document.querySelector('[data-search-input]');
+        if (input) input.focus();
+        return;
+      }
+      if (e.target.closest('[data-close-sheet]')) {
+        state.activeSheet = null;
+        render();
+        return;
+      }
+      const pickTheme = e.target.closest('[data-pick-theme]');
+      if (pickTheme) { setThemeMode(pickTheme.dataset.pickTheme); return; }
+
+      const pickLang = e.target.closest('[data-pick-lang]');
+      if (pickLang) {
+        state.language = pickLang.dataset.pickLang;
+        state.activeSheet = null;
+        render();
+        return;
+      }
+      const pickCurr = e.target.closest('[data-pick-curr]');
+      if (pickCurr) {
+        state.currency = pickCurr.dataset.pickCurr;
+        state.activeSheet = null;
+        render();
+        return;
+      }
+      const toggle = e.target.closest('[data-toggle]');
+      if (toggle) {
+        const k = toggle.dataset.toggle;
+        state[k] = !state[k];
+        render();
+        return;
+      }
+      const acc = e.target.closest('[data-accordion]');
+      if (acc) {
+        const k = acc.dataset.accordion;
+        state.openAccordion = state.openAccordion === k ? null : k;
+        state.search = '';
+        render();
+      }
+    });
+
+    document.addEventListener('input', e => {
+      if (e.target.matches('[data-search-input]')) {
+        const pos = e.target.selectionStart;
+        state.search = e.target.value;
+        render();
+        const input = document.querySelector('[data-search-input]');
+        if (input) { input.focus(); input.setSelectionRange(pos, pos); }
+      }
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.target.matches('input, textarea, [contenteditable]')) return;
+      if (e.key === 'ArrowLeft') stepVariant(-1);
+      if (e.key === 'ArrowRight') stepVariant(1);
+    });
+
+    render();
+  </script>
+</body>
+</html>

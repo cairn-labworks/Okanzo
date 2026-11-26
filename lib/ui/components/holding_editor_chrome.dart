@@ -4,6 +4,7 @@ import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
+import '../theme/theme.dart';
 import 'ui_components.dart';
 
 class HoldingEditorHeading extends StatelessWidget {
@@ -25,6 +26,7 @@ class HoldingEditorHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final FinanceColors finance = FinanceColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -41,7 +43,9 @@ class HoldingEditorHeading extends StatelessWidget {
                           bottom: BorderSide(
                             width: 2,
                             color: kind == asset
-                                ? theme.colorScheme.primary
+                                ? (kind
+                                      ? theme.colorScheme.primary
+                                      : finance.negative)
                                 : Colors.transparent,
                           ),
                         ),
@@ -50,7 +54,9 @@ class HoldingEditorHeading extends StatelessWidget {
                         onPressed: enabled ? () => onKindSelected!(kind) : null,
                         style: TextButton.styleFrom(
                           foregroundColor: kind == asset
-                              ? theme.colorScheme.primary
+                              ? (kind
+                                    ? theme.colorScheme.primary
+                                    : finance.negative)
                               : theme.colorScheme.onSurfaceVariant,
                           textStyle: theme.textTheme.bodySmall?.copyWith(
                             fontWeight: kind == asset
@@ -279,7 +285,9 @@ class HoldingEditorFooter extends StatelessWidget {
                                 height: 1.1,
                                 letterSpacing: -0.65,
                                 fontWeight: FontWeight.w600,
-                                color: colors.primary,
+                                color: asset
+                                    ? colors.primary
+                                    : FinanceColors.of(context).negative,
                                 fontFeatures: const <FontFeature>[
                                   FontFeature.tabularFigures(),
                                 ],

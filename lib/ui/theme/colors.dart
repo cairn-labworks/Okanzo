@@ -7,11 +7,11 @@ const ColorScheme lightColors = ColorScheme(
   primary: Color(0xFF3D6249),
   onPrimary: Color(0xFFFFFFFF),
   primaryContainer: Color(0xFFDCE9D8),
-  onPrimaryContainer: Color(0xFF203828),
+  onPrimaryContainer: Color(0xFF1F3727),
   secondary: Color(0xFF566A5C),
   onSecondary: Color(0xFFFFFFFF),
-  secondaryContainer: Color(0xFFE2EBE1),
-  onSecondaryContainer: Color(0xFF304536),
+  secondaryContainer: Color(0xFFE6ECE2),
+  onSecondaryContainer: Color(0xFF2B4031),
   tertiary: Color(0xFF546C76),
   onTertiary: Color(0xFFFFFFFF),
   tertiaryContainer: Color(0xFFCBE6FF),
@@ -20,16 +20,16 @@ const ColorScheme lightColors = ColorScheme(
   onError: Color(0xFFFFFFFF),
   errorContainer: Color(0xFFFFDAD6),
   onErrorContainer: Color(0xFF410002),
-  surface: Color(0xFFF6F8F3),
-  onSurface: Color(0xFF25332B),
+  surface: Color(0xFFFAF8F3),
+  onSurface: Color(0xFF223028),
   surfaceContainerLowest: Color(0xFFFFFFFF),
-  surfaceContainerLow: Color(0xFFEDF2EA),
-  surfaceContainer: Color(0xFFE8EEE5),
-  surfaceContainerHigh: Color(0xFFE1E9DE),
-  surfaceContainerHighest: Color(0xFFD9E3D6),
-  onSurfaceVariant: Color(0xFF5F7063),
-  outline: Color(0xFF748677),
-  outlineVariant: Color(0xFFD1DCCE),
+  surfaceContainerLow: Color(0xFFF2EEE5),
+  surfaceContainer: Color(0xFFEDE8DE),
+  surfaceContainerHigh: Color(0xFFE5DFD2),
+  surfaceContainerHighest: Color(0xFFDDD6C7),
+  onSurfaceVariant: Color(0xFF536358),
+  outline: Color(0xFF727E73),
+  outlineVariant: Color(0xFFDFD9CC),
   surfaceTint: Color(0xFF3D6249),
   inverseSurface: Color(0xFF2D3130),
   onInverseSurface: Color(0xFFEFF1EF),
@@ -70,20 +70,22 @@ const ColorScheme darkColors = ColorScheme(
   inversePrimary: Color(0xFF3D6249),
 );
 
-// Semantic colors for positive (assets/gains) and negative (liabilities/losses).
+// Semantic colors for positive (assets) and non-alarmist warm terracotta liabilities.
 const Color positiveGreen = Color(0xFF3D6249);
 const Color positiveGreenDark = Color(0xFFC1E1BD);
+const Color negativeTerracotta = Color(0xFF8C4A27);
+const Color negativeTerracottaDark = Color(0xFFF2B896);
 const Color negativeRed = Color(0xFFBA1A1A);
 const Color negativeRedDark = Color(0xFFFFB4AB);
 
-/// Palette used for chart slices, cycled by index.
+/// Palette used for asset chart slices, cycled by index.
 const List<Color> chartColors = <Color>[
-  Color(0xFF7DAD8B),
-  Color(0xFF7897B0),
-  Color(0xFFC0A169),
-  Color(0xFF9C89B5),
-  Color(0xFF98AF79),
-  Color(0xFFC48E84),
+  Color(0xFF3D6249),
+  Color(0xFF6B8F78),
+  Color(0xFFB69354),
+  Color(0xFF5A7D8C),
+  Color(0xFF869F6A),
+  Color(0xFF8D7B99),
   Color(0xFF71A9AC),
   Color(0xFFBD946E),
   Color(0xFF9D8E7C),
@@ -92,7 +94,32 @@ const List<Color> chartColors = <Color>[
   Color(0xFFB38DAB),
 ];
 
+const List<Color> liabilityChartColors = <Color>[
+  Color(0xFF8C4A27),
+  Color(0xFFC07D4F),
+  Color(0xFFA3635D),
+  Color(0xFFCCA26E),
+  Color(0xFF9D7563),
+  Color(0xFFB5836B),
+];
+
+const List<Color> liabilityChartColorsDark = <Color>[
+  Color(0xFFF2B896),
+  Color(0xFFE29E72),
+  Color(0xFFD98F88),
+  Color(0xFFE4BE8B),
+  Color(0xFFC99F8D),
+  Color(0xFFDDB09B),
+];
+
 Color chartColorAt(int index) => chartColors[index % chartColors.length];
+
+Color liabilityChartColorAt(int index, {required bool dark}) {
+  final List<Color> palette = dark
+      ? liabilityChartColorsDark
+      : liabilityChartColors;
+  return palette[index % palette.length];
+}
 
 // ---------------------------------------------------------------------------
 // Midnight theme

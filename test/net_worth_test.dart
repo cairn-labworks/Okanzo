@@ -166,6 +166,16 @@ void main() {
       expect(summary.hasApproximateConversions, isTrue);
       // The unconverted amount is still counted 1:1.
       expect(summary.totalAssets, 100.0);
+
+      final NetWorthSummary missingBaseRate = calculator.calculate(
+        assets: <AssetEntity>[
+          asset(type: AssetType.cash, manualValue: 100, currency: 'USD'),
+        ],
+        liabilities: const <LiabilityEntity>[],
+        baseCurrency: 'INR',
+        converter: const CurrencyConverter.empty(),
+      );
+      expect(missingBaseRate.hasApproximateConversions, isTrue);
     });
 
     test('does not flag items already in the base currency', () {

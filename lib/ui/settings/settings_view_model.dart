@@ -78,9 +78,6 @@ class SettingsViewModel extends ChangeNotifier {
   Future<void> markWhatsNewSeen(String version) =>
       _settingsRepository.setLastSeenVersion(version);
 
-  void setDynamicColor(bool enabled) =>
-      unawaited(_settingsRepository.setDynamicColor(enabled));
-
   void setBaseCurrency(String code) =>
       unawaited(_settingsRepository.setBaseCurrency(code));
 
