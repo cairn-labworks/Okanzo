@@ -18,11 +18,13 @@ import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/liability_type.dart';
 import 'package:okanzo/domain/model/net_worth_summary.dart';
 import 'package:okanzo/l10n/app_localizations.dart';
+import 'package:okanzo/ui/components/holding_create_screen.dart';
 import 'package:okanzo/ui/home/home_screen.dart';
 import 'package:okanzo/ui/home/home_view_model.dart';
 import 'package:okanzo/ui/home/net_worth_card.dart';
 import 'package:okanzo/ui/settings/settings_screen.dart';
 import 'package:okanzo/ui/settings/settings_view_model.dart';
+import 'package:okanzo/ui/theme/theme.dart';
 import 'package:okanzo/util/result.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -419,4 +421,261 @@ void main() {
       }
     },
   );
+
+  testWidgets(
+    'NetWorthCard wraps summary in a block background and aligns base currency pill',
+    (WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(360, 800);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final ThemeData light = buildTheme(brightness: Brightness.light);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: light,
+          home: const Scaffold(
+            body: Padding(
+              padding: EdgeInsets.all(24),
+              child: NetWorthCard(
+                summary: NetWorthSummary(
+                  baseCurrency: 'USD',
+                  totalAssets: 360500,
+                  totalLiabilities: 148000,
+                  assetBreakdown: <CategoryTotal>[],
+                  liabilityBreakdown: <CategoryTotal>[],
+                  hasApproximateConversions: false,
+                ),
+                hideBalances: false,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.descendant(
+          of: find.byType(NetWorthCard),
+          matching: find.byType(Card),
+        ),
+        findsNothing,
+      );
+      final Finder blockFinder = find.byKey(
+        const ValueKey<String>('net-worth-block'),
+      );
+      expect(blockFinder, findsOneWidget);
+      final DecoratedBox block = tester.widget<DecoratedBox>(blockFinder);
+      final BoxDecoration blockDecoration = block.decoration as BoxDecoration;
+      expect(blockDecoration.color, light.colorScheme.surfaceContainerLow);
+
+      final Rect blockRect = tester.getRect(blockFinder);
+      final Rect headlineRect = tester.getRect(
+        find.byKey(const ValueKey<String>('net-worth-headline')),
+      );
+      final Rect assetsTileRect = tester.getRect(
+        find.byKey(const ValueKey<String>('net-worth-assets-tile')),
+      );
+      final Rect liabilitiesTileRect = tester.getRect(
+        find.byKey(const ValueKey<String>('net-worth-liabilities-tile')),
+      );
+      final Rect barRect = tester.getRect(
+        find.byKey(const ValueKey<String>('net-worth-coverage-bar')),
+      );
+      expect(blockRect.contains(headlineRect.center), isTrue);
+      expect(blockRect.contains(assetsTileRect.center), isTrue);
+      expect(blockRect.contains(liabilitiesTileRect.center), isTrue);
+      expect(blockRect.contains(barRect.center), isTrue);
+
+      final Finder pillFinder = find.byKey(
+        const ValueKey<String>('net-worth-base-currency-pill'),
+      );
+      expect(pillFinder, findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('net-worth-currency-thumb')),
+        findsNothing,
+      );
+      final Rect pillRect = tester.getRect(pillFinder);
+      final Rect netWorthLabelRect = tester.getRect(find.text('Net worth'));
+      final Rect pillTextRect = tester.getRect(
+        find.descendant(of: pillFinder, matching: find.text('USD')),
+      );
+
+      expect(pillRect.right, closeTo(liabilitiesTileRect.right, 0.5));
+      expect(pillRect.center.dy, closeTo(netWorthLabelRect.center.dy, 1.5));
+      expect(pillTextRect.center.dy, closeTo(pillRect.center.dy, 1.5));
+    },
+  );
+
+  testWidgets(
+    'NetWorthCard split bar color-codes Assets and Liabilities to match tiles above',
+    (WidgetTester tester) async {
+      final ThemeData light = buildTheme(brightness: Brightness.light);
+      final FinanceColors finance = light.extension<FinanceColors>()!;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: light,
+          home: const Scaffold(
+            body: Padding(
+              padding: EdgeInsets.all(24),
+              child: NetWorthCard(
+                summary: NetWorthSummary(
+                  baseCurrency: 'USD',
+                  totalAssets: 360500,
+                  totalLiabilities: 148000,
+                  assetBreakdown: <CategoryTotal>[],
+                  liabilityBreakdown: <CategoryTotal>[],
+                  hasApproximateConversions: false,
+                ),
+                hideBalances: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey<String>('net-worth-coverage-bar')),
+        findsOneWidget,
+      );
+      final Finder assetsSegmentFinder = find.byKey(
+        const ValueKey<String>('net-worth-assets-bar-segment'),
+      );
+      final Finder liabilitiesSegmentFinder = find.byKey(
+        const ValueKey<String>('net-worth-liabilities-bar-segment'),
+      );
+      expect(assetsSegmentFinder, findsOneWidget);
+      expect(liabilitiesSegmentFinder, findsOneWidget);
+
+      final BoxDecoration assetsSegDec =
+          tester.widget<DecoratedBox>(assetsSegmentFinder).decoration
+              as BoxDecoration;
+      final BoxDecoration liabilitiesSegDec =
+          tester.widget<DecoratedBox>(liabilitiesSegmentFinder).decoration
+              as BoxDecoration;
+      expect(assetsSegDec.color, finance.positive);
+      expect(liabilitiesSegDec.color, finance.negative);
+
+      final double assetsWidth = tester.getSize(assetsSegmentFinder).width;
+      final double liabilitiesWidth = tester
+          .getSize(liabilitiesSegmentFinder)
+          .width;
+      expect(
+        assetsWidth / (assetsWidth + liabilitiesWidth),
+        closeTo(360500 / (360500 + 148000), 0.02),
+      );
+      expect(find.text('Assets 70.9%'), findsOneWidget);
+      expect(find.text('Liabilities 29.1%'), findsOneWidget);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: light,
+          home: const Scaffold(
+            body: Padding(
+              padding: EdgeInsets.all(24),
+              child: NetWorthCard(
+                summary: NetWorthSummary(
+                  baseCurrency: 'USD',
+                  totalAssets: 19800,
+                  totalLiabilities: 38250,
+                  assetBreakdown: <CategoryTotal>[],
+                  liabilityBreakdown: <CategoryTotal>[],
+                  hasApproximateConversions: false,
+                ),
+                hideBalances: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(const ValueKey<String>('net-worth-headline')),
+            )
+            .style
+            ?.color,
+        finance.negative,
+      );
+      expect(find.text('Liabilities exceed assets'), findsOneWidget);
+      // Both segments still split proportionally even when liabilities exceed assets.
+      final double negAssetsWidth = tester.getSize(assetsSegmentFinder).width;
+      final double negLiabWidth = tester
+          .getSize(liabilitiesSegmentFinder)
+          .width;
+      expect(
+        negAssetsWidth / (negAssetsWidth + negLiabWidth),
+        closeTo(19800 / (19800 + 38250), 0.02),
+      );
+
+      // Masking hides whether net worth is negative so sign is not leaked.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: light,
+          home: const Scaffold(
+            body: NetWorthCard(
+              summary: NetWorthSummary(
+                baseCurrency: 'USD',
+                totalAssets: 19800,
+                totalLiabilities: 38250,
+                assetBreakdown: <CategoryTotal>[],
+                liabilityBreakdown: <CategoryTotal>[],
+                hasApproximateConversions: false,
+              ),
+              hideBalances: true,
+            ),
+          ),
+        ),
+      );
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(const ValueKey<String>('net-worth-headline')),
+            )
+            .style
+            ?.color,
+        light.colorScheme.primary,
+      );
+      expect(find.text('Liabilities exceed assets'), findsNothing);
+    },
+  );
+
+  testWidgets('Liability editor uses warm terracotta emphasis', (
+    WidgetTester tester,
+  ) async {
+    final ThemeData light = buildTheme(brightness: Brightness.light);
+    final FinanceColors finance = light.extension<FinanceColors>()!;
+    await tester.pumpWidget(
+      AppScope(
+        container: container,
+        child: MaterialApp(
+          theme: light,
+          home: const HoldingCreateScreen(portfolioId: 1, asset: false),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<Text>(
+            find.byKey(const ValueKey<String>('liability-outstanding-amount')),
+          )
+          .style
+          ?.color,
+      finance.negative,
+    );
+    final TextButton liabilityTab = tester.widget<TextButton>(
+      find.widgetWithText(TextButton, 'Liability / I owe'),
+    );
+    expect(
+      liabilityTab.style?.foregroundColor?.resolve(const <WidgetState>{}),
+      finance.negative,
+    );
+    final TextField prominentField = tester
+        .widgetList<TextField>(find.byType(TextField))
+        .first;
+    expect(prominentField.style?.color, finance.negative);
+  });
 }

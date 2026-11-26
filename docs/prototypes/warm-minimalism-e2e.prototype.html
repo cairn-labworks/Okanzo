@@ -388,17 +388,48 @@
   }
 
   /* Net Worth Hero ("Mineral Ledger" Warm Minimalism) */
+  .nw-hero-block {
+    background: var(--soft); border: 1px solid var(--line);
+    border-radius: 24px; padding: 18px;
+  }
   .nw-label-row {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
   }
   .nw-caption { font-size: 12.5px; font-weight: 500; color: var(--muted); }
   .fx-pill {
-    font-size: 10.5px; font-weight: 600; color: var(--muted);
-    background: var(--soft); padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line);
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    background: var(--bg); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line);
+  }
+  .fx-pill-toggle {
+    display: inline-grid; grid-template-columns: 1fr 1fr; padding: 2.5px;
+    width: 96px; border-radius: 999px; background: var(--bg); border: 1px solid var(--box-line);
+    font-size: 10.5px; font-weight: 650;
+  }
+  .fx-pill-seg {
+    padding: 4px 6px; border-radius: 999px; text-align: center; color: var(--muted);
+    transition: all var(--dur-interaction) var(--ease-out-cubic);
+  }
+  .fx-pill-seg.is-active {
+    background: var(--accent); color: var(--on-accent);
+  }
+  .refresh-banner {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin: 0 auto 10px; width: fit-content; padding: 6px 14px;
+    border-radius: 999px; background: var(--soft-high); border: 1px solid var(--box-line);
+    font-size: 12px; font-weight: 600; color: var(--ink);
+  }
+  .scroll-view.is-refreshing {
+    animation: homeBounceDown 420ms var(--ease-out-cubic);
+  }
+  @keyframes homeBounceDown {
+    0% { transform: translateY(0); }
+    35% { transform: translateY(18px); }
+    70% { transform: translateY(-3px); }
+    100% { transform: translateY(0); }
   }
   .nw-headline {
     font-size: 39px; font-weight: 560; letter-spacing: -1.5px; line-height: 1.12;
-    margin: 5px 0 7px; color: var(--ink);
+    margin: 6px 0 12px; color: var(--accent);
     transition: opacity var(--dur-fast) var(--ease-std), transform var(--dur-fast) var(--ease-emph);
   }
   .nw-headline.is-negative { color: var(--liab); }
@@ -408,30 +439,44 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Tonal Balance Sheet Tiles + Coverage Bar */
-  .ledger-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  /* Tonal Balance Sheet Tiles + Color-Coded Split Bar */
+  .ledger-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
   .ledger-tile {
-    background: var(--soft); border: 1px solid var(--line);
-    border-radius: 16px; padding: 11px 13px;
+    min-width: 0;
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 16px; padding: 11px 12px;
+  }
+  .ledger-tile.asset {
+    background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+  }
+  .ledger-tile.liability {
+    background: color-mix(in srgb, var(--liab) 8%, var(--bg));
+    border-color: color-mix(in srgb, var(--liab) 42%, var(--line));
   }
   .ledger-tile-lbl {
     display: flex; align-items: center; gap: 6px;
     font-size: 11.5px; font-weight: 600; color: var(--muted);
   }
-  .ledger-tile-val { margin-top: 5px; font-size: 15px; font-weight: 600; color: var(--ink); }
+  .ledger-tile-val {
+    margin-top: 5px; font-size: 13.5px; font-weight: 600; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .ledger-tile.asset .ico { color: var(--accent); }
   .ledger-tile.liability .ico { color: var(--liab); }
 
-  .coverage-block { margin-top: 12px; }
-  .coverage-track {
-    height: 6px; border-radius: 999px; overflow: hidden;
-    background: color-mix(in srgb, var(--liab) 28%, var(--soft));
+  .coverage-block { margin-top: 13px; }
+  .coverage-split-row {
+    display: flex; gap: 3px; height: 8px; align-items: stretch;
   }
-  .coverage-fill {
+  .coverage-seg-asset {
     height: 100%; border-radius: 999px; background: var(--accent);
-    transition: width var(--dur-morph) var(--ease-out-cubic), background var(--dur-med) var(--ease-std);
+    transition: flex var(--dur-morph) var(--ease-out-cubic);
   }
-  .coverage-fill.negative { background: var(--liab); }
+  .coverage-seg-liab {
+    height: 100%; border-radius: 999px; background: var(--liab);
+    transition: flex var(--dur-morph) var(--ease-out-cubic);
+  }
   .coverage-legend {
     display: flex; justify-content: space-between; gap: 8px;
     margin-top: 5px; font-size: 11px; color: var(--muted);
@@ -688,14 +733,31 @@
   }
   .setting-item-row {
     width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 15px 0; border-bottom: 0.5px solid var(--line); text-align: start;
+    padding: 15px 16px; text-align: start;
   }
-  button.setting-item-row:hover:not(:disabled) { opacity: 0.88; }
+  .setting-item-row + .setting-item-row { border-top: 1px solid var(--line); }
+  button.setting-item-row:hover:not(:disabled) { background: var(--soft-mid); }
   .picker-chip {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 5px 10px; border-radius: 999px; background: var(--soft);
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border-radius: 12px; background: var(--bg);
     border: 1px solid var(--box-line); font-size: 12px; font-weight: 600; color: var(--ink);
-    max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 174px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .picker-chip-badge {
+    background: var(--tint); color: var(--accent); padding: 2px 5px;
+    border-radius: 6px; font-size: 11px; font-weight: 700;
+  }
+  .theme-seg-track {
+    margin-top: 11px; background: var(--bg); border: 1px solid var(--box-line);
+    border-radius: 14px; padding: 3px; display: grid; grid-template-columns: repeat(3, 1fr);
+  }
+  .theme-seg-btn {
+    border-radius: 11px; padding: 8px 6px; font-size: 12px; font-weight: 500;
+    color: var(--muted); text-align: center;
+    transition: all var(--dur-interaction) var(--ease-out-cubic);
+  }
+  .theme-seg-btn[aria-selected="true"] {
+    background: var(--soft-high); color: var(--ink); font-weight: 650;
   }
   .m3-switch {
     width: 46px; height: 26px; border-radius: 999px; padding: 3px; flex-shrink: 0;
@@ -1550,6 +1612,9 @@ const app = {
   offline: false,
   compact: false,
   baseCurrency: 'USD',
+  displayInUsd: false,
+  langSearchOpen: false,
+  langSearchQuery: '',
   appLockEnabled: false,
   locked: false,
   lockError: null,
@@ -1664,9 +1729,11 @@ function wrapInAppShell(st, innerHtml, currentTab, blurred = false) {
 
 function renderHomeView(st) {
   const p = st.portfolios.find(x => x.id === st.activePortfolio) || st.portfolios[0];
-  const sum = summarizePortfolio(st.holdings, p.id, st.baseCurrency);
+  const displayCurr = st.displayInUsd && st.baseCurrency !== 'USD' ? 'USD' : st.baseCurrency;
+  const sum = summarizePortfolio(st.holdings, p.id, displayCurr);
   const neg = sum.netWorth < -0.005;
-  const equityFrac = neg ? 1 : (sum.totalAssets > 0 ? Math.max(0, Math.min(1, sum.netWorth / sum.totalAssets)) : 0);
+  const totalVol = sum.totalAssets + sum.totalLiabilities;
+  const assetShare = totalVol > 0 ? Math.max(0, Math.min(1, sum.totalAssets / totalVol)) : 0.5;
   const typeDefs = st.homeTab === 'asset' ? ASSET_TYPES : LIABILITY_TYPES;
   const groupMap = st.homeTab === 'asset' ? sum.assetGroups : sum.liabilityGroups;
   const secTotal = st.homeTab === 'asset' ? sum.totalAssets : sum.totalLiabilities;
@@ -1692,6 +1759,13 @@ function renderHomeView(st) {
   const allKeys = visibleGroups.map(g => `${p.id}:${st.homeTab}:${g.def.id}`);
   const allExpanded = allKeys.length > 0 && allKeys.every(k => st.expanded[k]);
 
+  const currencyPillHtml = st.baseCurrency === 'USD'
+    ? `<span class="fx-pill">USD</span>`
+    : `<button type="button" class="fx-pill-toggle" data-act="toggle-display-currency" title="Switch between ${st.baseCurrency} and USD">
+         <span class="fx-pill-seg${!st.displayInUsd ? ' is-active' : ''}">${st.baseCurrency}</span>
+         <span class="fx-pill-seg${st.displayInUsd ? ' is-active' : ''}">USD</span>
+       </button>`;
+
   const content = `
     <header class="m3-appbar">
       <button class="portfolio-chip" data-act="open-portfolio-switcher" title="Switch portfolio">
@@ -1700,45 +1774,48 @@ function renderHomeView(st) {
         ${ico('chev')}
       </button>
       <div class="appbar-actions">
-        <button class="icon-btn" data-act="refresh" title="Refresh prices">${st.refreshing ? `<span class="spin">${ico('refresh')}</span>` : ico('refresh')}</button>
         <button class="icon-btn${st.masked ? ' is-active' : ''}" data-act="toggle-mask" title="${st.masked ? 'Show balances' : 'Hide balances'}">${ico(st.masked ? 'eye-off' : 'eye')}</button>
         <button class="icon-btn" data-act="open-settings" title="Settings">${ico('settings')}</button>
       </div>
     </header>
 
-    <div class="scroll-view has-fab">
+    <div class="scroll-view has-fab${st.refreshing ? ' is-refreshing' : ''}" data-home-scroll="true">
+      ${st.refreshing ? `<div class="refresh-banner"><span class="spin">${ico('refresh')}</span><span>Refreshing Quotes</span></div>` : ''}
       ${st.offline ? `<div class="banner-note">${ico('offline')}<div><strong>Offline — cached quotes &amp; FX active</strong><br>Manual valuations &amp; unpriced market tickers still save on device.</div></div>` : ''}
 
-      <div class="nw-label-row">
-        <span class="nw-caption">Net worth</span>
-        <span class="fx-pill">Base · ${st.baseCurrency}${sum.unpricedCount ? ` · ${sum.unpricedCount} pending` : ''}</span>
-      </div>
-      <div class="nw-headline tabular num-ltr value-swap${neg && !st.masked ? ' is-negative' : ''}">
-        ${formatMoney(sum.netWorth, st.baseCurrency, { masked: st.masked, compact: st.compact })}
-      </div>
+      <div class="nw-hero-block">
+        <div class="nw-label-row">
+          <span class="nw-caption">Net worth</span>
+          ${currencyPillHtml}
+        </div>
+        <div class="nw-headline tabular num-ltr value-swap${neg && !st.masked ? ' is-negative' : ''}">
+          ${formatMoney(sum.netWorth, displayCurr, { masked: st.masked, compact: st.compact })}
+        </div>
 
-      <div class="ledger-pair">
-        <div class="ledger-tile asset">
-          <div class="ledger-tile-lbl">${ico('up')} Assets</div>
-          <div class="ledger-tile-val tabular num-ltr">${st.masked ? '••••' : formatMoney(sum.totalAssets, st.baseCurrency)}</div>
+        <div class="ledger-pair">
+          <div class="ledger-tile asset">
+            <div class="ledger-tile-lbl">${ico('up')} Assets</div>
+            <div class="ledger-tile-val tabular num-ltr">${st.masked ? '••••' : formatMoney(sum.totalAssets, displayCurr)}</div>
+          </div>
+          <div class="ledger-tile liability">
+            <div class="ledger-tile-lbl">${ico('down')} Liabilities</div>
+            <div class="ledger-tile-val tabular num-ltr">${st.masked ? '••••' : formatMoney(sum.totalLiabilities, displayCurr)}</div>
+          </div>
         </div>
-        <div class="ledger-tile liability">
-          <div class="ledger-tile-lbl">${ico('down')} Liabilities</div>
-          <div class="ledger-tile-val tabular num-ltr">${st.masked ? '••••' : formatMoney(sum.totalLiabilities, st.baseCurrency)}</div>
-        </div>
-      </div>
 
-      ${(sum.totalAssets > 0 || sum.totalLiabilities > 0) ? `
-      <div class="coverage-block">
-        <div class="coverage-track">
-          <div class="coverage-fill${neg ? ' negative' : ''}" style="width:${(equityFrac * 100).toFixed(1)}%"></div>
-        </div>
-        <div class="coverage-legend tabular">
-          ${neg
-            ? `<span style="color:var(--liab);font-weight:600;">Liabilities exceed assets</span><span>${sum.liabilityCount} obligations</span>`
-            : `<span>Net equity ${pct1(sum.netWorth, sum.totalAssets)}</span><span>Obligations ${pct1(sum.totalLiabilities, sum.totalAssets)}</span>`}
-        </div>
-      </div>` : ''}
+        ${(!st.masked && totalVol > 0) ? `
+        <div class="coverage-block">
+          <div class="coverage-split-row">
+            ${sum.totalAssets > 0 ? `<div class="coverage-seg-asset" style="flex:${assetShare.toFixed(4)};"></div>` : ''}
+            ${sum.totalLiabilities > 0 ? `<div class="coverage-seg-liab" style="flex:${(1 - assetShare).toFixed(4)};"></div>` : ''}
+          </div>
+          <div class="coverage-legend tabular">
+            <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-inline-end:5px;"></span>Assets ${pct1(sum.totalAssets, totalVol)}</span>
+            <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--liab);margin-inline-end:5px;"></span>Liabilities ${pct1(sum.totalLiabilities, totalVol)}</span>
+          </div>
+          ${neg ? `<div style="margin-top:4px;font-size:11px;color:var(--liab);font-weight:600;">Liabilities exceed assets</div>` : ''}
+        </div>` : ''}
+      </div>
 
       <div class="seg-bar" role="tablist">
         <button class="seg-btn" role="tab" aria-selected="${st.homeTab === 'asset'}" data-act="home-tab" data-val="asset">Assets</button>
@@ -1787,7 +1864,7 @@ function renderHomeView(st) {
                     <span class="cat-name">${def.label}</span>
                     <span class="cat-sub tabular">${items.length} ${items.length === 1 ? 'holding' : 'holdings'}${share ? ` · ${share}` : ''}</span>
                   </span>
-                  <span class="cat-total tabular num-ltr">${allPending ? `<span class="pill-pending">Price pending</span>` : (st.masked ? '••••' : formatMoney(total, st.baseCurrency))}</span>
+                  <span class="cat-total tabular num-ltr">${allPending ? `<span class="pill-pending">Price pending</span>` : (st.masked ? '••••' : formatMoney(total, displayCurr))}</span>
                   <span class="cat-chev">${ico('chev')}</span>
                 </button>
                 <div class="disclosure-box${open ? ' is-open' : ''}">
@@ -1798,9 +1875,9 @@ function renderHomeView(st) {
                         <button class="h-item-btn" data-act="open-holding" data-id="${item.id}">
                           <span style="min-width:0;flex:1;">
                             <span class="h-item-title">${esc(displayTitle(item))}${item.isNew ? '<span class="pill-new">New</span>' : ''}</span>
-                            <span class="h-item-sub">${esc(holdingSubtitle(item, st.baseCurrency, st.masked))}</span>
+                            <span class="h-item-sub">${esc(holdingSubtitle(item, displayCurr, st.masked))}</span>
                           </span>
-                          <span class="h-item-amt tabular num-ltr">${!item.priced ? `<span class="pill-pending">Price pending</span>` : (st.masked ? '••••' : formatMoney(item.converted, st.baseCurrency))}</span>
+                          <span class="h-item-amt tabular num-ltr">${!item.priced ? `<span class="pill-pending">Price pending</span>` : (st.masked ? '••••' : formatMoney(item.converted, displayCurr))}</span>
                         </button>
                       `).join('')}
                     </div>
@@ -2314,65 +2391,63 @@ function renderSettingsView(st) {
   } else if (cat.id === 'appearance') {
     bodyHtml = `
       <h1 class="page-h1">Appearance</h1>
-      <button class="setting-item-row" data-act="open-language-dialog">
-        <span>
-          <strong style="display:block;font-size:14px;font-weight:500;">App language</strong>
-          <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Use device language</span>
-        </span>
-        <span class="picker-chip">${esc(langMeta.short)}</span>
-      </button>
-      <button class="setting-item-row" data-act="open-theme-dialog">
-        <span>
+      <div class="settings-group-card">
+        <div class="setting-item-row" style="display:block;">
           <strong style="display:block;font-size:14px;font-weight:500;">Theme</strong>
           <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Light or Midnight dark</span>
-        </span>
-        <span class="picker-chip">${modeLabel}</span>
-      </button>
-      <button class="setting-item-row" data-act="toggle-dynamic-color" ${isDark ? 'disabled' : ''}>
-        <span>
-          <strong style="display:block;font-size:14px;font-weight:500;">Dynamic color</strong>
-          <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">
-            ${isDark ? 'Not used in dark mode' : 'Use wallpaper colors in light mode (Android 12+)'}
+          <div class="theme-seg-track" role="tablist">
+            <button type="button" class="theme-seg-btn" role="tab" aria-selected="${st.appearanceMode === 'light'}" data-act="pick-appearance" data-val="light">☀ Light</button>
+            <button type="button" class="theme-seg-btn" role="tab" aria-selected="${st.appearanceMode === 'dark'}" data-act="pick-appearance" data-val="dark">☾ Dark</button>
+            <button type="button" class="theme-seg-btn" role="tab" aria-selected="${st.appearanceMode === 'system'}" data-act="pick-appearance" data-val="system">◐ System</button>
+          </div>
+        </div>
+        <button class="setting-item-row" data-act="open-language-dialog">
+          <span>
+            <strong style="display:block;font-size:14px;font-weight:500;">App language</strong>
           </span>
-        </span>
-        <span class="m3-switch" role="switch" aria-checked="${dynActive}"><span class="m3-switch-thumb"></span></span>
-      </button>
+          <span class="picker-chip"><span class="picker-chip-badge">🌐</span><span>${esc(langMeta.short)}</span><span style="color:var(--muted);">⇅</span></span>
+        </button>
+      </div>
     `;
   } else if (cat.id === 'currency') {
     bodyHtml = `
       <h1 class="page-h1">Currency</h1>
-      <button class="setting-item-row" data-act="open-currency-picker" data-target="base">
-        <span>
-          <strong style="display:block;font-size:14px;font-weight:500;">Base currency</strong>
-          <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">${esc(currMeta.name)}</span>
-        </span>
-        <span class="picker-chip">${currMeta.sym} ${currMeta.code}</span>
-      </button>
-      <button class="setting-item-row" data-act="toggle-simple-nw">
-        <span>
-          <strong style="display:block;font-size:14px;font-weight:500;">Simple net worth</strong>
-          <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Shorten the home net worth using currency-specific units</span>
-        </span>
-        <span class="m3-switch" role="switch" aria-checked="${st.compact}"><span class="m3-switch-thumb"></span></span>
-      </button>
+      <div class="settings-group-card">
+        <button class="setting-item-row" data-act="open-currency-picker" data-target="base">
+          <span>
+            <strong style="display:block;font-size:14px;font-weight:500;">Base currency</strong>
+            <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">${esc(currMeta.name)}</span>
+          </span>
+          <span class="picker-chip"><span class="picker-chip-badge">${currMeta.sym}</span><span>${currMeta.code}</span><span style="color:var(--muted);">⇅</span></span>
+        </button>
+        <button class="setting-item-row" data-act="toggle-simple-nw">
+          <span>
+            <strong style="display:block;font-size:14px;font-weight:500;">Simple net worth</strong>
+            <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Shorten the home net worth using currency-specific units</span>
+          </span>
+          <span class="m3-switch" role="switch" aria-checked="${st.compact}"><span class="m3-switch-thumb"></span></span>
+        </button>
+      </div>
     `;
   } else if (cat.id === 'security') {
     bodyHtml = `
       <h1 class="page-h1">Security</h1>
-      <button class="setting-item-row" data-act="toggle-app-lock">
-        <span>
-          <strong style="display:block;font-size:14px;font-weight:500;">App lock</strong>
-          <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Require fingerprint or device PIN to open Okanzo</span>
-        </span>
-        <span class="m3-switch" role="switch" aria-checked="${st.appLockEnabled}"><span class="m3-switch-thumb"></span></span>
-      </button>
-      <button class="setting-item-row" data-act="toggle-block-screenshots">
-        <span>
-          <strong style="display:block;font-size:14px;font-weight:500;">Block screenshots</strong>
-          <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Prevent screenshots and hide Okanzo in recent apps</span>
-        </span>
-        <span class="m3-switch" role="switch" aria-checked="${st.blockScreenshots}"><span class="m3-switch-thumb"></span></span>
-      </button>
+      <div class="settings-group-card">
+        <button class="setting-item-row" data-act="toggle-app-lock">
+          <span>
+            <strong style="display:block;font-size:14px;font-weight:500;">App lock</strong>
+            <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Require fingerprint or device PIN to open Okanzo</span>
+          </span>
+          <span class="m3-switch" role="switch" aria-checked="${st.appLockEnabled}"><span class="m3-switch-thumb"></span></span>
+        </button>
+        <button class="setting-item-row" data-act="toggle-block-screenshots">
+          <span>
+            <strong style="display:block;font-size:14px;font-weight:500;">Block screenshots</strong>
+            <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Prevent screenshots and hide Okanzo in recent apps</span>
+          </span>
+          <span class="m3-switch" role="switch" aria-checked="${st.blockScreenshots}"><span class="m3-switch-thumb"></span></span>
+        </button>
+      </div>
       <div style="margin-top:18px;">
         <button class="btn-outlined" data-act="trigger-lock-now">
           ${ico('lock')} Simulate app background / Lock screen now
@@ -2382,51 +2457,55 @@ function renderSettingsView(st) {
   } else if (cat.id === 'data') {
     bodyHtml = `
       <h1 class="page-h1">Data</h1>
-      <div class="setting-item-row">
-        <span>
-          <strong style="display:block;font-size:14px;font-weight:500;">Exchange rates</strong>
-          <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">${st.offline ? 'Offline — cached rates active' : `Updated ${st.fxUpdatedAgo}`}</span>
-        </span>
-        <button class="icon-btn" data-act="refresh-fx" title="Refresh rates">${st.refreshing ? `<span class="spin">${ico('refresh')}</span>` : ico('refresh')}</button>
+      <div class="settings-group-card">
+        <div class="setting-item-row">
+          <span>
+            <strong style="display:block;font-size:14px;font-weight:500;">Exchange rates</strong>
+            <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">${st.offline ? 'Offline — cached rates active' : `Updated ${st.fxUpdatedAgo}`}</span>
+          </span>
+          <button class="icon-btn" data-act="refresh-fx" title="Refresh rates">${st.refreshing ? `<span class="spin">${ico('refresh')}</span>` : ico('refresh')}</button>
+        </div>
+        <button class="setting-item-row" data-act="start-export">
+          <span>
+            <strong style="display:block;font-size:14px;font-weight:500;">Export portfolios</strong>
+            <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Save an encrypted, password-protected backup</span>
+          </span>
+          <span style="color:var(--muted);">${ico('chev-right', 'dir-flip')}</span>
+        </button>
+        <button class="setting-item-row" data-act="start-import">
+          <span>
+            <strong style="display:block;font-size:14px;font-weight:500;">Import portfolios</strong>
+            <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Restore from an encrypted backup file${st.exportedBackup ? ' (1 backup ready)' : ''}</span>
+          </span>
+          <span style="color:var(--muted);">${ico('chev-right', 'dir-flip')}</span>
+        </button>
       </div>
-      <button class="setting-item-row" data-act="start-export">
-        <span>
-          <strong style="display:block;font-size:14px;font-weight:500;">Export portfolios</strong>
-          <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Save an encrypted, password-protected backup</span>
-        </span>
-        <span style="color:var(--muted);">${ico('chev-right', 'dir-flip')}</span>
-      </button>
-      <button class="setting-item-row" data-act="start-import">
-        <span>
-          <strong style="display:block;font-size:14px;font-weight:500;">Import portfolios</strong>
-          <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Restore from an encrypted backup file${st.exportedBackup ? ' (1 backup ready)' : ''}</span>
-        </span>
-        <span style="color:var(--muted);">${ico('chev-right', 'dir-flip')}</span>
-      </button>
     `;
   } else if (cat.id === 'about') {
     bodyHtml = `
       <h1 class="page-h1">About</h1>
-      <button class="setting-item-row" data-act="open-about-dialog">
-        <span>
-          <strong style="display:block;font-size:14px;font-weight:500;">Okanzo</strong>
-          <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Version ${WHATS_NEW_161.version} · Open source (MIT)</span>
-        </span>
-        <span style="color:var(--muted);">${ico('chev-right', 'dir-flip')}</span>
-      </button>
-      <button class="setting-item-row" data-act="open-whats-new">
-        <span>
-          <strong style="display:block;font-size:14px;font-weight:500;">What's new</strong>
-          <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">See the latest release highlights</span>
-        </span>
-        <span style="color:var(--muted);">${ico('chev-right', 'dir-flip')}</span>
-      </button>
-      <button class="setting-item-row" data-act="open-privacy-dialog">
-        <span>
-          <strong style="display:block;font-size:14px;font-weight:500;">Privacy policy</strong>
-        </span>
-        <span style="color:var(--muted);">${ico('chev-right', 'dir-flip')}</span>
-      </button>
+      <div class="settings-group-card">
+        <button class="setting-item-row" data-act="open-about-dialog">
+          <span>
+            <strong style="display:block;font-size:14px;font-weight:500;">Okanzo</strong>
+            <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">Version ${WHATS_NEW_161.version} · Open source (MIT)</span>
+          </span>
+          <span style="color:var(--muted);">${ico('chev-right', 'dir-flip')}</span>
+        </button>
+        <button class="setting-item-row" data-act="open-whats-new">
+          <span>
+            <strong style="display:block;font-size:14px;font-weight:500;">What's new</strong>
+            <span style="display:block;font-size:12px;color:var(--muted);margin-top:2px;">See the latest release highlights</span>
+          </span>
+          <span style="color:var(--muted);">${ico('chev-right', 'dir-flip')}</span>
+        </button>
+        <button class="setting-item-row" data-act="open-privacy-dialog">
+          <span>
+            <strong style="display:block;font-size:14px;font-weight:500;">Privacy policy</strong>
+          </span>
+          <span style="color:var(--muted);">${ico('chev-right', 'dir-flip')}</span>
+        </button>
+      </div>
       <p style="font-size:12px;color:var(--muted);line-height:1.55;margin-top:16px;">
         Okanzo encrypts your data on this device. Your data leaves it only when you export a backup. Price and exchange-rate lookups send only the ticker or currency code.<br><br>
         Company/ticker search sends the text you type to Yahoo Finance.
@@ -2749,17 +2828,31 @@ function renderModal(st) {
     </div>`;
   }
   if (m.type === 'language-dialog') {
+    const q = (st.langSearchQuery || '').trim().toLowerCase();
+    const langs = LANGUAGES.filter(l => !q || l.name.toLowerCase().includes(q) || l.short.toLowerCase().includes(q) || l.code.toLowerCase().includes(q));
     return `<div class="glance-card">
-      <h2 style="margin:0 0 10px;font-size:20px;">App language</h2>
-      <div role="radiogroup" style="max-height:320px;overflow-y:auto;">
-        ${LANGUAGES.map(l => `
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;">
+        <div>
+          <span class="eyebrow">Appearance</span>
+          <h2 style="margin:3px 0 0;font-size:20px;">App language</h2>
+        </div>
+        <button class="mini-icon-btn" data-act="toggle-lang-search" title="Search">${ico('search')}</button>
+      </div>
+      ${st.langSearchOpen ? `
+        <div class="filter-input-box" style="margin-bottom:10px;">
+          ${ico('search')}
+          <input id="lang-search-input" value="${esc(st.langSearchQuery || '')}" placeholder="Search…" data-input="lang-search" />
+        </div>
+      ` : ''}
+      <div role="radiogroup" style="max-height:300px;overflow-y:auto;">
+        ${langs.length ? langs.map(l => `
           <button class="radio-row" role="radio" aria-checked="${st.language === l.code}" data-act="pick-language" data-val="${l.code}">
             <span class="radio-dot"></span>
             <span>${esc(l.name)}${l.rtl ? ' <small style="color:var(--muted);">(RTL)</small>' : ''}</span>
-          </button>`).join('')}
+          </button>`).join('') : `<div style="padding:12px 4px;font-size:12.5px;color:var(--muted);">No matching options.</div>`}
       </div>
-      <div style="display:flex;justify-content:flex-end;margin-top:8px;">
-        <button style="padding:8px 12px;color:var(--accent);font-weight:600;" data-act="close-modal">Close</button>
+      <div style="display:flex;justify-content:center;margin-top:8px;">
+        <button style="padding:8px 12px;color:var(--muted);font-weight:600;width:100%;" data-act="close-modal">Close</button>
       </div>
     </div>`;
   }
@@ -3004,17 +3097,18 @@ function syncInspectorAndControls() {
   lockEl.hidden = !app.locked;
   if (app.locked) lockEl.innerHTML = renderLockScreenHtml(app);
 
-  const sum = summarizePortfolio(app.holdings, app.activePortfolio, app.baseCurrency);
+  const displayCurr = app.displayInUsd && app.baseCurrency !== 'USD' ? 'USD' : app.baseCurrency;
+  const sum = summarizePortfolio(app.holdings, app.activePortfolio, displayCurr);
   document.getElementById('live-state-box').textContent = JSON.stringify({
     screen: app.screen,
     settingsCategory: app.settingsCategory,
     locked: app.locked,
     appearanceMode: app.appearanceMode,
     resolvedTheme: app.theme,
-    dynamicColor: app.dynamicColor && app.theme === 'light',
     formFactor: app.formFactor,
     portfolio: app.activePortfolio,
     baseCurrency: app.baseCurrency,
+    displayCurrency: displayCurr,
     simpleNetWorth: app.compact,
     netWorth: Number(sum.netWorth.toFixed(2)),
     totalAssets: Number(sum.totalAssets.toFixed(2)),
@@ -3511,6 +3605,9 @@ function makeFrameSnapshot(customizer, captionTitle, captionBody) {
     offline: false,
     compact: false,
     baseCurrency: 'USD',
+    displayInUsd: false,
+    langSearchOpen: false,
+    langSearchQuery: '',
     appLockEnabled: false,
     locked: false,
     lockError: null,
@@ -3564,8 +3661,11 @@ function renderAllStaticFrames() {
   // Band 1: Home, Morph & Holding Entry Lifecycle (5 frames)
   document.getElementById('renders-band-flow').innerHTML = [
     makeFrameSnapshot(s => {
+      s.baseCurrency = 'INR';
+      s.compact = true;
+      s.refreshing = true;
       s.expanded = { 'personal:asset:stock': true, 'personal:asset:crypto': true };
-    }, 'Frame 1 · Home Overview + Settings Entry', 'Alabaster #FAF8F3 ledger, $212,500 Net Worth, 180ms DisclosureSize categories, Refresh, Hide Balances & Settings icon.'),
+    }, 'Frame 1 · Home Block, INR ↔ USD Toggle & Refresh Bounce', 'Rounded NetWorthCard block, [INR | USD] pill toggle switch, color-coded Assets/Liabilities split bar, and "Refreshing Quotes" top bounce banner.'),
     makeFrameSnapshot(s => {
       s.holdings = initialHoldings({ includeAsml: false });
       s.addExpanded = true;
@@ -3615,7 +3715,7 @@ function renderAllStaticFrames() {
     }, 'Frame 10 · Settings Hub (All 5 Categories)', 'Content-area heading, grouped inset card for Appearance, Currency, Security, Data & About, plus on-device privacy footer.'),
     makeFrameSnapshot(s => {
       s.screen = 'settings'; s.settingsCategory = 'appearance';
-    }, 'Frame 11 · Settings → Appearance Drill-In', '22-locale App language picker (with RTL Arabic), Light / Midnight / System Theme dialog, and Android 12+ Dynamic Color.'),
+    }, 'Frame 11 · Settings → Appearance (Design B)', 'Grouped inset card, inline 3-way segmented Theme (Light / Dark / System), and outlined tactile App language pill with Search button.'),
     makeFrameSnapshot(s => {
       s.screen = 'settings'; s.settingsCategory = 'data';
       s.modal = { type: 'export-dialog' };
@@ -3805,7 +3905,19 @@ document.addEventListener('click', e => {
     recordMotion(`SettingsRepository.setAppearanceMode(${app.appearanceMode})`);
     renderStudio();
   }
-  else if (act === 'open-language-dialog') { app.modal = { type: 'language-dialog' }; renderStudio(); }
+  else if (act === 'open-language-dialog') { app.langSearchOpen = false; app.langSearchQuery = ''; app.modal = { type: 'language-dialog' }; renderStudio(); }
+  else if (act === 'toggle-lang-search') {
+    app.langSearchOpen = !app.langSearchOpen;
+    if (!app.langSearchOpen) app.langSearchQuery = '';
+    renderStudio();
+    document.getElementById('lang-search-input')?.focus();
+  }
+  else if (act === 'toggle-display-currency') {
+    if (app.baseCurrency === 'USD') return;
+    app.displayInUsd = !app.displayInUsd;
+    recordMotion(`Home display currency → ${app.displayInUsd ? 'USD' : app.baseCurrency}`);
+    renderStudio();
+  }
   else if (act === 'pick-language') {
     const code = actEl.dataset.val;
     const meta = LANGUAGES.find(l => l.code === code) || LANGUAGES[0];
@@ -3813,12 +3925,6 @@ document.addEventListener('click', e => {
     app.dir = meta.rtl ? 'rtl' : 'ltr';
     app.modal = null;
     showToast(`Language set to ${meta.short}`);
-    renderStudio();
-  }
-  else if (act === 'toggle-dynamic-color') {
-    if (app.theme === 'dark') return;
-    app.dynamicColor = !app.dynamicColor;
-    showToast(app.dynamicColor ? 'Dynamic wallpaper colors enabled' : 'Classic Mineral Ledger palette active');
     renderStudio();
   }
   else if (act === 'toggle-simple-nw') {
@@ -4014,6 +4120,7 @@ document.addEventListener('click', e => {
     const code = actEl.dataset.val;
     if (actEl.dataset.target === 'base') {
       app.baseCurrency = code;
+      app.displayInUsd = false;
       showToast(`Base currency set to ${code}`);
     } else {
       app.draft.currency = code;
@@ -4252,6 +4359,14 @@ document.addEventListener('input', e => {
     if (next) { next.focus(); next.setSelectionRange(caret, caret); }
     return;
   }
+  if (inputKind === 'lang-search') {
+    app.langSearchQuery = e.target.value;
+    const caret = e.target.selectionStart;
+    renderStudio();
+    const next = document.getElementById('lang-search-input');
+    if (next) { next.focus(); next.setSelectionRange(caret, caret); }
+    return;
+  }
   if (inputKind === 'currency-search') {
     app.currencySearchQuery = e.target.value;
     const caret = e.target.selectionStart;
@@ -4286,12 +4401,38 @@ document.addEventListener('input', e => {
 
 document.addEventListener('change', e => {
   if (e.target.id === 'sel-appearance') { app.appearanceMode = e.target.value; renderStudio(); }
-  if (e.target.id === 'sel-base-currency') { app.baseCurrency = e.target.value; renderStudio(); }
+  if (e.target.id === 'sel-base-currency') { app.baseCurrency = e.target.value; app.displayInUsd = false; renderStudio(); }
   if (e.target.id === 'sel-compact') { app.compact = e.target.value === 'compact'; renderStudio(); }
   if (e.target.id === 'sel-dir') {
     app.dir = e.target.value;
     app.language = app.dir === 'rtl' ? 'ar' : 'system';
     renderStudio();
+  }
+});
+
+let pullStartY = null;
+document.addEventListener('pointerdown', e => {
+  const scroller = e.target.closest('[data-home-scroll="true"]');
+  if (scroller && scroller.scrollTop <= 0 && !e.target.closest('button, input')) {
+    pullStartY = e.clientY;
+  } else {
+    pullStartY = null;
+  }
+});
+document.addEventListener('pointerup', e => {
+  if (pullStartY !== null && e.clientY - pullStartY > 48 && !app.refreshing) {
+    pullStartY = null;
+    app.refreshing = true;
+    recordMotion('Home swipe-down → Bounce + "Refreshing Quotes"');
+    renderStudio();
+    setTimeout(() => {
+      app.refreshing = false;
+      app.fxUpdatedAgo = 'Just now';
+      showToast(app.offline ? 'Offline — using cached quotes & FX' : 'Updated market quotes & FX');
+      renderStudio();
+    }, 650);
+  } else {
+    pullStartY = null;
   }
 });
 

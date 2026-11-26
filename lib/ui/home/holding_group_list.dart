@@ -30,6 +30,7 @@ class HoldingGroupList<T> extends StatelessWidget {
     required this.onSort,
     required this.onReordered,
     required this.itemBuilder,
+    this.canArrange = true,
     super.key,
   });
 
@@ -41,6 +42,7 @@ class HoldingGroupList<T> extends StatelessWidget {
   final ValueChanged<HoldingSort> onSort;
   final Future<void> Function(List<T>) onReordered;
   final Widget Function(T) itemBuilder;
+  final bool canArrange;
 
   List<T> get sorted {
     final List<T> result = List<T>.of(items);
@@ -62,6 +64,7 @@ class HoldingGroupList<T> extends StatelessWidget {
   }
 
   Future<void> _arrange(BuildContext context) async {
+    if (!canArrange) return;
     final List<T> order = List<T>.of(items);
     bool saving = false;
     await showModalBottomSheet<void>(
@@ -205,11 +208,13 @@ class HoldingGroupList<T> extends StatelessWidget {
                     checked: option == sort,
                     child: Text(option.label.tr(context)),
                   ),
-                const PopupMenuDivider(),
-                PopupMenuItem<Object>(
-                  value: 'arrange',
-                  child: Text('Arrange manually'.tr(context)),
-                ),
+                if (canArrange) ...<PopupMenuEntry<Object>>[
+                  const PopupMenuDivider(),
+                  PopupMenuItem<Object>(
+                    value: 'arrange',
+                    child: Text('Arrange manually'.tr(context)),
+                  ),
+                ],
               ],
             ),
           ],

@@ -14,6 +14,7 @@ import '../components/holding_editor_guard.dart';
 import '../components/holding_editor_chrome.dart';
 import '../components/holding_saved_summary_screen.dart';
 import '../components/type_icons.dart';
+import '../theme/theme.dart';
 import 'liability_edit_view_model.dart';
 import 'liability_form_state.dart';
 
@@ -235,6 +236,7 @@ class _LiabilityEditScreenState extends State<LiabilityEditScreen> {
                           decimal: true,
                         ),
                         prominent: true,
+                        prominentColor: FinanceColors.of(context).negative,
                         supportingText: 'The amount you still owe'.tr(context),
                         onChanged: viewModel.onAmountChange,
                       ),

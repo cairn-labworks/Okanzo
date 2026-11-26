@@ -19,11 +19,7 @@ import '../statistics/statistics_screen.dart';
 enum TopLevelDestination {
   home('Home', Icons.home, Icons.home_outlined),
   statistics('Statistics', Icons.pie_chart, Icons.pie_chart_outline),
-  portfolios(
-    'Portfolios',
-    Icons.account_balance_wallet,
-    Icons.account_balance_wallet_outlined,
-  );
+  portfolios('Portfolios', Icons.folder, Icons.folder_outlined);
 
   const TopLevelDestination(this.label, this.selectedIcon, this.unselectedIcon);
 

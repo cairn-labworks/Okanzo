@@ -151,6 +151,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                         _ChartCard(
                           title: 'Liabilities'.tr(context),
                           subtitle: 'By type'.tr(context),
+                          isLiabilityCard: true,
                           slices: <PieSlice>[
                             for (
                               int i = 0;
@@ -160,7 +161,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                               PieSlice(
                                 state.liabilitiesByType[i].label.tr(context),
                                 state.liabilitiesByType[i].amount,
-                                chartColorAt(i),
+                                liabilityChartColorAt(
+                                  i,
+                                  dark:
+                                      Theme.of(context).brightness ==
+                                      Brightness.dark,
+                                ),
                               ),
                           ],
                           defaultCenterLabel: 'Liabilities'.tr(context),
@@ -194,24 +200,49 @@ class _PortfolioMenuTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget label = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Flexible(
-          child: Text(
-            activeName,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.w600),
-          ),
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+    final Widget label = DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(12, 6, 8, 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              Icons.folder_outlined,
+              size: 16,
+              color: colors.onSurfaceVariant,
+            ),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(
+                activeName,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(
+              Icons.keyboard_arrow_down,
+              size: 18,
+              color: colors.onSurfaceVariant,
+            ),
+          ],
         ),
-        const Icon(Icons.arrow_drop_down),
-      ],
+      ),
     );
     if (portfolios.isEmpty) return label;
     return PopupMenuButton<int>(
       tooltip: 'Switch portfolio'.tr(context),
       position: PopupMenuPosition.under,
+      borderRadius: BorderRadius.circular(999),
       onSelected: onSelect,
       itemBuilder: (BuildContext context) => <PopupMenuEntry<int>>[
         for (final PortfolioEntity portfolio in portfolios)
@@ -242,6 +273,7 @@ class _ChartCard extends StatelessWidget {
     required this.hideBalances,
     required this.selectedIndex,
     required this.onSelectedChange,
+    this.isLiabilityCard = false,
   });
 
   final String title;
@@ -253,6 +285,7 @@ class _ChartCard extends StatelessWidget {
   final bool hideBalances;
   final int? selectedIndex;
   final ValueChanged<int?> onSelectedChange;
+  final bool isLiabilityCard;
 
   String _money(double amount) => hideBalances
       ? CurrencyUtil.masked(baseCurrency)
@@ -274,10 +307,19 @@ class _ChartCard extends StatelessWidget {
       (double sum, PieSlice slice) => sum + slice.value,
     );
 
+    final Color borderColor = isLiabilityCard
+        ? Color.lerp(
+            theme.colorScheme.outlineVariant,
+            FinanceColors.of(context).negative,
+            0.30,
+          )!
+        : theme.colorScheme.outlineVariant;
+
     return Card(
       color: theme.colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(shapeLarge),
+        side: BorderSide(color: borderColor),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -318,6 +360,10 @@ class _ChartCard extends StatelessWidget {
               _LegendRow(
                 color: slices[index].color,
                 label: slices[index].label,
+                percentageText: oneDecimalPercentageLabel(
+                  slices[index].value,
+                  total,
+                ),
                 valueText: _money(slices[index].value),
                 highlighted: selected == index,
                 onTap: () => onSelectedChange(selected == index ? null : index),
@@ -440,6 +486,7 @@ class _LegendRow extends StatelessWidget {
   const _LegendRow({
     required this.color,
     required this.label,
+    required this.percentageText,
     required this.valueText,
     required this.highlighted,
     required this.onTap,
@@ -447,6 +494,7 @@ class _LegendRow extends StatelessWidget {
 
   final Color color;
   final String label;
+  final String percentageText;
   final String valueText;
   final bool highlighted;
   final VoidCallback onTap;
@@ -504,16 +552,35 @@ class _LegendRow extends StatelessWidget {
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: AlignmentDirectional.centerEnd,
-                    child: Text(
-                      valueText,
-                      textDirection: TextDirection.ltr,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: weight,
-                        color: theme.colorScheme.onSurface,
-                        fontFeatures: _tabular,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        if (percentageText.isNotEmpty) ...<Widget>[
+                          Text(
+                            percentageText,
+                            textDirection: TextDirection.ltr,
+                            maxLines: 1,
+                            softWrap: false,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: weight,
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontFeatures: _tabular,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                        ],
+                        Text(
+                          valueText,
+                          textDirection: TextDirection.ltr,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: weight,
+                            color: theme.colorScheme.onSurface,
+                            fontFeatures: _tabular,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

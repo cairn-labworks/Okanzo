@@ -16,7 +16,6 @@ class AppSettings {
   const AppSettings({
     this.themeMode = AppThemeMode.system,
     this.appTheme = AppTheme.classic,
-    this.dynamicColor = true,
     required this.baseCurrency,
     this.appLockEnabled = false,
     this.blockScreenshots = true,
@@ -30,7 +29,6 @@ class AppSettings {
 
   final AppThemeMode themeMode;
   final AppTheme appTheme;
-  final bool dynamicColor;
   final String baseCurrency;
   final bool appLockEnabled;
   final bool blockScreenshots;
@@ -61,7 +59,6 @@ class SettingsRepository {
 
   static const String _keyThemeMode = 'theme_mode';
   static const String _keyAppTheme = 'app_theme';
-  static const String _keyDynamicColor = 'dynamic_color';
   static const String _keyBaseCurrency = 'base_currency';
   static const String _keyAppLock = 'app_lock_enabled';
   static const String _keyBlockScreenshots = 'block_screenshots';
@@ -89,7 +86,6 @@ class SettingsRepository {
   AppSettings get current => AppSettings(
     themeMode: AppThemeMode.fromName(_prefs.getString(_keyThemeMode)),
     appTheme: AppTheme.fromName(_prefs.getString(_keyAppTheme)),
-    dynamicColor: _prefs.getBool(_keyDynamicColor) ?? true,
     baseCurrency:
         _prefs.getString(_keyBaseCurrency) ?? CurrencyUtil.deviceCurrencyCode(),
     appLockEnabled: _prefs.getBool(_keyAppLock) ?? false,
@@ -208,11 +204,6 @@ class SettingsRepository {
         }
       }
     }
-    _emit();
-  }
-
-  Future<void> setDynamicColor(bool enabled) async {
-    await _prefs.setBool(_keyDynamicColor, enabled);
     _emit();
   }
 

@@ -95,7 +95,7 @@ void main() {
       );
     });
 
-    test('Classic preserves light/dark and optional Material You schemes', () {
+    test('Classic preserves light and dark schemes', () {
       for (final Brightness brightness in Brightness.values) {
         final ThemeData fixed = buildTheme(brightness: brightness);
         expect(fixed.brightness, brightness);
@@ -103,18 +103,19 @@ void main() {
           fixed.colorScheme,
           brightness == Brightness.dark ? darkColors : lightColors,
         );
-        final ColorScheme dynamic = ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          brightness: brightness,
-        );
-        final ThemeData adaptive = buildTheme(
-          brightness: brightness,
-          dynamicScheme: dynamic,
-        );
-        expect(adaptive.colorScheme, dynamic);
-        expect(adaptive.cardTheme.color, dynamic.surfaceContainerLow);
-        expect(adaptive.appBarTheme.backgroundColor, dynamic.surface);
       }
+    });
+
+    test('Warm Minimalism light palette and terracotta liabilities meet 4.5:1 contrast', () {
+      expect(lightColors.surface, const Color(0xFFFAF8F3));
+      expect(lightColors.surfaceContainerLow, const Color(0xFFF2EEE5));
+      expect(lightColors.outlineVariant, const Color(0xFFDFD9CC));
+      expect(FinanceColors.light.negative, const Color(0xFF8C4A27));
+      expect(FinanceColors.dark.negative, const Color(0xFFF2B896));
+      expect(FinanceColors.light.negative, isNot(lightColors.error));
+      expect(FinanceColors.dark.negative, isNot(darkColors.error));
+      expect(liabilityChartColorAt(0, dark: false), const Color(0xFF8C4A27));
+      expect(liabilityChartColorAt(0, dark: true), const Color(0xFFF2B896));
     });
 
     test('text and primary actions meet a 4.5:1 contrast ratio', () {
@@ -126,7 +127,11 @@ void main() {
         return (high + 0.05) / (low + 0.05);
       }
 
-      for (final ColorScheme scheme in <ColorScheme>[lightColors, darkColors]) {
+      for (final (ColorScheme scheme, FinanceColors finance)
+          in <(ColorScheme, FinanceColors)>[
+            (lightColors, FinanceColors.light),
+            (darkColors, FinanceColors.dark),
+          ]) {
         for (final (Color foreground, Color background) pair
             in <(Color, Color)>[
               (scheme.onSurface, scheme.surface),
@@ -134,6 +139,10 @@ void main() {
               (scheme.primary, scheme.surface),
               (scheme.onPrimary, scheme.primary),
               (scheme.onSecondaryContainer, scheme.secondaryContainer),
+              (finance.positive, scheme.surface),
+              (finance.positive, scheme.surfaceContainerLow),
+              (finance.negative, scheme.surface),
+              (finance.negative, scheme.surfaceContainerLow),
             ]) {
           expect(contrast(pair.$1, pair.$2), greaterThanOrEqualTo(4.5));
         }

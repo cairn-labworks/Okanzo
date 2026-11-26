@@ -24,10 +24,6 @@ dependencies:
   # Platform message customisation for the app-lock prompt (title/subtitle).
   local_auth_android: ^2.2.0
   local_auth_darwin: ^2.0.4
-  # Material You colors on Android 12+ (platform palette plugin).
-  dynamic_color: ^2.1.0
-  # Tonal palette -> ColorScheme mapping for the wallpaper palette.
-  material_color_utilities: ^0.13.0
   # Currency metadata and number grouping.
   intl: ^0.20.2
   # Yahoo quotes and exchange-rate lookups.

@@ -81,14 +81,14 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 
 ### Quiet overview & portfolios
 
-- Unboxed net-worth headline, clean asset and liability totals, and compact **Assets** and **Liabilities** tabs
-- A single quiet panel with **collapsible category rows** showing category totals and item counts until expanded
+- Unboxed net-worth headline, tonal **Assets** and **Liabilities** tiles, an **equity vs. obligations** coverage bar, and compact **Assets** and **Liabilities** tabs
+- A single quiet panel with **collapsible category rows** showing category totals, item counts, and 1-decimal percentage shares until expanded, plus **Quick-Find** holding filtering and **Expand / Collapse all**
 - **Simple net worth** (`Settings → Currency → Simple net worth`) shortens only the home headline from 1,000 upward (`$7K`, `$165.3M`, or `₹1.65 Cr` in INR lakh/crore) while keeping detailed totals exact
-- **Multiple portfolios** (*Personal*, *Family*, *Business*), each with a distinct name (ignoring case and surrounding spaces), a **Default** that powers the home screen, and instant switching
+- **Multiple portfolios** (*Personal*, *Family*, *Business*), each with a distinct name (ignoring case and surrounding spaces), explicit **Viewing** vs. **Default** badges, and 1-tap switching
 - **Custom ordering**: long-press and drag to reorder categories; arrange holdings inside a category using its **Sort or arrange** menu
 - **Canvas holding entry**: the compact bottom-right **Add holding** button expands in place over a blurred background, without moving the portfolio list. Choose **An asset** or **A liability**. The amount-led editors use outlined fields and searchable type/currency/exchange dialogs. A live **Estimated value** for assets or **Outstanding amount** for liabilities appears above the pinned Save button. Name or Custom name identifies each holding, without a separate Notes field; previously stored notes remain preserved. Switch between asset and liability tabs without losing either draft; Back protects unsaved changes, and Save is available once the required fields are valid.
 - **Amount precision**: if an amount or quantity would lose digits when saved, the editor keeps what you typed and disables Save until you correct it. This also applies to large whole numbers.
-- **Holding details and order**: tap a holding for its details, Edit, or confirmed Delete. The category's **Sort or arrange** menu offers name/value sorting and **Arrange manually**; saved custom order is preserved when trying other sorts. Sort choices are session-scoped and separate for each portfolio/category.
+- **Holding details and order**: tap a holding for its valuation provenance (**Market quote** vs. **Manual valuation**), converted base-currency value, portfolio percentage share bar, Edit, or isolated confirmed Delete. The category's **Sort or arrange** menu offers name/value sorting and **Arrange manually**; saved custom order is preserved when trying other sorts. Sort choices are session-scoped and separate for each portfolio/category.
 - **Readable names and quotes**: newly entered names and custom names are limited to 60 user-perceived characters, with a counter. Search suggestions appear directly below the search field. Tap a selected market holding to search again; selecting a stock, fund or crypto listing fetches its price once automatically, without waiting for a quantity. An unavailable quote does not block saving offline.
 
 </td>
@@ -112,16 +112,16 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 
 - **Focused entry forms**: a large page heading leads into the value or live estimate, compact type/currency/exchange chips (long-press the exchange chip for suffix guidance), paired underlined valuation fields with distinct labels and muted placeholders, expandable optional notes and an inline save button
 - **Guided field entry**: selecting an editor option or pressing **Next/Enter** in a single-line input moves to the next empty required field, skipping completed and optional fields. Finishing closes the keyboard; tap **Save** to save.
-- **Statistics**: interactive donut charts breaking down overview (assets vs. liabilities), assets by category and liabilities by category in your base currency
+- **Statistics**: interactive donut charts breaking down overview (assets vs. liabilities), assets by category and warm-terracotta liabilities by category in your base currency, with 1-decimal percentage shares alongside amounts in every legend row
 - **What's new** highlights after installing or updating (`Settings → About → What's new`), separate from **Settings → About → Okanzo** app & licence details
 
 </td>
 <td width="50%" valign="top">
 
-### Midnight, sage & 21 languages
+### Mineral Ledger, Midnight & 21 languages
 
-- **Unified precision UI**: deep-green surfaces, sage accents, tabular number typography, quiet inset cards and subtle separators across every screen
-- Single **Settings → Appearance → Theme** control: **Light** uses the sage palette (with optional **Material You** wallpaper colors on Android 12+), **Dark** uses **Midnight**, and **System default** follows the device
+- **Unified precision UI**: warm alabaster and stone surfaces in Light mode, deep-green Midnight surfaces in Dark mode, sage accents, non-alarmist warm terracotta liabilities, tabular number typography, quiet inset cards and subtle separators across every screen
+- Single **Settings → Appearance → Theme** control: **Light** uses the warm mineral & sage palette (with optional **Material You** wallpaper colors on Android 12+), **Dark** uses **Midnight**, and **System default** follows the device
 - **Grouped settings** (**Appearance**, **Currency**, **Security**, **Data**, **About**) and adaptive navigation (bottom bar on phones, navigation rail on tablets and wide windows)
 - **21 languages** with immediate override or automatic device-language selection, including right-to-left Arabic layout
 
@@ -229,7 +229,6 @@ By default, Okanzo selects the first supported language in your device's preferr
 | Preferences | `shared_preferences` |
 | Networking | `http` with hand-written JSON models |
 | Crypto | `pointycastle` (PBKDF2-HMAC-SHA256 + AES-256-GCM) |
-| Dynamic color | `dynamic_color` + `material_color_utilities` |
 
 <details>
 <summary><b>Project layout</b></summary>
@@ -245,7 +244,7 @@ lib/
 ├── domain/model/     Enums and value types
 ├── di/               AppContainer + AppScope
 ├── ui/
-│   ├── theme/        Material 3 theme, color, dynamic color
+│   ├── theme/        Material 3 theme and color palettes
 │   ├── home/         Net worth home screen
 │   ├── asset/        Asset editor
 │   ├── liability/    Liability editor
@@ -366,7 +365,10 @@ import**, **What's new**, and the full-screen **App lock** gate, plus adaptive
 tablet rail mode). It includes a direct all-screens jumper, a 12-step guided
 walkthrough (`?mode=studio`), an 18-frame storyboard gallery (`?mode=renders`),
 and live **DisclosureSize**, **AddHoldingButton** morph, and chart-legend
-transitions that honor **Remove animations**.
+transitions that honor **Remove animations**. For the Settings selector study
+that settled on **Design B (Segmented + Pill)**, open
+[the Settings selector options prototype](docs/prototypes/settings-selectors.prototype.html)
+(`?variant=A|B|C|D|current`).
 
 These are design references, not app code: all data is fictional, quotes and FX
 are simulated, and changes stay in memory. They are not bundled into the Flutter

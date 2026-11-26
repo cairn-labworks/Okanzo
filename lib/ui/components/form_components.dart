@@ -18,6 +18,9 @@ Color canvasBoxBorderColor(ColorScheme colors) {
   if (colors.outlineVariant == const Color(0xFF2A3934)) {
     return const Color(0xFF3B5446);
   }
+  if (colors.outlineVariant == const Color(0xFFDFD9CC)) {
+    return const Color(0xFFC9C2B2);
+  }
   if (colors.outlineVariant == const Color(0xFFD1DCCE)) {
     return const Color(0xFFC5D3C0);
   }
@@ -46,6 +49,7 @@ class LabeledTextField extends StatelessWidget {
     this.supportingText,
     this.isError = false,
     this.prominent = false,
+    this.prominentColor,
     this.maxLength,
     this.canvas = false,
     this.showLabel = true,
@@ -68,6 +72,7 @@ class LabeledTextField extends StatelessWidget {
   final String? supportingText;
   final bool isError;
   final bool prominent;
+  final Color? prominentColor;
   final int? maxLength;
   final bool canvas;
   final bool showLabel;
@@ -102,6 +107,8 @@ class LabeledTextField extends StatelessWidget {
         (keyboardType == const TextInputType.numberWithOptions(decimal: true)
             ? _decimalFormatters
             : null);
+    final Color effectiveProminentColor =
+        prominentColor ?? Theme.of(context).colorScheme.primary;
     final Widget field = TextField(
       controller: controller,
       focusNode: focusNode,
@@ -114,7 +121,7 @@ class LabeledTextField extends StatelessWidget {
       keyboardType: keyboardType,
       style: prominent
           ? Theme.of(context).textTheme.displaySmall
-                ?.copyWith(color: Theme.of(context).colorScheme.primary)
+                ?.copyWith(color: effectiveProminentColor)
           : Theme.of(context).textTheme.bodyLarge,
       inputFormatters: effectiveFormatters,
       decoration: InputDecoration(
@@ -131,7 +138,7 @@ class LabeledTextField extends StatelessWidget {
         prefixText: prefix,
         prefixStyle: prominent
             ? Theme.of(context).textTheme.displaySmall
-                  ?.copyWith(color: Theme.of(context).colorScheme.primary)
+                  ?.copyWith(color: effectiveProminentColor)
             : null,
         suffixText: suffix,
         helperText: supportingText,
@@ -143,7 +150,7 @@ class LabeledTextField extends StatelessWidget {
       final ColorScheme colors = theme.colorScheme;
       final TextStyle? inputStyle = prominent
           ? theme.textTheme.displaySmall?.copyWith(
-              color: colors.primary,
+              color: effectiveProminentColor,
               fontSize: 32,
               height: 1.3,
             )
@@ -185,6 +192,7 @@ class LabeledTextField extends StatelessWidget {
                   labelText: null,
                   hintText: placeholder,
                   prefixText: prefix,
+                  prefixStyle: prominent ? inputStyle : null,
                   suffixText: suffix,
                   helperText: supportingText,
                   errorText: isError ? supportingText : null,
@@ -226,7 +234,7 @@ class LabeledTextField extends StatelessWidget {
                   focusedBorder: prominent
                       ? UnderlineInputBorder(
                           borderSide: BorderSide(
-                            color: colors.primary,
+                            color: effectiveProminentColor,
                             width: 1.5,
                           ),
                         )
@@ -474,42 +482,64 @@ class PickerChip extends StatelessWidget {
       child: InkWell(
         focusNode: focusNode,
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(12),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
           child: Center(
             widthFactor: 1,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(24),
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: canvasBoxBorderColor(theme.colorScheme),
+                ),
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                  horizontal: 10,
+                  vertical: 7,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     if (icon != null) ...<Widget>[
-                      Icon(
-                        icon,
-                        size: 14,
-                        color: theme.colorScheme.onSurfaceVariant,
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.secondaryContainer,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 3,
+                          ),
+                          child: Icon(
+                            icon,
+                            size: 14,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 7),
                     ],
                     Flexible(
                       child: Text(
                         label,
-                        style: theme.textTheme.bodySmall,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.expand_more, size: 14),
+                    const SizedBox(width: 5),
+                    Icon(
+                      Icons.unfold_more_rounded,
+                      size: 15,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ],
                 ),
               ),
@@ -884,11 +914,13 @@ class _SelectionPickerDialog<T> extends StatefulWidget {
 
 class _SelectionPickerDialogState<T> extends State<_SelectionPickerDialog<T>> {
   final TextEditingController _query = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
   final ScrollController _scroll = ScrollController();
 
   @override
   void dispose() {
     _query.dispose();
+    _searchFocus.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -931,32 +963,53 @@ class _SelectionPickerDialogState<T> extends State<_SelectionPickerDialog<T>> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 24),
       actionsPadding: const EdgeInsets.fromLTRB(24, 6, 24, 12),
       actionsAlignment: MainAxisAlignment.center,
-      title: Column(
+      title: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          if (widget.eyebrow != null) ...<Widget>[
-            Text(
-              widget.eyebrow!.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.35,
-                color: colors.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 5),
-          ],
-          Text(
-            widget.title,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontSize: 22,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.6,
-              height: 1.25,
-              color: colors.onSurface,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (widget.eyebrow != null) ...<Widget>[
+                  Text(
+                    widget.eyebrow!.toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.35,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                ],
+                Text(
+                  widget.title,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -0.6,
+                    height: 1.25,
+                    color: colors.onSurface,
+                  ),
+                ),
+              ],
             ),
           ),
+          if (widget.searchable) ...<Widget>[
+            const SizedBox(width: 8),
+            IconButton(
+              key: const ValueKey<String>('picker-search-button'),
+              tooltip: searchLabel,
+              onPressed: _searchFocus.requestFocus,
+              style: IconButton.styleFrom(
+                backgroundColor: colors.surfaceContainerLow,
+                foregroundColor: colors.onSurfaceVariant,
+                visualDensity: VisualDensity.compact,
+              ),
+              icon: const Icon(Icons.search, size: 19),
+            ),
+          ],
         ],
       ),
       content: SizedBox(
@@ -966,18 +1019,11 @@ class _SelectionPickerDialogState<T> extends State<_SelectionPickerDialog<T>> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             if (widget.searchable) ...<Widget>[
-              Text(
-                searchLabel,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 7),
               Semantics(
                 label: searchLabel,
                 child: TextField(
                   controller: _query,
+                  focusNode: _searchFocus,
                   onChanged: (_) => setState(() {}),
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: colors.onSurface,
@@ -988,6 +1034,24 @@ class _SelectionPickerDialogState<T> extends State<_SelectionPickerDialog<T>> {
                     hintStyle: theme.textTheme.bodyLarge?.copyWith(
                       color: colors.onSurfaceVariant,
                     ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      size: 18,
+                      color: colors.onSurfaceVariant,
+                    ),
+                    suffixIcon: _query.text.isEmpty
+                        ? null
+                        : IconButton(
+                            key: const ValueKey<String>('picker-search-clear'),
+                            tooltip: 'Clear filter'.tr(context),
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () {
+                              _query.clear();
+                              setState(() {});
+                              _searchFocus.requestFocus();
+                            },
+                            icon: const Icon(Icons.close, size: 18),
+                          ),
                     filled: true,
                     fillColor: theme.brightness == Brightness.dark
                         ? colors.surfaceContainerLow

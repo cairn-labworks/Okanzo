@@ -101,6 +101,8 @@ class _PortfolioScreenState extends State<PortfolioScreen> {
               return _PortfolioCard(
                 row: row,
                 hideBalances: hideBalances,
+                onSelect: () =>
+                    unawaited(viewModel.selectPortfolio(row.portfolio.id)),
                 onSetDefault: () =>
                     unawaited(viewModel.setDefault(row.portfolio.id)),
                 onRename: () => _showRenameDialog(row.portfolio),
@@ -184,6 +186,7 @@ class _PortfolioCard extends StatelessWidget {
   const _PortfolioCard({
     required this.row,
     required this.hideBalances,
+    required this.onSelect,
     required this.onSetDefault,
     required this.onRename,
     required this.onDelete,
@@ -191,6 +194,7 @@ class _PortfolioCard extends StatelessWidget {
 
   final PortfolioRow row;
   final bool hideBalances;
+  final VoidCallback onSelect;
   final VoidCallback onSetDefault;
   final VoidCallback onRename;
   final VoidCallback onDelete;
@@ -198,107 +202,186 @@ class _PortfolioCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+    final FinanceColors finance = FinanceColors.of(context);
+    final bool isNegative = !hideBalances && row.netWorth < -0.005;
     return Card(
-      color: theme.colorScheme.surfaceContainerLow,
+      clipBehavior: Clip.antiAlias,
+      color: row.isViewing
+          ? colors.surfaceContainer
+          : colors.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(shapeLarge),
+        side: BorderSide(
+          color: row.isViewing
+              ? colors.primary.withValues(alpha: 0.65)
+              : colors.outlineVariant,
+          width: row.isViewing ? 1.5 : 1,
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    row.portfolio.name,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+      child: InkWell(
+        onTap: onSelect,
+        borderRadius: BorderRadius.circular(shapeLarge),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Icon(
+                    row.isViewing ? Icons.folder : Icons.folder_outlined,
+                    size: 19,
+                    color: row.isViewing
+                        ? colors.primary
+                        : colors.onSurfaceVariant,
                   ),
-                ),
-                if (row.portfolio.isDefault)
-                  Flexible(
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.only(end: 4),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.1,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'Default'.tr(context),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      row.portfolio.name,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                PopupMenuButton<String>(
-                  tooltip: 'More'.tr(context),
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (String value) {
-                    switch (value) {
-                      case 'default':
-                        onSetDefault();
-                      case 'rename':
-                        onRename();
-                      case 'delete':
-                        onDelete();
-                    }
-                  },
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<String>>[
-                        if (!row.portfolio.isDefault)
+                  PopupMenuButton<String>(
+                    tooltip: 'More'.tr(context),
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (String value) {
+                      switch (value) {
+                        case 'default':
+                          onSetDefault();
+                        case 'rename':
+                          onRename();
+                        case 'delete':
+                          onDelete();
+                      }
+                    },
+                    itemBuilder: (BuildContext context) =>
+                        <PopupMenuEntry<String>>[
+                          if (!row.portfolio.isDefault)
+                            PopupMenuItem<String>(
+                              value: 'default',
+                              child: Text('Set as default'.tr(context)),
+                            ),
                           PopupMenuItem<String>(
-                            value: 'default',
-                            child: Text('Set as default'.tr(context)),
+                            value: 'rename',
+                            child: Text('Rename'.tr(context)),
                           ),
-                        PopupMenuItem<String>(
-                          value: 'rename',
-                          child: Text('Rename'.tr(context)),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Text('Delete'.tr(context)),
-                        ),
-                      ],
+                          PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Text('Delete'.tr(context)),
+                          ),
+                        ],
+                  ),
+                ],
+              ),
+              if (row.isViewing || row.portfolio.isDefault) ...<Widget>[
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: <Widget>[
+                    if (row.isViewing)
+                      _PortfolioBadge(
+                        icon: Icons.check,
+                        label: 'Viewing'.tr(context),
+                        background: colors.primaryContainer,
+                        foreground: colors.onPrimaryContainer,
+                      ),
+                    if (row.portfolio.isDefault)
+                      _PortfolioBadge(
+                        icon: Icons.star_outline,
+                        label: 'Default'.tr(context),
+                        background: colors.primary.withValues(alpha: 0.10),
+                        foreground: colors.primary,
+                      ),
+                  ],
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              hideBalances
-                  ? CurrencyUtil.masked(row.baseCurrency)
-                  : CurrencyUtil.format(row.netWorth, row.baseCurrency),
-              style: theme.textTheme.headlineMedium?.copyWith(
-                color: theme.colorScheme.primary,
+              const SizedBox(height: 14),
+              Text(
+                hideBalances
+                    ? CurrencyUtil.masked(row.baseCurrency)
+                    : CurrencyUtil.format(row.netWorth, row.baseCurrency),
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: isNegative ? finance.negative : colors.primary,
+                  fontFeatures: const <FontFeature>[
+                    FontFeature.tabularFigures(),
+                  ],
+                ),
               ),
-            ),
-            Text(
-              '{assets} assets · {liabilities} liabilities'
-                  .tr(context)
-                  .replaceAll('{assets}', '${row.assetCount}')
-                  .replaceAll('{liabilities}', '${row.liabilityCount}'),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              Text(
+                '{assets} assets · {liabilities} liabilities'
+                    .tr(context)
+                    .replaceAll('{assets}', '${row.assetCount}')
+                    .replaceAll('{liabilities}', '${row.liabilityCount}'),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
               ),
-            ),
-          ],
+              if (row.assetCount + row.liabilityCount > 0) ...<Widget>[
+                const SizedBox(height: 6),
+                Text(
+                  '${'Assets'.tr(context)} ${hideBalances ? CurrencyUtil.maskShort : CurrencyUtil.format(row.totalAssets, row.baseCurrency)}'
+                  '  ·  '
+                  '${'Liabilities'.tr(context)} ${hideBalances ? CurrencyUtil.maskShort : CurrencyUtil.format(row.totalLiabilities, row.baseCurrency)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    fontFeatures: const <FontFeature>[
+                      FontFeature.tabularFigures(),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _PortfolioBadge extends StatelessWidget {
+  const _PortfolioBadge({
+    required this.icon,
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: background,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Icon(icon, size: 13, color: foreground),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(color: foreground, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _NameDialog extends StatefulWidget {

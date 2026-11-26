@@ -494,7 +494,12 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      await _tap(tester, find.byTooltip('Refresh prices'));
+      await tester.fling(
+        find.byKey(const ValueKey<String>('home-refresh-indicator')),
+        const Offset(0, 300),
+        1000,
+      );
+      await tester.pump();
       await _waitUntil(
         tester,
         () => find.textContaining('Updated ').evaluate().isNotEmpty,
@@ -787,7 +792,12 @@ void main() {
         );
       }
 
-      await _tap(tester, find.byTooltip('Refresh prices'));
+      await tester.fling(
+        find.byKey(const ValueKey<String>('home-refresh-indicator')),
+        const Offset(0, 300),
+        1000,
+      );
+      await tester.pump();
       await _waitUntil(
         tester,
         () => find.text('Updated 3 price(s)').evaluate().isNotEmpty,

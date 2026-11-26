@@ -17,6 +17,7 @@ import 'package:okanzo/data/repository/liability_repository.dart';
 import 'package:okanzo/data/repository/portfolio_repository.dart';
 import 'package:okanzo/data/repository/settings_repository.dart';
 import 'package:okanzo/di/app_container.dart';
+import 'package:okanzo/domain/model/app_language.dart';
 import 'package:okanzo/domain/model/app_theme.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/liability_type.dart';
@@ -51,8 +52,9 @@ import 'package:okanzo/ui/portfolio/portfolio_screen.dart';
 import 'package:okanzo/ui/settings/settings_screen.dart';
 import 'package:okanzo/ui/settings/settings_view_model.dart';
 import 'package:okanzo/ui/statistics/statistics_screen.dart';
-import 'package:okanzo/ui/theme/theme.dart';
 import 'package:okanzo/ui/theme/app_style.dart';
+import 'package:okanzo/ui/theme/colors.dart';
+import 'package:okanzo/ui/theme/theme.dart';
 import 'package:okanzo/util/result.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:okanzo/util/screenshot_protection.dart';
@@ -69,8 +71,23 @@ class _Assets extends Fake implements AssetRepository {
   List<int>? lastOrder;
   List<AssetEntity> items = const <AssetEntity>[];
   int quoteFetches = 0;
+  int portfolioRefreshes = 0;
+  PriceRefreshResult refreshResult = const PriceRefreshResult(
+    total: 2,
+    updated: 2,
+    failed: 0,
+  );
+  Future<PriceRefreshResult>? pendingPortfolioRefresh;
   Future<Result<StockQuote>>? pendingQuote;
   Future<Result<double>>? pendingMetalPrice;
+
+  @override
+  Future<PriceRefreshResult> refreshAllPrices(int portfolioId) async {
+    portfolioRefreshes++;
+    return pendingPortfolioRefresh == null
+        ? refreshResult
+        : await pendingPortfolioRefresh!;
+  }
 
   @override
   Stream<List<AssetEntity>> observeForPortfolio(int portfolioId) =>
@@ -1890,7 +1907,7 @@ void main() {
     expect(find.byType(Switch), findsNothing);
     expect(find.text('App language'), findsNothing);
     final Map<String, List<String>> categories = <String, List<String>>{
-      'Appearance': <String>['App language', 'Theme', 'Dynamic color'],
+      'Appearance': <String>['App language', 'Theme'],
       'Currency': <String>['Base currency', 'Simple net worth'],
       'Security': <String>['App lock', 'Block screenshots'],
       'Data': <String>[
@@ -2381,36 +2398,23 @@ void main() {
   );
 
   testWidgets(
-    'one theme choice maps Dark to Midnight and keeps dynamic color available in Light',
+    'one theme choice maps Dark to Midnight and omits Dynamic color and language subtitle',
     (WidgetTester tester) async {
       await open(tester, SettingsScreen(onClose: () {}));
       await _tap(tester, find.text('Appearance'));
-      await _tap(tester, find.text('Dynamic color'));
-      expect(container.settingsRepository.current.dynamicColor, isFalse);
+      expect(find.text('Dynamic color'), findsNothing);
+      expect(find.text('Use device language'), findsNothing);
       expect(find.text('App theme'), findsNothing);
       expect(find.text('Light / dark'), findsNothing);
-      await _tap(tester, find.text('Theme'));
       await tester.tap(
         find.byKey(const ValueKey<AppThemeMode>(AppThemeMode.dark)),
       );
       await tester.pumpAndSettle();
       expect(container.settingsRepository.current.appTheme, AppTheme.midnight);
       expect(
-        tester
-            .widget<SwitchListTile>(
-              find.widgetWithText(SwitchListTile, 'Dynamic color'),
-            )
-            .onChanged,
-        isNull,
-      );
-      expect(
         container.settingsRepository.current.appearanceMode,
         AppThemeMode.dark,
       );
-      await _tap(tester, find.byTooltip('Back'));
-      await _tap(tester, find.text('Appearance'));
-      expect(find.text('Not used in dark mode'), findsOneWidget);
-      await _tap(tester, find.text('Theme'));
       await tester.tap(
         find.byKey(const ValueKey<AppThemeMode>(AppThemeMode.light)),
       );
@@ -2418,14 +2422,6 @@ void main() {
       expect(
         container.settingsRepository.current.appearanceMode,
         AppThemeMode.light,
-      );
-      expect(
-        tester
-            .widget<SwitchListTile>(
-              find.widgetWithText(SwitchListTile, 'Dynamic color'),
-            )
-            .onChanged,
-        isNotNull,
       );
     },
   );
@@ -2487,12 +2483,12 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     await _tap(tester, find.text('Appearance'));
-    await _tap(tester, find.text('Theme'));
+    expect(find.byType(AlertDialog), findsNothing);
     await tester.tap(
       find.byKey(const ValueKey<AppThemeMode>(AppThemeMode.dark)),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
     expect(find.textContaining("Couldn't save theme:"), findsOneWidget);
     expect(failing.current.appearanceMode, AppThemeMode.system);
   });
@@ -4381,6 +4377,795 @@ void main() {
         tester.widget<PickerChip>(find.byType(PickerChip)).icon,
         Icons.euro,
       );
+    },
+  );
+
+  testWidgets(
+    'Home supports Quick-Find filtering, Expand all, and 1-decimal category shares',
+    (WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      await container.settingsRepository.setBaseCurrency('USD');
+      await container.settingsRepository.setHideBalances(false);
+      container.assetRepository.items = <AssetEntity>[
+        const AssetEntity(
+          id: 1,
+          portfolioId: 1,
+          type: AssetType.realEstate,
+          name: 'Cedar Park Townhome',
+          currency: 'USD',
+          manualValue: 215000,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+        const AssetEntity(
+          id: 2,
+          portfolioId: 1,
+          type: AssetType.stock,
+          name: 'ASML Holding N.V.',
+          customName: 'European Semis — ASML',
+          symbol: 'ASML.AS',
+          currency: 'USD',
+          quantity: 25,
+          lastPrice: 702,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+        for (int i = 3; i <= 50; i++)
+          AssetEntity(
+            id: i,
+            portfolioId: 1,
+            type: AssetType.cash,
+            name: 'Reserve Bucket #$i',
+            currency: 'USD',
+            manualValue: 2665.625,
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+      ];
+
+      await open(
+        tester,
+        HomeScreen(
+          onOpenAssetEditor: (_, _) {},
+          onOpenLiabilityEditor: (_, _) {},
+          onManagePortfolios: () {},
+          onOpenSettings: () {},
+        ),
+      );
+
+      // 1-decimal category percentage share is shown on collapsed headers
+      expect(find.text('1 item · 4.9%'), findsOneWidget);
+      expect(find.text('48 items · 35.5%'), findsOneWidget);
+      expect(find.text('1 item · 59.6%'), findsOneWidget);
+
+      // Expand all opens categories; Collapse all closes them
+      await _tap(tester, find.byTooltip('Expand all'));
+      expect(find.text('European Semis — ASML'), findsOneWidget);
+      expect(find.text('Reserve Bucket #3'), findsOneWidget);
+      await _tap(tester, find.byTooltip('Collapse all'));
+      expect(find.text('European Semis — ASML'), findsNothing);
+
+      // Quick-Find filters across 50 holdings by name/ticker and auto-expands matches
+      await _tap(tester, find.byTooltip('Filter holdings'));
+      final Finder filterInput = find.byKey(
+        const ValueKey<String>('home-filter-input'),
+      );
+      expect(filterInput, findsOneWidget);
+      await tester.enterText(filterInput, 'Townhome');
+      await tester.pumpAndSettle();
+      expect(find.text('Cedar Park Townhome'), findsOneWidget);
+      expect(find.text('Stock'), findsNothing);
+
+      // Manual arrangement is hidden on filtered subsets so saved positions stay intact
+      await _tap(tester, find.byTooltip('Sort or arrange'));
+      expect(find.text('Arrange manually'), findsNothing);
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pumpAndSettle();
+
+      // Category header and Collapse all work visually during filter without mutating saved state
+      await _tap(tester, find.byTooltip('Collapse all'));
+      expect(find.text('Cedar Park Townhome'), findsNothing);
+      await _tap(tester, find.byTooltip('Expand all'));
+      expect(find.text('Cedar Park Townhome'), findsOneWidget);
+
+      // Unmatched query shows calm empty state
+      await tester.enterText(filterInput, 'ZZZ-NONEXISTENT');
+      await tester.pumpAndSettle();
+      expect(find.text('No matching holdings'), findsOneWidget);
+
+      // Clearing filter restores collapsed state without mutating saved expansion
+      await _tap(tester, find.byTooltip('Clear filter'));
+      expect(find.text('Stock'), findsOneWidget);
+      expect(find.text('Cedar Park Townhome'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Holding Details shows valuation provenance, converted base value, share bar, and terracotta liability value',
+    (WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await container.settingsRepository.setBaseCurrency('USD');
+      await container.settingsRepository.setHideBalances(false);
+      container.fxRepository.rates = const CurrencyConverter(<String, double>{
+        'USD': 1.0,
+        'EUR': 1 / 1.08,
+      });
+      container.assetRepository.items = const <AssetEntity>[
+        AssetEntity(
+          id: 1,
+          portfolioId: 1,
+          type: AssetType.realEstate,
+          name: 'Cedar Park Townhome',
+          currency: 'USD',
+          manualValue: 342950,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+        AssetEntity(
+          id: 2,
+          portfolioId: 1,
+          type: AssetType.stock,
+          name: 'ASML Holding N.V.',
+          customName: 'European Semis — ASML',
+          symbol: 'ASML.AS',
+          currency: 'EUR',
+          quantity: 25,
+          lastPrice: 650,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+      container.liabilityRepository.items = const <LiabilityEntity>[
+        LiabilityEntity(
+          id: 1,
+          portfolioId: 1,
+          type: LiabilityType.mortgage,
+          name: 'Cedar Park Mortgage',
+          currency: 'USD',
+          amount: 138200,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+
+      await open(
+        tester,
+        HomeScreen(
+          onOpenAssetEditor: (_, _) {},
+          onOpenLiabilityEditor: (_, _) {},
+          onManagePortfolios: () {},
+          onOpenSettings: () {},
+        ),
+      );
+
+      await _tap(tester, find.text('Stock'));
+      await _tap(tester, find.text('European Semis — ASML'));
+      expect(find.textContaining('Market quote'), findsOneWidget);
+      expect(find.text('Portfolio value (USD)'), findsOneWidget);
+      expect(find.text('\$17,550'), findsWidgets);
+      expect(find.text('Share of portfolio assets'), findsOneWidget);
+      expect(find.text('4.9%'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('holding-portfolio-share-bar')),
+        findsOneWidget,
+      );
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('close-holding-details')),
+      );
+
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('home-liabilities-tab')),
+      );
+      await _tap(tester, find.text('Mortgage'));
+      await _tap(tester, find.text('Cedar Park Mortgage'));
+      expect(find.textContaining('Manual valuation'), findsOneWidget);
+      final ThemeData theme = Theme.of(tester.element(find.byType(Dialog)));
+      final FinanceColors finance = theme.extension<FinanceColors>()!;
+      final Text liabHeadline = tester.widget<Text>(
+        find.byKey(const ValueKey<String>('holding-glance-headline-value')),
+      );
+      expect(liabHeadline.style?.color, finance.negative);
+    },
+  );
+
+  testWidgets(
+    'Holding Details uses quote timestamp for market provenance, handles unpriced/diamond items, and fits 320px large text',
+    (WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(320, 640);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final int nowMs = DateTime.now().millisecondsSinceEpoch;
+      await container.settingsRepository.setBaseCurrency('USD');
+      await container.settingsRepository.setHideBalances(false);
+      container.fxRepository.rates = const CurrencyConverter(<String, double>{
+        'USD': 1.0,
+        'EUR': 0.5,
+      });
+      container.assetRepository.items = <AssetEntity>[
+        AssetEntity(
+          id: 1,
+          portfolioId: 1,
+          type: AssetType.stock,
+          name: 'Offline SAP',
+          symbol: 'SAP.DE',
+          currency: 'EUR',
+          quantity: 10,
+          createdAt: nowMs,
+          updatedAt: nowMs,
+        ),
+        AssetEntity(
+          id: 2,
+          portfolioId: 1,
+          type: AssetType.metals,
+          metal: PreciousMetal.diamond,
+          name: 'Loose Diamond',
+          currency: 'EUR',
+          quantity: 2,
+          pricePerUnit: 5000,
+          customPrice: false,
+          useTotalValue: false,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+        const AssetEntity(
+          id: 3,
+          portfolioId: 1,
+          type: AssetType.cash,
+          name: 'Sovereign Reserve',
+          currency: 'EUR',
+          manualValue: 987654321098,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        _app(
+          container,
+          HomeScreen(
+            onOpenAssetEditor: (_, _) {},
+            onOpenLiabilityEditor: (_, _) {},
+            onManagePortfolios: () {},
+            onOpenSettings: () {},
+          ),
+          textScale: 1.8,
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      // 1. Unpriced offline stock says Market quote · Price pending (not updatedAt age)
+      await _tap(tester, find.text('Stock'));
+      await _tap(tester, find.text('Offline SAP'));
+      expect(find.text('Market quote · Price pending'), findsOneWidget);
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('close-holding-details')),
+      );
+
+      // 2. Non-ticker diamond item is Manual valuation, not Market quote
+      await _tap(tester, find.text('Valuables'));
+      await _tap(tester, find.text('Loose Diamond'));
+      expect(find.text('Manual valuation'), findsOneWidget);
+      expect(find.textContaining('Market quote'), findsNothing);
+      await _tap(
+        tester,
+        find.byKey(const ValueKey<String>('close-holding-details')),
+      );
+
+      // 3. Large converted amount on 320px at 180% text scale does not overflow
+      await _tap(tester, find.text('Cash'));
+      await _tap(tester, find.text('Sovereign Reserve'));
+      expect(find.text('Portfolio value (USD)'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Statistics shows 1-decimal legend percentages and warm terracotta liability slices, and Settings hub shows current values',
+    (WidgetTester tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await container.settingsRepository.setBaseCurrency('USD');
+      await container.settingsRepository.setHideBalances(false);
+      container.assetRepository.items = const <AssetEntity>[
+        AssetEntity(
+          id: 1,
+          portfolioId: 1,
+          type: AssetType.realEstate,
+          name: 'Townhome',
+          currency: 'USD',
+          manualValue: 215000,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+        AssetEntity(
+          id: 2,
+          portfolioId: 1,
+          type: AssetType.cash,
+          name: 'Reserve',
+          currency: 'USD',
+          manualValue: 145500,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+      container.liabilityRepository.items = const <LiabilityEntity>[
+        LiabilityEntity(
+          id: 1,
+          portfolioId: 1,
+          type: LiabilityType.mortgage,
+          name: 'Mortgage',
+          currency: 'USD',
+          amount: 148000,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+
+      await open(tester, const StatisticsScreen());
+      // Overview: 360500 / 508500 = 70.9%, 148000 / 508500 = 29.1%
+      // Assets by type: 215000 / 360500 = 59.6%, 145500 / 360500 = 40.4%
+      expect(find.text('70.9%'), findsOneWidget);
+      expect(find.text('29.1%'), findsOneWidget);
+      expect(find.text('59.6%'), findsOneWidget);
+      expect(find.text('40.4%'), findsOneWidget);
+
+      await tester.drag(find.byType(ListView), const Offset(0, -420));
+      await tester.pumpAndSettle();
+      final DonutChart liabilityChart = tester
+          .widgetList<DonutChart>(find.byType(DonutChart))
+          .last;
+      expect(
+        liabilityChart.slices.first.color,
+        liabilityChartColorAt(0, dark: false),
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+
+      await open(tester, SettingsScreen(onClose: () {}));
+      expect(find.text('USD'), findsOneWidget);
+      expect(find.text('v${AppReleaseNotes.currentVersion}'), findsOneWidget);
+    },
+  );
+
+  for (final bool reducedMotion in <bool>[false, true]) {
+    testWidgets(
+      'Home Assets and Liabilities toggle animates thumb and supports swipe (reducedMotion: $reducedMotion)',
+      (WidgetTester tester) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            FakeAccessibilityFeatures(disableAnimations: reducedMotion);
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        seedHoldings();
+        await container.settingsRepository.setBaseCurrency('USD');
+        await open(
+          tester,
+          HomeScreen(
+            onOpenAssetEditor: (_, _) {},
+            onOpenLiabilityEditor: (_, _) {},
+            onManagePortfolios: () {},
+            onOpenSettings: () {},
+          ),
+        );
+
+        final Finder thumb = find.byKey(
+          const ValueKey<String>('home-section-thumb'),
+        );
+        final Finder assetsTab = find.byKey(
+          const ValueKey<String>('home-assets-tab'),
+        );
+        final Finder liabilitiesTab = find.byKey(
+          const ValueKey<String>('home-liabilities-tab'),
+        );
+        expect(thumb, findsOneWidget);
+
+        final double assetsLeft = tester.getRect(assetsTab).left;
+        final double liabilitiesLeft = tester.getRect(liabilitiesTab).left;
+        expect(tester.getRect(thumb).left, closeTo(assetsLeft, 2.0));
+
+        // Tap Liabilities and inspect mid-animation thumb position.
+        await tester.tap(liabilitiesTab);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 70));
+        final double midTapLeft = tester.getRect(thumb).left;
+        if (reducedMotion) {
+          expect(midTapLeft, closeTo(liabilitiesLeft, 2.0));
+        } else {
+          expect(
+            midTapLeft,
+            allOf(
+              greaterThan(assetsLeft + 4.0),
+              lessThan(liabilitiesLeft - 4.0),
+            ),
+          );
+        }
+        await tester.pumpAndSettle();
+        expect(tester.getRect(thumb).left, closeTo(liabilitiesLeft, 2.0));
+        expect(find.text('Loan'), findsOneWidget);
+
+        // Swiping right when Liabilities is already selected keeps Liabilities.
+        final Finder toggleTrack = find.byKey(
+          const ValueKey<String>('home-section-toggle'),
+        );
+        await tester.drag(toggleTrack, const Offset(90, 0));
+        await tester.pumpAndSettle();
+        expect(find.text('Loan'), findsOneWidget);
+
+        // Swiping left when Liabilities is selected moves back to Assets.
+        await tester.drag(toggleTrack, const Offset(-90, 0));
+        await tester.pumpAndSettle();
+        expect(find.text('Cash'), findsOneWidget);
+        expect(find.text('Loan'), findsNothing);
+        expect(tester.getRect(thumb).left, closeTo(assetsLeft, 2.0));
+
+        // Swiping right when Assets is selected moves to Liabilities.
+        await tester.drag(toggleTrack, const Offset(90, 0));
+        await tester.pumpAndSettle();
+        expect(find.text('Loan'), findsOneWidget);
+        expect(find.text('Cash'), findsNothing);
+        expect(tester.getRect(thumb).left, closeTo(liabilitiesLeft, 2.0));
+      },
+    );
+
+    testWidgets(
+      'Settings category drill-in and back animate smoothly (reducedMotion: $reducedMotion)',
+      (WidgetTester tester) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            FakeAccessibilityFeatures(disableAnimations: reducedMotion);
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        await open(tester, SettingsScreen(onClose: () {}));
+        final double settledLeft = tester
+            .getRect(find.byType(PageHeading))
+            .left;
+
+        await tester.tap(find.text('Appearance'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 70));
+
+        final Finder appearanceHeading = find.widgetWithText(
+          PageHeading,
+          'Appearance',
+        );
+        expect(appearanceHeading, findsOneWidget);
+        final double drillInMidLeft = tester.getRect(appearanceHeading).left;
+        if (reducedMotion) {
+          expect(drillInMidLeft, closeTo(settledLeft, 0.5));
+          expect(find.text('Language, theme & colour'), findsNothing);
+        } else {
+          expect(drillInMidLeft, greaterThan(settledLeft + 4.0));
+        }
+
+        await tester.pumpAndSettle();
+        expect(
+          tester.getRect(appearanceHeading).left,
+          closeTo(settledLeft, 0.5),
+        );
+        expect(find.text('Language, theme & colour'), findsNothing);
+
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 70));
+
+        final Finder hubHeading = find.widgetWithText(PageHeading, 'Settings');
+        expect(hubHeading, findsOneWidget);
+        final double backMidLeft = tester.getRect(hubHeading).left;
+        if (reducedMotion) {
+          expect(backMidLeft, closeTo(settledLeft, 0.5));
+        } else {
+          expect(backMidLeft, lessThan(settledLeft - 4.0));
+        }
+
+        await tester.pumpAndSettle();
+        expect(tester.getRect(hubHeading).left, closeTo(settledLeft, 0.5));
+        expect(find.text('Language, theme & colour'), findsOneWidget);
+      },
+    );
+  }
+
+  testWidgets(
+    'Home screen replaces top refresh button with pull-to-refresh bounce and Refreshing Quotes banner',
+    (WidgetTester tester) async {
+      final Completer<PriceRefreshResult> pending =
+          Completer<PriceRefreshResult>();
+      container.assetRepository.pendingPortfolioRefresh = pending.future;
+      container.assetRepository.items = const <AssetEntity>[];
+      container.liabilityRepository.items = const <LiabilityEntity>[];
+      await open(
+        tester,
+        HomeScreen(
+          onOpenAssetEditor: (_, _) {},
+          onOpenLiabilityEditor: (_, _) {},
+          onManagePortfolios: () {},
+          onOpenSettings: () {},
+        ),
+      );
+
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byIcon(Icons.refresh),
+        ),
+        findsNothing,
+      );
+      expect(find.byTooltip('Refresh prices'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('home-refresh-indicator')),
+        findsOneWidget,
+      );
+      expect(find.text('Refreshing Quotes'), findsNothing);
+
+      final double restCardTop = tester.getRect(find.byType(NetWorthCard)).top;
+
+      // Swipe down to trigger bounce + quote refresh.
+      await tester.fling(find.byType(ListView), const Offset(0, 300), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 90));
+
+      expect(find.text('Refreshing Quotes'), findsOneWidget);
+      final double refreshingCardTop = tester
+          .getRect(find.byType(NetWorthCard))
+          .top;
+      final double bannerBottom = tester
+          .getRect(find.byKey(const ValueKey<String>('home-refreshing-banner')))
+          .bottom;
+      expect(refreshingCardTop, greaterThan(restCardTop + 20.0));
+      expect(refreshingCardTop, greaterThanOrEqualTo(bannerBottom));
+
+      pending.complete(
+        const PriceRefreshResult(total: 2, updated: 2, failed: 0),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Refreshing Quotes'), findsNothing);
+      expect(
+        tester.getRect(find.byType(NetWorthCard)).top,
+        closeTo(restCardTop, 0.5),
+      );
+      expect(container.fxRepository.refreshes, 1);
+      expect(container.assetRepository.portfolioRefreshes, 1);
+      expect(find.text('Updated 2 price(s)'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'Home currency pill toggles between non-USD base currency and USD, and shows static USD when base is USD',
+    (WidgetTester tester) async {
+      container.fxRepository.rates = const CurrencyConverter(<String, double>{
+        'INR': 80.0,
+      });
+      container.assetRepository.items = const <AssetEntity>[
+        AssetEntity(
+          id: 1,
+          portfolioId: 1,
+          type: AssetType.cash,
+          name: 'Savings',
+          currency: 'INR',
+          manualValue: 80000,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+      container.liabilityRepository.items = const <LiabilityEntity>[
+        LiabilityEntity(
+          id: 1,
+          portfolioId: 1,
+          type: LiabilityType.loan,
+          name: 'Loan',
+          currency: 'INR',
+          amount: 16000,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ];
+      await container.settingsRepository.setBaseCurrency('INR');
+      await open(
+        tester,
+        HomeScreen(
+          onOpenAssetEditor: (_, _) {},
+          onOpenLiabilityEditor: (_, _) {},
+          onManagePortfolios: () {},
+          onOpenSettings: () {},
+        ),
+      );
+
+      final Finder pill = find.byKey(
+        const ValueKey<String>('net-worth-base-currency-pill'),
+      );
+      final Finder thumb = find.byKey(
+        const ValueKey<String>('net-worth-currency-thumb'),
+      );
+      expect(pill, findsOneWidget);
+      expect(thumb, findsOneWidget);
+      expect(
+        find.descendant(of: pill, matching: find.text('INR')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: pill, matching: find.text('USD')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(const ValueKey<String>('net-worth-headline')),
+            )
+            .data,
+        CurrencyUtil.format(64000, 'INR'),
+      );
+
+      final double baseThumbLeft = tester.getRect(thumb).left;
+
+      // Tapping the pill toggles Home display currency from INR to USD.
+      await tester.tap(pill);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(thumb).left, greaterThan(baseThumbLeft + 10.0));
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(const ValueKey<String>('net-worth-headline')),
+            )
+            .data,
+        CurrencyUtil.format(800, 'USD'),
+      );
+      expect(container.settingsRepository.current.baseCurrency, 'INR');
+
+      // Tapping again toggles back to INR.
+      await tester.tap(pill);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(thumb).left, closeTo(baseThumbLeft, 1.0));
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(const ValueKey<String>('net-worth-headline')),
+            )
+            .data,
+        CurrencyUtil.format(64000, 'INR'),
+      );
+
+      // When USD is the base currency, the pill only shows static USD.
+      await container.settingsRepository.setBaseCurrency('USD');
+      await tester.pumpAndSettle();
+      expect(thumb, findsNothing);
+      expect(
+        find.descendant(of: pill, matching: find.text('USD')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: pill, matching: find.text('INR')),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets(
+    'Settings uses Design B (grouped inset card, inline segmented Theme, outlined tactile pills, and search buttons in Currency & Language pickers)',
+    (WidgetTester tester) async {
+      await container.settingsRepository.setAppearanceMode(AppThemeMode.light);
+      await open(tester, SettingsScreen(onClose: () {}));
+      await _tap(tester, find.text('Appearance'));
+
+      // Grouped inset card wraps the drill-in rows.
+      expect(find.byType(Card), findsOneWidget);
+
+      // Theme is rendered inline as a 3-way animated segmented control (no modal).
+      final Finder themeSegmented = find.byKey(
+        const ValueKey<String>('settings-theme-segmented'),
+      );
+      final Finder themeThumb = find.byKey(
+        const ValueKey<String>('settings-theme-thumb'),
+      );
+      expect(themeSegmented, findsOneWidget);
+      expect(themeThumb, findsOneWidget);
+      expect(
+        find.descendant(of: themeSegmented, matching: find.text('System')),
+        findsOneWidget,
+      );
+      expect(find.byType(AlertDialog), findsNothing);
+
+      final double lightThumbLeft = tester.getRect(themeThumb).left;
+      await tester.tap(
+        find.byKey(const ValueKey<AppThemeMode>(AppThemeMode.dark)),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 70));
+      final double midThumbLeft = tester.getRect(themeThumb).left;
+      expect(midThumbLeft, greaterThan(lightThumbLeft + 2.0));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(
+        container.settingsRepository.current.appearanceMode,
+        AppThemeMode.dark,
+      );
+
+      // App language row uses an outlined tactile PickerChip with language icon & unfold_more.
+      final PickerChip langChip = tester.widget<PickerChip>(
+        find.byType(PickerChip),
+      );
+      expect(langChip.icon, Icons.language);
+      expect(find.byIcon(Icons.unfold_more_rounded), findsOneWidget);
+
+      // App language picker has a Search button that focuses live filtering.
+      await _tap(tester, find.text('App language'));
+      final Finder langSearchBtn = find.byKey(
+        const ValueKey<String>('picker-search-button'),
+      );
+      expect(langSearchBtn, findsOneWidget);
+      await tester.tap(langSearchBtn);
+      await tester.pumpAndSettle();
+      final Finder langSearchField = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      );
+      expect(langSearchField, findsOneWidget);
+      expect(
+        tester.widget<TextField>(langSearchField).focusNode?.hasFocus,
+        isTrue,
+      );
+      await tester.enterText(langSearchField, 'zzz-no-lang');
+      await tester.pumpAndSettle();
+      expect(find.text('No matching options.'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('picker-search-clear')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(langSearchField, 'spanish');
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<AppLanguage>(AppLanguage.spanish)),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(TextButton, 'Close'));
+      await tester.pumpAndSettle();
+
+      // Currency drill-in also uses grouped Card, tactile pill, and Search button.
+      await _tap(tester, find.byTooltip('Back'));
+      await _tap(tester, find.text('Currency'));
+      expect(find.byType(Card), findsOneWidget);
+      expect(find.byIcon(Icons.unfold_more_rounded), findsOneWidget);
+
+      await _tap(tester, find.text('Base currency'));
+      final Finder currSearchBtn = find.byKey(
+        const ValueKey<String>('picker-search-button'),
+      );
+      expect(currSearchBtn, findsOneWidget);
+      await tester.tap(currSearchBtn);
+      await tester.pumpAndSettle();
+      final Finder currSearchField = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      );
+      expect(
+        tester.widget<TextField>(currSearchField).focusNode?.hasFocus,
+        isTrue,
+      );
+      await tester.enterText(currSearchField, 'INR');
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('picker-search-clear')),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('INR — Indian Rupee'));
+      await tester.pumpAndSettle();
+      expect(container.settingsRepository.current.baseCurrency, 'INR');
     },
   );
 }

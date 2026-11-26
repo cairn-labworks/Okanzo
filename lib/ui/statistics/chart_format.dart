@@ -17,6 +17,17 @@ String percentageLabel(double value, double total) {
   return pct >= 10.0 ? '${pct.truncate()}%' : '${pct.toStringAsFixed(1)}%';
 }
 
+/// Consistent 1-decimal percentage share used across Home, Holding Details,
+/// and Statistics legend rows, with a `<0.1%` floor for tiny positive shares.
+String oneDecimalPercentageLabel(double part, double total) {
+  if (!part.isFinite || !total.isFinite || total <= 0.0 || part <= 0.0) {
+    return '';
+  }
+  final double pct = part / total * 100.0;
+  if (pct > 0.0 && pct < 0.1) return '<0.1%';
+  return '${pct.toStringAsFixed(1)}%';
+}
+
 /// Chooses between [fullText] and [compactText] for a donut hole of [maxWidth]
 /// given the unscaled single-line [fullTextWidth].
 ///

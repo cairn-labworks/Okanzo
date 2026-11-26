@@ -401,4 +401,91 @@ void main() {
       expect(_homeTitle('Beta'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'Portfolios distinguishes Viewing from Default and switches active portfolio on tap',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'base_currency': 'USD',
+        'last_seen_version': AppReleaseNotes.currentVersion,
+      });
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final SettingsRepository settings = SettingsRepository(prefs);
+      final _InMemoryPortfolioRepository portfolios =
+          _InMemoryPortfolioRepository(<PortfolioEntity>[
+            const PortfolioEntity(
+              id: 1,
+              name: 'Personal',
+              isDefault: true,
+              createdAt: 0,
+              updatedAt: 0,
+            ),
+            const PortfolioEntity(
+              id: 2,
+              name: 'Family Household',
+              isDefault: false,
+              createdAt: 0,
+              updatedAt: 0,
+            ),
+          ]);
+      addTearDown(settings.dispose);
+      addTearDown(portfolios.dispose);
+
+      final _TestContainer container = _TestContainer(
+        settingsRepository: settings,
+        portfolioRepository: portfolios,
+      );
+
+      await tester.pumpWidget(_shellApp(container));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Portfolios'));
+      await tester.pumpAndSettle();
+
+      final Finder personalCard = find.ancestor(
+        of: find.text('Personal'),
+        matching: find.byType(Card),
+      );
+      final Finder familyCard = find.ancestor(
+        of: find.text('Family Household'),
+        matching: find.byType(Card),
+      );
+
+      // Initially Personal is both Viewing and Default
+      expect(
+        find.descendant(of: personalCard, matching: find.text('Viewing')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: personalCard, matching: find.text('Default')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: familyCard, matching: find.text('Viewing')),
+        findsNothing,
+      );
+
+      // Tapping Family Household switches Viewing to Family Household while Default stays on Personal
+      await tester.tap(familyCard);
+      await tester.pumpAndSettle();
+      expect(settings.current.selectedPortfolioId, 2);
+      expect(
+        find.descendant(of: familyCard, matching: find.text('Viewing')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: personalCard, matching: find.text('Viewing')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: personalCard, matching: find.text('Default')),
+        findsOneWidget,
+      );
+
+      // Home immediately reflects the newly selected portfolio
+      await tester.tap(find.text('Home'));
+      await tester.pumpAndSettle();
+      expect(_homeTitle('Family Household'), findsOneWidget);
+    },
+  );
 }

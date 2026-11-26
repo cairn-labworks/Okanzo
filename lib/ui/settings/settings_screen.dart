@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,6 +20,7 @@ import '../components/form_components.dart';
 import '../components/type_icons.dart';
 import '../components/ui_components.dart';
 import '../components/whats_new_dialog.dart';
+import '../theme/motion.dart';
 import 'settings_view_model.dart';
 
 /// Appearance, currency, security, backup and about.
@@ -32,11 +36,22 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   SettingsViewModel? _viewModel;
   int? _selectedCategory;
+  bool _movingForward = true;
   bool _authenticating = false;
+
+  void _openCategory(int index) {
+    setState(() {
+      _movingForward = true;
+      _selectedCategory = index;
+    });
+  }
 
   void _back() {
     if (_selectedCategory != null) {
-      setState(() => _selectedCategory = null);
+      setState(() {
+        _movingForward = false;
+        _selectedCategory = null;
+      });
     } else {
       widget.onClose();
     }
@@ -85,34 +100,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: 'Appearance'.tr(context),
             description: 'Language, theme & colour'.tr(context),
             icon: Icons.contrast,
+            summary: settings.appearanceMode.displayName.tr(context),
             children: <Widget>[
+              _ThemeSegmentedRow(
+                selected: settings.appearanceMode,
+                onSave: viewModel.setAppearanceMode,
+              ),
               _SettingRow(
                 title: 'App language'.tr(context),
-                subtitle: 'Use device language'.tr(context),
                 value: settings.language == AppLanguage.system
                     ? 'System default'.tr(context)
                     : settings.language.displayName,
+                valueIcon: Icons.language,
                 onTap: () => _showLanguageDialog(settings.language),
-              ),
-              _SettingRow(
-                title: 'Theme'.tr(context),
-                subtitle: 'Light or Midnight dark'.tr(context),
-                value: settings.appearanceMode.displayName.tr(context),
-                onTap: () => _showThemeDialog(settings.appearanceMode),
-              ),
-              _SwitchRow(
-                title: 'Dynamic color'.tr(context),
-                subtitle: settings.appearanceMode == AppThemeMode.dark
-                    ? 'Not used in dark mode'.tr(context)
-                    : 'Use wallpaper colors in light mode (Android 12+)'.tr(
-                        context,
-                      ),
-                value:
-                    settings.dynamicColor &&
-                    settings.appearanceMode != AppThemeMode.dark,
-                onChanged: settings.appearanceMode == AppThemeMode.dark
-                    ? null
-                    : viewModel.setDynamicColor,
               ),
             ],
           ),
@@ -120,6 +120,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: 'Currency'.tr(context),
             description: 'Base currency & number display'.tr(context),
             icon: Icons.monetization_on_outlined,
+            summary: settings.baseCurrency,
             children: <Widget>[
               _SettingRow(
                 title: 'Base currency'.tr(context),
@@ -217,6 +218,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: 'About'.tr(context),
             description: 'Release notes & privacy'.tr(context),
             icon: Icons.info_outline,
+            summary: 'v${AppReleaseNotes.currentVersion}',
             children: <Widget>[
               _SettingRow(
                 title: 'Okanzo'.tr(context),
@@ -234,26 +236,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: 'Privacy policy'.tr(context),
                 onTap: _openPrivacyPolicy,
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                child: Text(
-                  <String>[
-                    'Okanzo encrypts your data on this device. Your data leaves '
-                            'it only when you export a backup. Price and '
-                            'exchange-rate lookups send only the ticker or currency code.'
-                        .tr(context),
-                    'Company/ticker search sends the text you type to Yahoo Finance.'
-                        .tr(context),
-                  ].join('\n'),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+            ],
+            footer: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+              child: Text(
+                <String>[
+                  'Okanzo encrypts your data on this device. Your data leaves '
+                          'it only when you export a backup. Price and '
+                          'exchange-rate lookups send only the ticker or currency code.'
+                      .tr(context),
+                  'Company/ticker search sends the text you type to Yahoo Finance.'
+                      .tr(context),
+                ].join('\n'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-            ],
+            ),
           ),
         ];
         final _SettingsSection? category = _selectedCategory == null
@@ -287,87 +286,196 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-            body: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
-              children: <Widget>[
-                PageHeading(category?.title ?? 'Settings'.tr(context)),
-                const SizedBox(height: 28),
-                if (category != null)
-                  ...category.children
-                else ...<Widget>[
-                  Card(
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(
-                      children: <Widget>[
-                        for (int i = 0; i < categories.length; i++) ...<Widget>[
-                          if (i > 0) const Divider(indent: 16, endIndent: 16),
-                          ListTile(
-                            key: ValueKey<String>('settings-category-$i'),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                            ),
-                            minVerticalPadding: 16,
-                            horizontalTitleGap: 12,
-                            leading: Container(
-                              width: 34,
-                              height: 34,
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.secondaryContainer,
-                                borderRadius: BorderRadius.circular(12),
+            body: Builder(
+              builder: (BuildContext context) {
+                final Key pageKey = ValueKey<int?>(_selectedCategory);
+                final Widget pageContent = ListView(
+                  key: pageKey,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 26,
+                    vertical: 12,
+                  ),
+                  children: <Widget>[
+                    PageHeading(category?.title ?? 'Settings'.tr(context)),
+                    const SizedBox(height: 28),
+                    if (category != null) ...<Widget>[
+                      Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          children: <Widget>[
+                            for (
+                              int i = 0;
+                              i < category.children.length;
+                              i++
+                            ) ...<Widget>[
+                              if (i > 0)
+                                const Divider(indent: 16, endIndent: 16),
+                              category.children[i],
+                            ],
+                          ],
+                        ),
+                      ),
+                      ?category.footer,
+                    ] else ...<Widget>[
+                      Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          children: <Widget>[
+                            for (
+                              int i = 0;
+                              i < categories.length;
+                              i++
+                            ) ...<Widget>[
+                              if (i > 0)
+                                const Divider(indent: 16, endIndent: 16),
+                              ListTile(
+                                key: ValueKey<String>('settings-category-$i'),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                minVerticalPadding: 16,
+                                horizontalTitleGap: 12,
+                                leading: Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.secondaryContainer,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    categories[i].icon,
+                                    size: 20,
+                                    color: theme.colorScheme.secondary,
+                                  ),
+                                ),
+                                title: Text(
+                                  categories[i].title,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  categories[i].description,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                trailing:
+                                    categories[i].summary != null &&
+                                        MediaQuery.sizeOf(context).width >=
+                                            350 &&
+                                        MediaQuery.textScalerOf(context)
+                                                .scale(12) <=
+                                            18
+                                    ? Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: <Widget>[
+                                          ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              maxWidth: 76,
+                                            ),
+                                            child: Text(
+                                              categories[i].summary!,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: theme.textTheme.labelSmall
+                                                  ?.copyWith(
+                                                    color: theme
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Icon(
+                                            Icons.chevron_right,
+                                            size: 18,
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                        ],
+                                      )
+                                    : Icon(
+                                        Icons.chevron_right,
+                                        size: 18,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                onTap: () => _openCategory(i),
                               ),
-                              child: Icon(
-                                categories[i].icon,
-                                size: 20,
-                                color: theme.colorScheme.secondary,
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: <Widget>[
+                          Icon(
+                            Icons.lock_outline,
+                            size: 14,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Private by design. Stored on your device.'.tr(
+                                context,
                               ),
-                            ),
-                            title: Text(
-                              categories[i].title,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            subtitle: Text(
-                              categories[i].description,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
-                            trailing: Icon(
-                              Icons.chevron_right,
-                              size: 18,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            onTap: () => setState(() => _selectedCategory = i),
                           ),
                         ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: <Widget>[
-                      Icon(
-                        Icons.lock_outline,
-                        size: 14,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Private by design. Stored on your device.'.tr(
-                            context,
-                          ),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
                       ),
                     ],
+                    const SizedBox(height: 24),
+                  ],
+                );
+                if (MediaQuery.disableAnimationsOf(context)) {
+                  return pageContent;
+                }
+                return ClipRect(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 240),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    layoutBuilder:
+                        (Widget? currentChild, List<Widget> previousChildren) =>
+                            Stack(
+                              alignment: Alignment.topCenter,
+                              children: <Widget>[
+                                ...previousChildren,
+                                ?currentChild,
+                              ],
+                            ),
+                    transitionBuilder:
+                        (Widget child, Animation<double> animation) {
+                          final bool isRtl =
+                              Directionality.of(context) == TextDirection.rtl;
+                          final double dir =
+                              (_movingForward ? 1.0 : -1.0) *
+                              (isRtl ? -1.0 : 1.0);
+                          final bool isIncoming = child.key == pageKey;
+                          final Offset beginOffset = isIncoming
+                              ? Offset(0.14 * dir, 0)
+                              : Offset(-0.08 * dir, 0);
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: beginOffset,
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          );
+                        },
+                    child: pageContent,
                   ),
-                ],
-                const SizedBox(height: 24),
-              ],
+                );
+              },
             ),
           ),
         );
@@ -429,11 +537,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _showLanguageDialog(AppLanguage selected) => showDialog<void>(
-    context: context,
-    builder: (_) =>
-        _LanguageDialog(selected: selected, onSave: _viewModel!.setLanguage),
-  );
+  Future<void> _showLanguageDialog(AppLanguage selected) {
+    final bool dark = Theme.of(context).brightness == Brightness.dark;
+    return showDialog<void>(
+      context: context,
+      barrierColor: dark ? const Color(0xAA10231B) : const Color(0x7310231B),
+      builder: (_) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+        child: _LanguageDialog(
+          selected: selected,
+          onSave: _viewModel!.setLanguage,
+        ),
+      ),
+    );
+  }
 
   Future<void> _onAppLockChanged(bool enabled) async {
     if (await _confirmIdentity("Confirm it's you to change app lock") &&
@@ -459,12 +576,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) setState(() => _authenticating = false);
     }
   }
-
-  Future<void> _showThemeDialog(AppThemeMode selected) => showDialog<void>(
-    context: context,
-    builder: (_) =>
-        _ThemeDialog(selected: selected, onSave: _viewModel!.setAppearanceMode),
-  );
 
   Future<void> _showCurrencyPicker(String selected) async {
     final String? code = await showCurrencyPickerDialog(
@@ -549,24 +660,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-class _ThemeDialog extends StatefulWidget {
-  const _ThemeDialog({required this.selected, required this.onSave});
+class _ThemeSegmentedRow extends StatefulWidget {
+  const _ThemeSegmentedRow({required this.selected, required this.onSave});
 
   final AppThemeMode selected;
   final Future<void> Function(AppThemeMode) onSave;
 
   @override
-  State<_ThemeDialog> createState() => _ThemeDialogState();
+  State<_ThemeSegmentedRow> createState() => _ThemeSegmentedRowState();
 }
 
-class _ThemeDialogState extends State<_ThemeDialog> {
+class _ThemeSegmentedRowState extends State<_ThemeSegmentedRow> {
+  static const List<AppThemeMode> _modes = <AppThemeMode>[
+    AppThemeMode.light,
+    AppThemeMode.dark,
+    AppThemeMode.system,
+  ];
+
   bool _saving = false;
   String? _error;
 
-  Future<void> _select(AppThemeMode? mode) async {
-    if (mode == null || _saving) return;
+  static IconData _iconFor(AppThemeMode mode) => switch (mode) {
+    AppThemeMode.light => Icons.wb_sunny_outlined,
+    AppThemeMode.dark => Icons.dark_mode_outlined,
+    AppThemeMode.system => Icons.brightness_auto_outlined,
+  };
+
+  Future<void> _select(AppThemeMode mode) async {
+    if (_saving) return;
     if (mode == widget.selected) {
-      Navigator.of(context).pop();
+      if (_error != null) setState(() => _error = null);
       return;
     }
     setState(() {
@@ -575,7 +698,7 @@ class _ThemeDialogState extends State<_ThemeDialog> {
     });
     try {
       await widget.onSave(mode);
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) setState(() => _saving = false);
     } on Object catch (error) {
       if (!mounted) return;
       setState(() {
@@ -586,51 +709,162 @@ class _ThemeDialogState extends State<_ThemeDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !_saving,
-    child: AlertDialog(
-      title: Text('Theme'.tr(context)),
-      scrollable: true,
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+    final int selectedIndex = _modes.indexOf(widget.selected).clamp(0, 2);
+    // Maps 0 -> -1.0 (start), 1 -> 0.0 (center), 2 -> 1.0 (end).
+    final double alignmentX = (selectedIndex - 1).toDouble();
+    final bool compactIcons =
+        MediaQuery.sizeOf(context).width >= 350 &&
+        MediaQuery.textScalerOf(context).scale(12) <= 18;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          RadioGroup<AppThemeMode>(
-            groupValue: widget.selected,
-            onChanged: _select,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                for (final AppThemeMode mode in AppThemeMode.values)
-                  RadioListTile<AppThemeMode>(
-                    key: ValueKey<AppThemeMode>(mode),
-                    value: mode,
-                    enabled: !_saving,
-                    title: Text(mode.displayName.tr(context)),
-                    subtitle: mode == AppThemeMode.dark
-                        ? Text('Midnight'.tr(context))
-                        : null,
-                  ),
-              ],
+          Text('Theme'.tr(context), style: theme.textTheme.bodyMedium),
+          const SizedBox(height: 3),
+          Text(
+            'Light or Midnight dark'.tr(context),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
             ),
           ),
-          if (_saving) const LinearProgressIndicator(),
-          if (_error != null)
+          const SizedBox(height: 12),
+          DecoratedBox(
+            key: const ValueKey<String>('settings-theme-segmented'),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: canvasBoxBorderColor(colors)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(3),
+              child: Stack(
+                children: <Widget>[
+                  Positioned.fill(
+                    child: AnimatedAlign(
+                      alignment: AlignmentDirectional(alignmentX, 0),
+                      duration: interactionDuration(context),
+                      curve: interactionCurve,
+                      child: FractionallySizedBox(
+                        widthFactor: 1 / 3,
+                        heightFactor: 1.0,
+                        child: DecoratedBox(
+                          key: const ValueKey<String>('settings-theme-thumb'),
+                          decoration: BoxDecoration(
+                            color: colors.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(11),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: <Widget>[
+                      for (final AppThemeMode mode in _modes)
+                        Expanded(
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: Semantics(
+                              selected: widget.selected == mode,
+                              button: true,
+                              enabled: !_saving,
+                              child: InkWell(
+                                key: ValueKey<AppThemeMode>(mode),
+                                borderRadius: BorderRadius.circular(11),
+                                onTap: _saving ? null : () => _select(mode),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    minHeight: 44,
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 8,
+                                    ),
+                                    child: Center(
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: <Widget>[
+                                          if (compactIcons) ...<Widget>[
+                                            Icon(
+                                              _iconFor(mode),
+                                              size: 15,
+                                              color: widget.selected == mode
+                                                  ? colors.primary
+                                                  : colors.onSurfaceVariant,
+                                            ),
+                                            const SizedBox(width: 5),
+                                          ],
+                                          Flexible(
+                                            child: AnimatedDefaultTextStyle(
+                                              duration: interactionDuration(
+                                                context,
+                                              ),
+                                              curve: interactionCurve,
+                                              style:
+                                                  (theme.textTheme.bodySmall ??
+                                                          const TextStyle())
+                                                      .copyWith(
+                                                        color:
+                                                            widget.selected ==
+                                                                mode
+                                                            ? colors.onSurface
+                                                            : colors
+                                                                  .onSurfaceVariant,
+                                                        fontWeight:
+                                                            widget.selected ==
+                                                                mode
+                                                            ? FontWeight.w600
+                                                            : FontWeight.w500,
+                                                      ),
+                                              child: Text(
+                                                mode == AppThemeMode.system
+                                                    ? 'System'.tr(context)
+                                                    : mode.displayName.tr(
+                                                        context,
+                                                      ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_saving) ...<Widget>[
+            const SizedBox(height: 8),
+            const LinearProgressIndicator(),
+          ],
+          if (_error != null) ...<Widget>[
+            const SizedBox(height: 8),
             Text(
               "Couldn't save theme: {error}"
                   .tr(context)
                   .replaceAll('{error}', _error!),
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              style: theme.textTheme.bodySmall?.copyWith(color: colors.error),
             ),
+          ],
         ],
       ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: _saving ? null : () => Navigator.of(context).pop(),
-          child: Text('Close'.tr(context)),
-        ),
-      ],
-    ),
-  );
+    );
+  }
 }
 
 class _LanguageDialog extends StatefulWidget {
@@ -644,8 +878,54 @@ class _LanguageDialog extends StatefulWidget {
 }
 
 class _LanguageDialogState extends State<_LanguageDialog> {
+  final TextEditingController _query = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  final ScrollController _scroll = ScrollController();
+  bool _searchOpen = false;
   bool _saving = false;
   String? _error;
+
+  @override
+  void dispose() {
+    _query.dispose();
+    _searchFocus.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _toggleSearch() {
+    if (_saving) return;
+    if (_searchOpen) {
+      setState(() {
+        _query.clear();
+        _searchOpen = false;
+      });
+    } else {
+      setState(() => _searchOpen = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _searchFocus.requestFocus();
+      });
+    }
+  }
+
+  String _labelFor(BuildContext context, AppLanguage language) =>
+      language == AppLanguage.system
+      ? 'Use device language'.tr(context)
+      : language.displayName;
+
+  List<AppLanguage> _filteredLanguages(BuildContext context) {
+    final String needle = _query.text.trim().toLowerCase();
+    if (needle.isEmpty) return AppLanguage.values;
+    return AppLanguage.values
+        .where((AppLanguage language) {
+          final String label = _labelFor(context, language).toLowerCase();
+          return label.contains(needle) ||
+              language.displayName.toLowerCase().contains(needle) ||
+              language.name.toLowerCase().contains(needle) ||
+              language.storageName.toLowerCase().contains(needle);
+        })
+        .toList(growable: false);
+  }
 
   Future<void> _select(AppLanguage? language) async {
     if (language == null || _saving) return;
@@ -670,66 +950,237 @@ class _LanguageDialogState extends State<_LanguageDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !_saving,
-    child: AlertDialog(
-      title: Text('App language'.tr(context)),
-      content: SizedBox(
-        width: 400,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+    final Color boxBorder = canvasBoxBorderColor(colors);
+    final String searchLabel = 'Search'.tr(context);
+    final OutlineInputBorder searchBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: boxBorder),
+    );
+    final List<AppLanguage> results = _filteredLanguages(context);
+
+    return PopScope(
+      canPop: !_saving,
+      child: AlertDialog(
+        backgroundColor: colors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: boxBorder),
+        ),
+        titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 6, 24, 12),
+        title: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Flexible(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 420),
-                child: ClipRect(
-                  child: Material(
-                    type: MaterialType.transparency,
-                    clipBehavior: Clip.hardEdge,
-                    child: RadioGroup<AppLanguage>(
-                      groupValue: widget.selected,
-                      onChanged: _select,
-                      child: ListView(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        children: <Widget>[
-                          for (final AppLanguage language in AppLanguage.values)
-                            RadioListTile<AppLanguage>(
-                              key: ValueKey<AppLanguage>(language),
-                              value: language,
-                              enabled: !_saving,
-                              title: Text(
-                                language == AppLanguage.system
-                                    ? 'Use device language'.tr(context)
-                                    : language.displayName,
-                              ),
-                            ),
-                        ],
-                      ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    'Appearance'.tr(context).toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.35,
+                      color: colors.onSurfaceVariant,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'App language'.tr(context),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.6,
+                      height: 1.25,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                ],
               ),
             ),
-            if (_saving) const LinearProgressIndicator(),
-            if (_error != null)
-              Text(
-                "Couldn't save app language: {error}"
-                    .tr(context)
-                    .replaceAll('{error}', _error!),
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+            const SizedBox(width: 8),
+            IconButton(
+              key: const ValueKey<String>('picker-search-button'),
+              tooltip: searchLabel,
+              onPressed: _saving ? null : _toggleSearch,
+              style: IconButton.styleFrom(
+                backgroundColor: _searchOpen
+                    ? colors.secondaryContainer
+                    : colors.surfaceContainerLow,
+                foregroundColor: _searchOpen
+                    ? colors.primary
+                    : colors.onSurfaceVariant,
+                visualDensity: VisualDensity.compact,
               ),
+              icon: const Icon(Icons.search, size: 19),
+            ),
           ],
         ),
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: _saving ? null : () => Navigator.of(context).pop(),
-          child: Text('Close'.tr(context)),
+        content: SizedBox(
+          width: 375,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              DisclosureSize(
+                child: !_searchOpen
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Semantics(
+                          label: searchLabel,
+                          child: TextField(
+                            controller: _query,
+                            focusNode: _searchFocus,
+                            enabled: !_saving,
+                            onChanged: (_) => setState(() {}),
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: colors.onSurface,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: searchLabel,
+                              hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                                color: colors.onSurfaceVariant,
+                              ),
+                              prefixIcon: Icon(
+                                Icons.search,
+                                size: 18,
+                                color: colors.onSurfaceVariant,
+                              ),
+                              suffixIcon: _query.text.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      key: const ValueKey<String>(
+                                        'picker-search-clear',
+                                      ),
+                                      tooltip: 'Clear filter'.tr(context),
+                                      visualDensity: VisualDensity.compact,
+                                      onPressed: () {
+                                        _query.clear();
+                                        setState(() {});
+                                        _searchFocus.requestFocus();
+                                      },
+                                      icon: const Icon(Icons.close, size: 18),
+                                    ),
+                              filled: true,
+                              fillColor: theme.brightness == Brightness.dark
+                                  ? colors.surfaceContainerLow
+                                  : colors.surfaceContainerLowest,
+                              border: searchBorder,
+                              enabledBorder: searchBorder,
+                              focusedBorder: searchBorder.copyWith(
+                                borderSide: BorderSide(
+                                  color: colors.primary,
+                                  width: 1.5,
+                                ),
+                              ),
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 13,
+                                vertical: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 342),
+                  child: results.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 16,
+                          ),
+                          child: Text(
+                            'No matching options.'.tr(context),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      : ClipRect(
+                          child: Material(
+                            type: MaterialType.transparency,
+                            clipBehavior: Clip.hardEdge,
+                            child: Scrollbar(
+                              controller: _scroll,
+                              child: RadioGroup<AppLanguage>(
+                                groupValue: widget.selected,
+                                onChanged: _select,
+                                child: ListView(
+                                  controller: _scroll,
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  children: <Widget>[
+                                    for (final AppLanguage language in results)
+                                      RadioListTile<AppLanguage>(
+                                        key: ValueKey<AppLanguage>(language),
+                                        value: language,
+                                        enabled: !_saving,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                            ),
+                                        title: Text(
+                                          _labelFor(context, language),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+              if (_saving) const LinearProgressIndicator(),
+              if (_error != null) ...<Widget>[
+                const SizedBox(height: 8),
+                Text(
+                  "Couldn't save app language: {error}"
+                      .tr(context)
+                      .replaceAll('{error}', _error!),
+                  style: TextStyle(color: colors.error),
+                ),
+              ],
+            ],
+          ),
         ),
-      ],
-    ),
-  );
+        actions: <Widget>[
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: _saving ? null : () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: colors.onSurfaceVariant,
+                minimumSize: const Size.fromHeight(48),
+                textStyle: theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              child: Text('Close'.tr(context)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SettingsSection {
@@ -738,12 +1189,16 @@ class _SettingsSection {
     required this.description,
     required this.icon,
     required this.children,
+    this.summary,
+    this.footer,
   });
 
   final String title;
   final String description;
   final IconData icon;
+  final String? summary;
   final List<Widget> children;
+  final Widget? footer;
 }
 
 class _SettingRow extends StatelessWidget {
@@ -766,43 +1221,41 @@ class _SettingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outlineVariant,
-            width: 0.5,
-          ),
-        ),
+    final double maxPillWidth = math.min(
+      184,
+      MediaQuery.sizeOf(context).width * 0.46,
+    );
+    return ListTile(
+      title: Text(title),
+      subtitle: subtitle == null ? null : Text(subtitle!),
+      titleTextStyle: theme.textTheme.bodyMedium,
+      subtitleTextStyle: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
       ),
-      child: ListTile(
-        title: Text(title),
-        subtitle: subtitle == null ? null : Text(subtitle!),
-        titleTextStyle: theme.textTheme.bodyMedium,
-        subtitleTextStyle: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-        contentPadding: EdgeInsets.zero,
-        minVerticalPadding: 16,
-        onTap: onTap,
-        trailing:
-            trailing ??
-            (value != null
-                ? ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 120),
-                    child: onTap == null
-                        ? Text(
-                            value!,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          )
-                        : PickerChip(label: value!, icon: valueIcon),
-                  )
-                : onTap == null
-                ? null
-                : const Icon(Icons.chevron_right, size: 18)),
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      minVerticalPadding: 16,
+      onTap: onTap,
+      trailing:
+          trailing ??
+          (value != null
+              ? ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxPillWidth),
+                  child: onTap == null
+                      ? Text(
+                          value!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        )
+                      : PickerChip(label: value!, icon: valueIcon),
+                )
+              : onTap == null
+              ? null
+              : Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: theme.colorScheme.onSurfaceVariant,
+                )),
     );
   }
 }
@@ -823,27 +1276,17 @@ class _SwitchRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.outlineVariant,
-            width: 0.5,
-          ),
+    return SwitchListTile(
+      title: Text(title, style: theme.textTheme.bodyMedium),
+      subtitle: Text(
+        subtitle,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
-      child: SwitchListTile(
-        title: Text(title, style: theme.textTheme.bodyMedium),
-        subtitle: Text(
-          subtitle,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        contentPadding: EdgeInsets.zero,
-        value: value,
-        onChanged: onChanged,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      value: value,
+      onChanged: onChanged,
     );
   }
 }

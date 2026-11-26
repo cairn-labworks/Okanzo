@@ -27,6 +27,7 @@ class HomeState {
     this.portfolios = const <PortfolioEntity>[],
     this.activePortfolio,
     this.baseCurrency = 'USD',
+    this.displayInUsd = false,
     NetWorthSummary? summary,
     this.assetGroups = const <AssetCategoryGroup>[],
     this.liabilityGroups = const <LiabilityCategoryGroup>[],
@@ -39,6 +40,7 @@ class HomeState {
   final List<PortfolioEntity> portfolios;
   final PortfolioEntity? activePortfolio;
   final String baseCurrency;
+  final bool displayInUsd;
   final NetWorthSummary? _summary;
   final List<AssetCategoryGroup> assetGroups;
   final List<LiabilityCategoryGroup> liabilityGroups;
@@ -46,8 +48,11 @@ class HomeState {
   final bool hideBalances;
   final bool simpleNetWorth;
 
+  String get displayCurrency =>
+      displayInUsd && baseCurrency != 'USD' ? 'USD' : baseCurrency;
+
   NetWorthSummary get summary =>
-      _summary ?? NetWorthSummary.empty(baseCurrency);
+      _summary ?? NetWorthSummary.empty(displayCurrency);
 
   bool get hasAnyAssets => assetGroups.isNotEmpty;
 
@@ -93,6 +98,7 @@ class HomeViewModel extends ChangeNotifier {
   int? _defaultPortfolioId;
   int? _watchedPortfolioId;
   bool _refreshing = false;
+  bool _displayInUsd = false;
   bool _loadedPortfolios = false;
 
   HomeState _state = const HomeState();
@@ -107,6 +113,9 @@ class HomeViewModel extends ChangeNotifier {
     _settingsSub = _settingsRepository.settings.listen((AppSettings settings) {
       final AppSettings? previous = _settings;
       _settings = settings;
+      if (previous != null && previous.baseCurrency != settings.baseCurrency) {
+        _displayInUsd = false;
+      }
       if (previous != null &&
           previous.selectedPortfolioId == settings.selectedPortfolioId &&
           previous.baseCurrency == settings.baseCurrency &&
@@ -167,6 +176,12 @@ class HomeViewModel extends ChangeNotifier {
 
   void toggleHideBalances() =>
       unawaited(_settingsRepository.setHideBalances(!_state.hideBalances));
+
+  void toggleDisplayCurrency() {
+    if (_state.baseCurrency == 'USD') return;
+    _displayInUsd = !_displayInUsd;
+    _rebuild();
+  }
 
   Future<void> refresh() async {
     final PortfolioEntity? active = _state.activePortfolio;
@@ -236,11 +251,18 @@ class HomeViewModel extends ChangeNotifier {
     );
     _watchPortfolio(active?.id);
 
+    final bool effectiveDisplayUsd =
+        _displayInUsd && settings.baseCurrency != 'USD';
+    final String effectiveCurrency = effectiveDisplayUsd
+        ? 'USD'
+        : settings.baseCurrency;
+
     if (active == null) {
       _state = HomeState(
         loading: false,
         portfolios: _portfolios,
         baseCurrency: settings.baseCurrency,
+        displayInUsd: effectiveDisplayUsd,
         isRefreshing: _refreshing,
         hideBalances: settings.hideBalances,
         simpleNetWorth: settings.simpleNetWorth,
@@ -252,7 +274,7 @@ class HomeViewModel extends ChangeNotifier {
     final NetWorthSummary summary = _calculator.calculate(
       assets: _assets,
       liabilities: _liabilities,
-      baseCurrency: settings.baseCurrency,
+      baseCurrency: effectiveCurrency,
       converter: _converter,
     );
 
@@ -261,9 +283,10 @@ class HomeViewModel extends ChangeNotifier {
       portfolios: _portfolios,
       activePortfolio: active,
       baseCurrency: settings.baseCurrency,
+      displayInUsd: effectiveDisplayUsd,
       summary: summary,
-      assetGroups: _buildAssetGroups(active.id, settings.baseCurrency),
-      liabilityGroups: _buildLiabilityGroups(active.id, settings.baseCurrency),
+      assetGroups: _buildAssetGroups(active.id, effectiveCurrency),
+      liabilityGroups: _buildLiabilityGroups(active.id, effectiveCurrency),
       isRefreshing: _refreshing,
       hideBalances: settings.hideBalances,
       simpleNetWorth: settings.simpleNetWorth,
