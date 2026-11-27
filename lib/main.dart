@@ -40,13 +40,12 @@ Future<void> main() async {
   final AppLockCoordinator appLock = AppLockCoordinator(
     authenticator: authenticator,
   );
-  if (!Platform.isAndroid) {
-    unawaited(
-      ScreenshotProtection.setEnabled(
-        settingsRepository.current.blockScreenshots,
-      ).catchError((Object _) {}),
-    );
-  }
+  // MainActivity.onCreate applies FLAG_SECURE before Frame 1 on cold Android
+  // launch; keep a non-blocking sync here too so Dart-only restarts stay aligned.
+  unawaited(
+    ScreenshotProtection.setEnabled(settingsRepository.current.blockScreenshots)
+        .catchError((Object _) {}),
+  );
 
   final Future<AppContainer> containerFuture = AppContainer.create(
     preferences: preferences,

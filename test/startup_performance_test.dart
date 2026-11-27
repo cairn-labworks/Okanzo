@@ -138,6 +138,53 @@ class _DelayedHoldingsLiabilityRepository extends Fake
       Stream<List<LiabilityEntity>>.fromFuture(initial.future);
 }
 
+class _MultiPortfolioAssetRepository extends Fake implements AssetRepository {
+  final Map<int, Completer<List<AssetEntity>>> completers =
+      <int, Completer<List<AssetEntity>>>{
+        1: Completer<List<AssetEntity>>(),
+        2: Completer<List<AssetEntity>>(),
+      };
+
+  @override
+  Stream<List<AssetEntity>> observeForPortfolio(int portfolioId) =>
+      Stream<List<AssetEntity>>.fromFuture(completers[portfolioId]!.future);
+}
+
+class _MultiPortfolioLiabilityRepository extends Fake
+    implements LiabilityRepository {
+  final Map<int, Completer<List<LiabilityEntity>>> completers =
+      <int, Completer<List<LiabilityEntity>>>{
+        1: Completer<List<LiabilityEntity>>(),
+        2: Completer<List<LiabilityEntity>>(),
+      };
+
+  @override
+  Stream<List<LiabilityEntity>> observeForPortfolio(int portfolioId) =>
+      Stream<List<LiabilityEntity>>.fromFuture(completers[portfolioId]!.future);
+}
+
+class _DecoupledFreshPortfolioRepository extends Fake
+    implements PortfolioRepository {
+  final StreamController<List<PortfolioEntity>> controller =
+      StreamController<List<PortfolioEntity>>.broadcast();
+  final Completer<int> ensureCompleter = Completer<int>();
+  int ensureCalls = 0;
+
+  @override
+  Stream<List<PortfolioEntity>> observeAll() async* {
+    yield const <PortfolioEntity>[];
+    yield* controller.stream;
+  }
+
+  @override
+  Future<int> ensureDefaultPortfolio([String defaultName = 'My Portfolio']) {
+    ensureCalls++;
+    return ensureCompleter.future;
+  }
+
+  Future<void> dispose() => controller.close();
+}
+
 class _SequencedFxRepository extends Fake implements FxRepository {
   int ensureFreshCalls = 0;
 
@@ -210,6 +257,22 @@ void main() {
         ...upToDate.queried,
       ].any((String s) => s.toUpperCase().contains('JOURNAL_MODE')),
       isTrue,
+    );
+    expect(
+      upToDate.executed.any(
+        (String s) =>
+            RegExp(r'SYNCHRONOUS\s*=\s*FULL', caseSensitive: false).hasMatch(s),
+      ),
+      isTrue,
+    );
+    expect(
+      upToDate.executed.any(
+        (String s) => RegExp(
+          r'SYNCHRONOUS\s*=\s*NORMAL',
+          caseSensitive: false,
+        ).hasMatch(s),
+      ),
+      isFalse,
     );
 
     // Fresh database (version 0) still creates all tables and stamps schemaVersion.
@@ -311,6 +374,220 @@ void main() {
     expect(readyStates, isNotEmpty);
     expect(readyStates.first.summary.netWorth, 2000);
     expect(fx.ensureFreshCalls, 1);
+  });
+
+  test('HomeViewModel publishes loading state with new active portfolio and live settings during portfolio switch', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'base_currency': 'USD',
+    });
+    final SettingsRepository settings = SettingsRepository(
+      await SharedPreferences.getInstance(),
+    );
+    addTearDown(settings.dispose);
+
+    final _CountingPortfolioRepository portfolios =
+        _CountingPortfolioRepository(const <PortfolioEntity>[
+          PortfolioEntity(
+            id: 1,
+            name: 'Personal',
+            isDefault: true,
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+          PortfolioEntity(
+            id: 2,
+            name: 'Retirement',
+            isDefault: false,
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+        ]);
+    addTearDown(portfolios.dispose);
+    final _MultiPortfolioAssetRepository assets =
+        _MultiPortfolioAssetRepository();
+    final _MultiPortfolioLiabilityRepository liabilities =
+        _MultiPortfolioLiabilityRepository();
+    final _SequencedFxRepository fx = _SequencedFxRepository();
+
+    final HomeViewModel vm = HomeViewModel(
+      settingsRepository: settings,
+      portfolioRepository: portfolios,
+      assetRepository: assets,
+      liabilityRepository: liabilities,
+      fxRepository: fx,
+    );
+    addTearDown(vm.dispose);
+
+    assets.completers[1]!.complete(const <AssetEntity>[
+      AssetEntity(
+        id: 1,
+        portfolioId: 1,
+        type: AssetType.cash,
+        name: 'Checking',
+        currency: 'USD',
+        manualValue: 2500,
+        createdAt: 0,
+        updatedAt: 0,
+      ),
+    ]);
+    liabilities.completers[1]!.complete(const <LiabilityEntity>[
+      LiabilityEntity(
+        id: 1,
+        portfolioId: 1,
+        type: LiabilityType.loan,
+        name: 'Card',
+        currency: 'USD',
+        amount: 500,
+        createdAt: 0,
+        updatedAt: 0,
+      ),
+    ]);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(vm.state.loading, isFalse);
+    expect(vm.state.activePortfolio?.id, 1);
+    expect(vm.state.summary.netWorth, 2000);
+    expect(vm.state.hideBalances, isFalse);
+
+    // Switch to portfolio 2 while its holdings queries are still pending.
+    vm.selectPortfolio(2);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(vm.state.loading, isTrue);
+    expect(vm.state.activePortfolio?.id, 2);
+
+    // Privacy toggle updates immediately even while portfolio 2 holdings load.
+    vm.toggleHideBalances();
+    await Future<void>.delayed(Duration.zero);
+    expect(vm.state.loading, isTrue);
+    expect(vm.state.hideBalances, isTrue);
+
+    assets.completers[2]!.complete(const <AssetEntity>[
+      AssetEntity(
+        id: 2,
+        portfolioId: 2,
+        type: AssetType.cash,
+        name: 'IRA',
+        currency: 'USD',
+        manualValue: 9000,
+        createdAt: 0,
+        updatedAt: 0,
+      ),
+    ]);
+    liabilities.completers[2]!.complete(const <LiabilityEntity>[
+      LiabilityEntity(
+        id: 2,
+        portfolioId: 2,
+        type: LiabilityType.loan,
+        name: 'Margin',
+        currency: 'USD',
+        amount: 1000,
+        createdAt: 0,
+        updatedAt: 0,
+      ),
+    ]);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(vm.state.loading, isFalse);
+    expect(vm.state.activePortfolio?.id, 2);
+    expect(vm.state.hideBalances, isTrue);
+    expect(vm.state.summary.netWorth, 8000);
+  });
+
+  test('HomeViewModel waits for observeAll and holdings after ensureDefaultPortfolio and handles disposal cleanly', () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{
+      'base_currency': 'USD',
+    });
+    final SettingsRepository settings = SettingsRepository(
+      await SharedPreferences.getInstance(),
+    );
+    addTearDown(settings.dispose);
+
+    // Part 1: ensureDefaultPortfolio finishes BEFORE observeAll delivers the row.
+    final _DecoupledFreshPortfolioRepository freshPortfolios =
+        _DecoupledFreshPortfolioRepository();
+    addTearDown(freshPortfolios.dispose);
+    final _DelayedHoldingsAssetRepository assets =
+        _DelayedHoldingsAssetRepository();
+    final _DelayedHoldingsLiabilityRepository liabilities =
+        _DelayedHoldingsLiabilityRepository();
+    final _SequencedFxRepository fx = _SequencedFxRepository();
+
+    final HomeViewModel vm = HomeViewModel(
+      settingsRepository: settings,
+      portfolioRepository: freshPortfolios,
+      assetRepository: assets,
+      liabilityRepository: liabilities,
+      fxRepository: fx,
+    );
+    addTearDown(vm.dispose);
+
+    await Future<void>.delayed(Duration.zero);
+    expect(freshPortfolios.ensureCalls, 1);
+    expect(vm.state.loading, isTrue);
+    expect(fx.ensureFreshCalls, 0);
+
+    // ensureDefaultPortfolio resolves BEFORE observeAll delivers the created row.
+    freshPortfolios.ensureCompleter.complete(1);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    // Must NOT mark empty Home ready or start FX prematurely!
+    expect(vm.state.loading, isTrue);
+    expect(fx.ensureFreshCalls, 0);
+
+    // Now observeAll delivers the newly created default portfolio.
+    freshPortfolios.controller.add(const <PortfolioEntity>[
+      PortfolioEntity(
+        id: 1,
+        name: 'My Portfolio',
+        isDefault: true,
+        createdAt: 0,
+        updatedAt: 0,
+      ),
+    ]);
+    await Future<void>.delayed(Duration.zero);
+    expect(vm.state.loading, isTrue);
+    expect(vm.state.activePortfolio?.id, 1);
+    expect(fx.ensureFreshCalls, 0);
+
+    assets.initial.complete(const <AssetEntity>[]);
+    liabilities.initial.complete(const <LiabilityEntity>[]);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(vm.state.loading, isFalse);
+    expect(vm.state.activePortfolio?.id, 1);
+    expect(fx.ensureFreshCalls, 1);
+
+    // Part 2: Disposing while ensureDefaultPortfolio is pending must not notify after dispose.
+    final _DecoupledFreshPortfolioRepository pendingCreate =
+        _DecoupledFreshPortfolioRepository();
+    addTearDown(pendingCreate.dispose);
+    int postDisposeNotifications = 0;
+    bool disposed = false;
+    final HomeViewModel disposableVm = HomeViewModel(
+      settingsRepository: settings,
+      portfolioRepository: pendingCreate,
+      assetRepository: _DelayedHoldingsAssetRepository(),
+      liabilityRepository: _DelayedHoldingsLiabilityRepository(),
+      fxRepository: _SequencedFxRepository(),
+    );
+    disposableVm.addListener(() {
+      if (disposed) postDisposeNotifications++;
+    });
+    await Future<void>.delayed(Duration.zero);
+    expect(pendingCreate.ensureCalls, 1);
+
+    disposed = true;
+    disposableVm.dispose();
+    pendingCreate.ensureCompleter.complete(1);
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+    expect(postDisposeNotifications, 0);
   });
 
   testWidgets(

@@ -58,7 +58,7 @@ class AppDatabase {
   static Future<void> prepareOpen(Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
     await db.rawQuery('PRAGMA journal_mode = WAL');
-    await db.execute('PRAGMA synchronous = NORMAL');
+    await db.execute('PRAGMA synchronous = FULL');
     final int currentVersion =
         Sqflite.firstIntValue(await db.rawQuery('PRAGMA user_version')) ?? 0;
 

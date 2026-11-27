@@ -107,6 +107,9 @@ void main() {
           await bootstrap.setLanguage(AppLanguage.english);
           await bootstrap.setLastSeenVersion(AppReleaseNotes.currentVersion);
           expect(bootstrap.current.blockScreenshots, isTrue);
+          await ScreenshotProtection.setEnabled(
+            bootstrap.current.blockScreenshots,
+          );
         } finally {
           await bootstrap.dispose();
         }
@@ -121,7 +124,9 @@ void main() {
 
         expect(container.settingsRepository.current.blockScreenshots, isTrue);
         expect(await ScreenshotProtection.isEnabled(), isTrue);
-        passed('default-on state sets native FLAG_SECURE on startup');
+        passed(
+          'default-on preference keeps live FLAG_SECURE enabled across Dart startup fixture',
+        );
 
         await _tap(tester, find.byTooltip('Settings'));
         expect(find.byType(SettingsScreen), findsOneWidget);

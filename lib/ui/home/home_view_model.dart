@@ -114,6 +114,7 @@ class HomeViewModel extends ChangeNotifier {
   bool _loadedLiabilities = false;
   bool _ensuringDefaultPortfolio = false;
   bool _startedBackgroundFxCheck = false;
+  bool _disposed = false;
 
   HomeState _state = const HomeState();
   String? _message;
@@ -153,18 +154,16 @@ class HomeViewModel extends ChangeNotifier {
           unawaited(_settingsRepository.setSelectedPortfolioId(null));
           _settings = _settingsRepository.current;
         }
-      } else if (!_ensuringDefaultPortfolio) {
-        _ensuringDefaultPortfolio = true;
-        unawaited(
-          _portfolioRepository.ensureDefaultPortfolio().whenComplete(() {
-            _ensuringDefaultPortfolio = false;
-            if (!_loadedPortfolios) {
-              _loadedPortfolios = true;
-              _rebuild();
-            }
-          }),
-        );
-        if (portfolios.isEmpty && !_loadedPortfolios) return;
+      } else {
+        if (!_ensuringDefaultPortfolio) {
+          _ensuringDefaultPortfolio = true;
+          unawaited(
+            _portfolioRepository.ensureDefaultPortfolio().whenComplete(() {
+              _ensuringDefaultPortfolio = false;
+            }),
+          );
+        }
+        if (portfolios.isEmpty) return;
       }
       _portfolios = portfolios;
       _loadedPortfolios = true;
@@ -266,20 +265,34 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   void _rebuild() {
+    if (_disposed) return;
     final AppSettings? settings = _settings;
-    if (settings == null || !_loadedPortfolios) return;
-
-    final PortfolioEntity? active = resolveActivePortfolio(
-      _portfolios,
-      settings.selectedPortfolioId,
-    );
-    _watchPortfolio(active?.id);
+    if (settings == null) return;
 
     final bool effectiveDisplayUsd =
         _displayInUsd && settings.baseCurrency != 'USD';
     final String effectiveCurrency = effectiveDisplayUsd
         ? 'USD'
         : settings.baseCurrency;
+
+    if (!_loadedPortfolios) {
+      _state = HomeState(
+        loading: true,
+        baseCurrency: settings.baseCurrency,
+        displayInUsd: effectiveDisplayUsd,
+        isRefreshing: _refreshing,
+        hideBalances: settings.hideBalances,
+        simpleNetWorth: settings.simpleNetWorth,
+      );
+      notifyListeners();
+      return;
+    }
+
+    final PortfolioEntity? active = resolveActivePortfolio(
+      _portfolios,
+      settings.selectedPortfolioId,
+    );
+    _watchPortfolio(active?.id);
 
     if (active == null) {
       _scheduleBackgroundFxCheck();
@@ -297,6 +310,17 @@ class HomeViewModel extends ChangeNotifier {
     }
 
     if (!_loadedAssets || !_loadedLiabilities) {
+      _state = HomeState(
+        loading: true,
+        portfolios: _portfolios,
+        activePortfolio: active,
+        baseCurrency: settings.baseCurrency,
+        displayInUsd: effectiveDisplayUsd,
+        isRefreshing: _refreshing,
+        hideBalances: settings.hideBalances,
+        simpleNetWorth: settings.simpleNetWorth,
+      );
+      notifyListeners();
       return;
     }
 
@@ -433,6 +457,7 @@ class HomeViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _settingsSub?.cancel();
     _portfolioSub?.cancel();
     _converterSub?.cancel();
