@@ -328,9 +328,11 @@ checkout, and the pipeline's actual project ID when inspecting fork CI jobs.
 
 ## UX prototype
 
-In the app, holding categories and the optional custom-name field expand
-smoothly, and the selected chart legend row eases into its highlight. These
-transitions follow Android's **Remove animations** accessibility setting.
+In the app, Android screen transitions are quick, tabs fade and slide into
+place, and Home totals fade to the new currency without counting up. The
+currency pill responds to presses, and the Assets/Liabilities selector follows
+horizontal swipes. Holding disclosures and chart selection also animate.
+These transitions follow Android's **Remove animations** accessibility setting.
 
 Open [the holding experience prototype](docs/prototypes/add-holding.prototype.html)
 directly in a browser; no server or dependencies are needed. It preserves the
@@ -365,8 +367,9 @@ Security / Data / About** drill-in screens, **Encrypted backup export /
 import**, **What's new**, and the full-screen **App lock** gate, plus adaptive
 tablet rail mode). It includes a direct all-screens jumper, a 12-step guided
 walkthrough (`?mode=studio`), an 18-frame storyboard gallery (`?mode=renders`),
-and live **DisclosureSize**, **AddHoldingButton** morph, and chart-legend
-transitions that honor **Remove animations**. For the Settings selector study
+and live screen, tab, currency, and swipe feedback alongside the existing
+disclosure, Add, and chart transitions. It honors both its **Remove animations**
+control and the browser's reduced-motion preference. For the Settings selector study
 that settled on **Design B (Segmented + Pill)**, open
 [the Settings selector options prototype](docs/prototypes/settings-selectors.prototype.html)
 (`?variant=A|B|C|D|current`).

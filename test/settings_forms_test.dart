@@ -1384,6 +1384,79 @@ void main() {
   });
 
   for (final bool reducedMotion in <bool>[false, true]) {
+    testWidgets('Motion pass: main tabs settle without remounting Home '
+        '(reduced motion: $reducedMotion)', (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(430, 950));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          FakeAccessibilityFeatures(disableAnimations: reducedMotion);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      seedHoldings();
+      await container.settingsRepository.setLastSeenVersion(
+        AppReleaseNotes.currentVersion,
+      );
+      await open(tester, const AppShell());
+      final Element home = tester.element(find.byType(HomeScreen));
+
+      await tester.tap(find.text('Statistics'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      final Finder overview = find.text('Overview');
+      final double movingTop = tester.getTopLeft(overview).dy;
+      expect(find.byType(HomeScreen), findsNothing);
+      await tester.pumpAndSettle();
+      final double settledTop = tester.getTopLeft(overview).dy;
+      if (reducedMotion) {
+        expect(movingTop, closeTo(settledTop, 0.01));
+      } else {
+        expect(movingTop, greaterThan(settledTop + 0.5));
+      }
+
+      // Selecting the current destination again shouldn't replay its entrance.
+      await tester.tap(find.text('Statistics'));
+      await tester.pump();
+      expect(tester.getTopLeft(overview).dy, closeTo(settledTop, 0.01));
+      await tester.tap(find.text('Portfolios'));
+      await tester.pump();
+      await tester.tap(find.text('Home'));
+      await tester.pumpAndSettle();
+      expect(tester.element(find.byType(HomeScreen)), same(home));
+    });
+  }
+
+  testWidgets('Motion pass: Android Settings opens and closes promptly', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(430, 950));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    seedHoldings();
+    await container.settingsRepository.setLastSeenVersion(
+      AppReleaseNotes.currentVersion,
+    );
+    await open(tester, const AppShell());
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 90));
+
+    final Finder settings = find.byType(SettingsScreen);
+    final Animation<double> routeAnimation = ModalRoute.of(
+      tester.element(settings),
+    )!.animation!;
+    expect(routeAnimation.value, allOf(greaterThan(0), lessThan(1)));
+    await tester.pump(const Duration(milliseconds: 160));
+    expect(routeAnimation.isCompleted, isTrue);
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump();
+    expect(settings, findsNothing);
+    expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
+  for (final bool reducedMotion in <bool>[false, true]) {
     testWidgets(
       'home category disclosure respects reduced motion: $reducedMotion',
       (WidgetTester tester) async {
@@ -4994,9 +5067,16 @@ void main() {
             ),
           );
         }
+        final Finder loan = find.text('Loan');
+        final double movingLoanTop = tester.getTopLeft(loan).dy;
         await tester.pumpAndSettle();
         expect(tester.getRect(thumb).left, closeTo(liabilitiesLeft, 2.0));
-        expect(find.text('Loan'), findsOneWidget);
+        final double settledLoanTop = tester.getTopLeft(loan).dy;
+        if (reducedMotion) {
+          expect(movingLoanTop, closeTo(settledLoanTop, 0.01));
+        } else {
+          expect(movingLoanTop, greaterThan(settledLoanTop + 0.5));
+        }
 
         // Swiping right when Liabilities is already selected keeps Liabilities.
         final Finder toggleTrack = find.byKey(
@@ -5143,6 +5223,73 @@ void main() {
       expect(find.text('Updated 2 price(s)'), findsOneWidget);
     },
   );
+
+  for (final bool reducedMotion in <bool>[false, true]) {
+    testWidgets('Motion pass: Home currency changes show only the new amount '
+        '(reduced motion: $reducedMotion)', (WidgetTester tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          FakeAccessibilityFeatures(disableAnimations: reducedMotion);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      seedHoldings();
+      container.fxRepository.rates = const CurrencyConverter(<String, double>{
+        'INR': 80.0,
+      });
+      await container.settingsRepository.setBaseCurrency('INR');
+      await container.settingsRepository.setLastSeenVersion(
+        AppReleaseNotes.currentVersion,
+      );
+      await open(tester, const AppShell());
+      final Finder pill = find.byKey(
+        const ValueKey<String>('net-worth-base-currency-pill'),
+      );
+      final Finder headline = find.byKey(
+        const ValueKey<String>('net-worth-headline'),
+      );
+      final Finder amountFades = find.descendant(
+        of: find.byType(NetWorthCard),
+        matching: find.byType(FadeTransition),
+      );
+      double amountOpacity() => amountFades.evaluate().isEmpty
+          ? 1
+          : tester.widget<FadeTransition>(amountFades).opacity.value;
+
+      final String baseAmount = tester.widget<Text>(headline).data!;
+      final double pillWidth = tester.getRect(pill).width;
+      final TestGesture press = await tester.startGesture(
+        tester.getCenter(pill),
+      );
+      await tester.pump(const Duration(milliseconds: 120));
+      await tester.pump(const Duration(milliseconds: 80));
+      if (reducedMotion) {
+        expect(tester.getRect(pill).width, closeTo(pillWidth, 0.01));
+      } else {
+        expect(tester.getRect(pill).width, lessThan(pillWidth - 1));
+      }
+      await press.up();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(tester.widget<Text>(headline).data, isNot(baseAmount));
+      expect(find.text(baseAmount), findsNothing);
+      if (reducedMotion) {
+        expect(amountOpacity(), 1);
+      } else {
+        expect(amountOpacity(), allOf(greaterThan(0), lessThan(1)));
+      }
+
+      // Turning on privacy during the fade must not retain the old value or
+      // wait until the animation ends to mask the current value.
+      final String usdAmount = tester.widget<Text>(headline).data!;
+      await tester.tap(find.byTooltip('Hide balances'));
+      await tester.pump();
+      expect(find.text(usdAmount), findsNothing);
+      expect(tester.widget<Text>(headline).data, CurrencyUtil.masked('USD'));
+      expect(amountOpacity(), 1);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(pill).width, closeTo(pillWidth, 0.01));
+    });
+  }
 
   testWidgets(
     'Home currency pill toggles between non-USD base currency and USD, and shows static USD when base is USD',
