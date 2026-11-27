@@ -107,6 +107,9 @@ void main() {
           await bootstrap.setLanguage(AppLanguage.english);
           await bootstrap.setLastSeenVersion(AppReleaseNotes.currentVersion);
           expect(bootstrap.current.blockScreenshots, isTrue);
+          await ScreenshotProtection.setEnabled(
+            bootstrap.current.blockScreenshots,
+          );
         } finally {
           await bootstrap.dispose();
         }
@@ -117,11 +120,13 @@ void main() {
           () => find.byType(HomeScreen).evaluate().isNotEmpty,
           'unlocked home screen',
         );
-        container = AppScope.of(tester.element(find.byType(app.OkanzoApp)));
+        container = AppScope.of(tester.element(find.byType(HomeScreen)));
 
         expect(container.settingsRepository.current.blockScreenshots, isTrue);
         expect(await ScreenshotProtection.isEnabled(), isTrue);
-        passed('default-on state sets native FLAG_SECURE on startup');
+        passed(
+          'default-on preference keeps live FLAG_SECURE enabled across Dart startup fixture',
+        );
 
         await _tap(tester, find.byTooltip('Settings'));
         expect(find.byType(SettingsScreen), findsOneWidget);
@@ -161,7 +166,7 @@ void main() {
           () => find.byType(HomeScreen).evaluate().isNotEmpty,
           'relaunched home with Block screenshots off',
         );
-        container = AppScope.of(tester.element(find.byType(app.OkanzoApp)));
+        container = AppScope.of(tester.element(find.byType(HomeScreen)));
         expect(container.settingsRepository.current.blockScreenshots, isFalse);
         expect(await ScreenshotProtection.isEnabled(), isFalse);
         passed('relaunch preserves disabled FLAG_SECURE state');

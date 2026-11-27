@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:okanzo/data/backup/backup_repository.dart';
+import 'package:okanzo/data/local/entity/asset_entity.dart';
+import 'package:okanzo/data/local/entity/liability_entity.dart';
 import 'package:okanzo/data/local/entity/portfolio_entity.dart';
 import 'package:okanzo/data/repository/asset_repository.dart';
 import 'package:okanzo/data/repository/currency_converter.dart';
@@ -29,7 +31,15 @@ import 'helpers/fake_biometric_authenticator.dart';
 class _PortfolioRepository extends Fake implements PortfolioRepository {
   @override
   Stream<List<PortfolioEntity>> observeAll() =>
-      Stream<List<PortfolioEntity>>.value(const <PortfolioEntity>[]);
+      Stream<List<PortfolioEntity>>.value(const <PortfolioEntity>[
+        PortfolioEntity(
+          id: 1,
+          name: 'My Portfolio',
+          isDefault: true,
+          createdAt: 0,
+          updatedAt: 0,
+        ),
+      ]);
 
   @override
   Future<int> ensureDefaultPortfolio([
@@ -50,9 +60,17 @@ class _FxRepository extends Fake implements FxRepository {
   Future<int?> latestTimestamp() async => null;
 }
 
-class _AssetRepository extends Fake implements AssetRepository {}
+class _AssetRepository extends Fake implements AssetRepository {
+  @override
+  Stream<List<AssetEntity>> observeForPortfolio(int portfolioId) =>
+      Stream<List<AssetEntity>>.value(const <AssetEntity>[]);
+}
 
-class _LiabilityRepository extends Fake implements LiabilityRepository {}
+class _LiabilityRepository extends Fake implements LiabilityRepository {
+  @override
+  Stream<List<LiabilityEntity>> observeForPortfolio(int portfolioId) =>
+      Stream<List<LiabilityEntity>>.value(const <LiabilityEntity>[]);
+}
 
 class _BackupRepository extends Fake implements BackupRepository {}
 

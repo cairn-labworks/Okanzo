@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 
 import 'data/repository/settings_repository.dart';
+import 'data/security/database_key_provider.dart';
 import 'di/app_container.dart';
 import 'domain/model/app_theme.dart';
 import 'domain/model/theme_mode.dart';
@@ -20,37 +23,132 @@ import 'util/screenshot_protection.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Draws behind the system bars, as `enableEdgeToEdge()` did on Android.
-  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   // Number and date formatting follows the device locale, as it did on Android.
   Intl.defaultLocale = Platform.localeName.split('.').first;
-  final AppContainer container = await AppContainer.create();
-  try {
-    await ScreenshotProtection.setEnabled(
-      container.settingsRepository.current.blockScreenshots,
-    );
-  } on PlatformException {
-    // Keep startup non-fatal; MainActivity enables FLAG_SECURE by default.
+
+  // Kick off Keystore unwrap and DB directory lookup immediately in parallel
+  // without stalling behind UI-thread window setup.
+  const DatabaseKeyProvider keyProvider = DatabaseKeyProvider();
+  final Future<SharedPreferences> prefsFuture = SharedPreferences.getInstance();
+  final Future<String> passphraseFuture = keyProvider.getOrCreatePassphrase();
+  final Future<String> databasesDirFuture = getDatabasesPath();
+  unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+
+  final SharedPreferences preferences = await prefsFuture;
+  final SettingsRepository settingsRepository = SettingsRepository(preferences);
+  final BiometricAuthenticator authenticator = LocalBiometricAuthenticator();
+  final AppLockCoordinator appLock = AppLockCoordinator(
+    authenticator: authenticator,
+  );
+  // MainActivity.onCreate applies FLAG_SECURE before Frame 1 on cold Android
+  // launch; keep a non-blocking sync here too so Dart-only restarts stay aligned.
+  unawaited(
+    ScreenshotProtection.setEnabled(settingsRepository.current.blockScreenshots)
+        .catchError((Object _) {}),
+  );
+
+  final Future<AppContainer> containerFuture = AppContainer.create(
+    preferences: preferences,
+    settingsRepository: settingsRepository,
+    appLock: appLock,
+    passphraseFuture: passphraseFuture,
+    databasesDirFuture: databasesDirFuture,
+    biometricAuthenticator: authenticator,
+  );
+
+  runApp(
+    OkanzoBootstrap(
+      settingsRepository: settingsRepository,
+      appLock: appLock,
+      containerFuture: containerFuture,
+    ),
+  );
+}
+
+/// Renders the themed application (and [AppLockGate] if enabled) immediately
+/// from [SettingsRepository] while the encrypted database finishes opening in
+/// the background, then seamlessly mounts [AppScope] + [OkanzoApp].
+class OkanzoBootstrap extends StatefulWidget {
+  const OkanzoBootstrap({
+    required this.settingsRepository,
+    required this.appLock,
+    required this.containerFuture,
+    super.key,
+  });
+
+  final SettingsRepository settingsRepository;
+  final AppLockCoordinator appLock;
+  final Future<AppContainer> containerFuture;
+
+  @override
+  State<OkanzoBootstrap> createState() => _OkanzoBootstrapState();
+}
+
+class _OkanzoBootstrapState extends State<OkanzoBootstrap> {
+  final GlobalKey<_OkanzoAppState> _appKey = GlobalKey<_OkanzoAppState>();
+  AppContainer? _container;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_awaitContainer(widget.containerFuture));
   }
-  runApp(AppScope(container: container, child: const OkanzoApp()));
+
+  @override
+  void didUpdateWidget(OkanzoBootstrap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.containerFuture != widget.containerFuture) {
+      _container = null;
+      unawaited(_awaitContainer(widget.containerFuture));
+    }
+  }
+
+  Future<void> _awaitContainer(Future<AppContainer> future) async {
+    final AppContainer resolved = await future;
+    if (!mounted || !identical(future, widget.containerFuture)) return;
+    setState(() => _container = resolved);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget app = OkanzoApp(
+      key: _appKey,
+      settingsRepository: widget.settingsRepository,
+      appLock: widget.appLock,
+      isDatabaseReady: _container != null,
+    );
+    final AppContainer? container = _container;
+    return container == null ? app : AppScope(container: container, child: app);
+  }
 }
 
 class OkanzoApp extends StatefulWidget {
-  const OkanzoApp({super.key});
+  const OkanzoApp({
+    this.settingsRepository,
+    this.appLock,
+    this.isDatabaseReady = true,
+    super.key,
+  });
+
+  final SettingsRepository? settingsRepository;
+  final AppLockCoordinator? appLock;
+  final bool isDatabaseReady;
 
   @override
   State<OkanzoApp> createState() => _OkanzoAppState();
 }
 
 class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
-  AppContainer? _container;
+  SettingsRepository? _settingsRepository;
+  AppLockCoordinator? _appLock;
   bool _navigatorCanHandlePop = false;
   bool? _frameworkHandlesBack;
 
   bool get _locked =>
-      _container != null &&
-      _container!.settingsRepository.current.appLockEnabled &&
-      !_container!.appLock.unlocked;
+      _settingsRepository != null &&
+      _appLock != null &&
+      _settingsRepository!.current.appLockEnabled &&
+      !_appLock!.unlocked;
 
   @override
   void initState() {
@@ -60,7 +158,7 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    _container?.appLock.removeListener(_updateBackHandling);
+    _appLock?.removeListener(_updateBackHandling);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -68,9 +166,27 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _container?.appLock.removeListener(_updateBackHandling);
-    _container = AppScope.of(context);
-    _container!.appLock.addListener(_updateBackHandling);
+    _bindDependencies();
+  }
+
+  @override
+  void didUpdateWidget(OkanzoApp oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _bindDependencies();
+  }
+
+  void _bindDependencies() {
+    final AppScope? scope = context
+        .dependOnInheritedWidgetOfExactType<AppScope>();
+    final SettingsRepository nextSettings =
+        widget.settingsRepository ?? scope!.container.settingsRepository;
+    final AppLockCoordinator nextLock =
+        widget.appLock ?? scope!.container.appLock;
+    if (!identical(_appLock, nextLock)) {
+      _appLock?.removeListener(_updateBackHandling);
+      _appLock = nextLock..addListener(_updateBackHandling);
+    }
+    _settingsRepository = nextSettings;
     _updateBackHandling();
   }
 
@@ -102,10 +218,11 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final AppContainer container = AppScope.of(context);
+    final SettingsRepository settingsRepository = _settingsRepository!;
+    final AppLockCoordinator appLock = _appLock!;
     return StreamBuilder<AppSettings>(
-      stream: container.settingsRepository.settings,
-      initialData: container.settingsRepository.current,
+      stream: settingsRepository.settings,
+      initialData: settingsRepository.current,
       builder: (BuildContext context, AsyncSnapshot<AppSettings> snapshot) {
         final AppSettings? settings = snapshot.data;
         if (settings == null) {
@@ -144,10 +261,12 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
           },
           builder: (BuildContext context, Widget? navigator) => AppLockGate(
             appLockEnabled: settings.appLockEnabled,
-            coordinator: container.appLock,
+            coordinator: appLock,
             child: navigator!,
           ),
-          home: const AppShell(),
+          home: widget.isDatabaseReady
+              ? const AppShell()
+              : const Scaffold(body: SizedBox.shrink()),
         );
       },
     );
