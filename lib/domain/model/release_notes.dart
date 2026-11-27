@@ -42,9 +42,39 @@ class ReleaseNotes {
 class AppReleaseNotes {
   const AppReleaseNotes._();
 
-  static const String currentVersion = '1.6.1';
+  static const String currentVersion = '1.7.0';
 
   static const List<ReleaseNotes> all = <ReleaseNotes>[
+    ReleaseNotes(
+      version: '1.7.0',
+      highlights: <ReleaseHighlight>[
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.theme,
+          title: 'Mineral Ledger and Midnight',
+          description: 'Enjoy warm Light colors, deep-green Midnight and motion that respects reduced-animation settings.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.assets,
+          title: 'Find and arrange holdings',
+          description: 'Search holdings, collapse categories and inspect value details without losing your saved manual order.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.portfolio,
+          title: 'Clear portfolios and precise amounts',
+          description: 'Use unique portfolio names, clearer default badges and safeguards against losing amount precision.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.exchanges,
+          title: 'NSE market support',
+          description: 'Select NSE for Indian stocks and funds, with clearer currency conversion and percentage shares.',
+        ),
+        ReleaseHighlight(
+          icon: ReleaseHighlightIcon.releaseNotes,
+          title: 'Faster startup',
+          description: 'Open the themed app sooner while encrypted holdings load in the background.',
+        ),
+      ],
+    ),
     ReleaseNotes(
       version: '1.6.1',
       highlights: <ReleaseHighlight>[

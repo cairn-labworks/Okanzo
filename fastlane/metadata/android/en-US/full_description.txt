@@ -9,24 +9,28 @@ Features:
 * Fetch current prices for market-linked assets by ticker symbol.
 * Search stocks, funds and crypto by company/coin name or ticker, with listing and trading-pair suggestions from Yahoo Finance.
 * Use fetched company/coin names or optional custom names, and fetch missing market prices automatically on Save.
-* Select stock exchanges across the US, China, Europe, Japan, Hong Kong, and India, and save a preferred-exchange shortlist.
+* Select stock exchanges across the US, China, Europe, Japan, Hong Kong, and India (BSE and NSE), and save a preferred-exchange shortlist.
 * Look up full Yahoo Finance tickers for other markets and cryptocurrency pairs.
 * Track loans, mortgages, credit cards, pending payments, and taxes.
 * See total assets, liabilities, and net worth in the home overview, with separate Assets and Liabilities tabs.
 * Optionally shorten the net-worth headline with currency-specific units, including lakh/crore for INR.
-* Create and switch between multiple portfolios.
+* Create uniquely named portfolios and switch between them with clear Viewing and Default badges.
 * Open your default portfolio on launch and switch immediately when the default changes.
-* Reorder categories and holdings, or sort holdings by name or value.
+* Search holdings with Quick-Find, collapse categories and see totals, counts and percentage shares.
+* Reorder categories and holdings, or sort holdings by name or value without losing your saved manual order.
+* Inspect valuation provenance, converted values and portfolio percentage shares in holding details.
+* Keep precise amount inputs; Save stays disabled when a value would lose digits.
 * Convert holdings using cached exchange rates.
 * Encrypt the local database with SQLCipher and protect its key with Android Keystore.
 * Optionally lock every screen and dialog with fingerprint or device credentials, and require authentication for lock-setting changes and protected exports. Screenshots and recent-apps previews are blocked by default (configurable in Settings).
 * Hide balances and holding quantities across Home, Statistics and Portfolios with synchronized eye controls.
 * Export and import password-protected encrypted backups.
-* Use the sage light theme or deep-green Midnight dark theme, or follow your device. Wallpaper colors are available in light mode on Android 12+.
+* Use the warm Mineral Ledger light theme or deep-green Midnight dark theme, or follow your device. Motion respects reduced-animation settings.
 * Find preferences in grouped settings and enter holdings with outlined fields, searchable pickers, guided focus, live values and a pinned Save action.
 * Review centered save confirmations, undo an addition or update, or add another holding without losing draft inputs.
 * See release highlights after updating, or reopen them from Settings. App information has its own About dialog.
 * Choose from 21 app languages in Settings, or follow your device language.
+* Open the themed app sooner while encrypted holdings load in the background.
 
 Okanzo is offline-first. Network access is only used to look up public market prices, company/coin/ticker suggestions and exchange rates. Only a ticker symbol, text typed into the stock/fund/crypto search field, or base currency code is sent. There are no accounts, analytics, or trackers, and portfolio values, asset name fields, quantities and holdings are never transmitted.
 
