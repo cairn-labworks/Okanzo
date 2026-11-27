@@ -89,6 +89,7 @@ void main() {
   testWidgets('approved Canvas holding journeys on Android', (tester) async {
     late AppContainer container;
     late int portfolioId;
+    int? fixtureId;
     final List<int> assets = <int>[];
     final List<int> liabilities = <int>[];
     await tester.runAsync(() async {
@@ -96,6 +97,10 @@ void main() {
       final previous = container.settingsRepository.current;
       addTearDown(
         () => runDeviceTestCleanup(<DeviceTestCleanupStep>[
+          (
+            'restore native screenshot protection',
+            () => ScreenshotProtection.setEnabled(previous.blockScreenshots),
+          ),
           (
             'restore canvas appearance mode',
             () => container.settingsRepository.setAppearanceMode(
@@ -107,9 +112,29 @@ void main() {
             () => container.settingsRepository.setAppTheme(previous.appTheme),
           ),
           (
-            'restore native screenshot protection',
-            () => ScreenshotProtection.setEnabled(previous.blockScreenshots),
+            'unmount canvas widgets',
+            () => tester.pumpWidget(const SizedBox.shrink()),
           ),
+          (
+            'settle canvas widgets',
+            () async {
+              await tester.pumpAndSettle();
+            },
+          ),
+          if (fixtureId case final int id)
+            (
+              'delete canvas test portfolio',
+              () async {
+                if (await container.portfolioRepository.getById(id) != null) {
+                  expect(
+                    await container.portfolioRepository.delete(id),
+                    isTrue,
+                  );
+                }
+              },
+            ),
+          ('dispose canvas settings', container.settingsRepository.dispose),
+          ('close canvas database', container.database.close),
         ]),
       );
       if (const bool.fromEnvironment('CANVAS_STORED_GLASS')) {
@@ -122,7 +147,11 @@ void main() {
         AppReleaseNotes.currentVersion,
       );
       await ScreenshotProtection.setEnabled(false);
-      portfolioId = await container.portfolioRepository.create('Canvas demo');
+      await container.portfolioRepository.ensureDefaultPortfolio();
+      portfolioId = await container.portfolioRepository.create(
+        'Canvas demo ${DateTime.now().microsecondsSinceEpoch}',
+      );
+      fixtureId = portfolioId;
       await container.settingsRepository.setSelectedPortfolioId(portfolioId);
       for (final (String name, String ticker, double price) holding
           in <(String, String, double)>[
@@ -159,6 +188,7 @@ void main() {
         ),
       );
     });
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(
       RepaintBoundary(
         key: const ValueKey<String>('canvas-evidence'),
@@ -325,17 +355,5 @@ void main() {
       ),
       isNotNull,
     );
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpAndSettle();
-    await tester.runAsync(() async {
-      for (final int id in assets) {
-        await container.assetRepository.delete(id);
-      }
-      for (final int id in liabilities) {
-        await container.liabilityRepository.delete(id);
-      }
-      await container.portfolioRepository.delete(portfolioId);
-    });
   });
 }
