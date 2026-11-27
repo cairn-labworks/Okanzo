@@ -9,6 +9,7 @@ import '../components/ui_components.dart';
 import '../theme/colors.dart';
 import '../theme/motion.dart';
 import '../theme/theme.dart';
+import '../theme/app_material.dart';
 import 'chart_format.dart';
 import 'statistics_view_model.dart';
 
@@ -315,7 +316,7 @@ class _ChartCard extends StatelessWidget {
           )!
         : theme.colorScheme.outlineVariant;
 
-    return Card(
+    return AppCard(
       color: theme.colorScheme.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(shapeLarge),

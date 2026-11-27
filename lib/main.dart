@@ -16,6 +16,7 @@ import 'domain/model/theme_mode.dart';
 import 'l10n/app_localizations.dart';
 import 'ui/lock/lock_screen.dart';
 import 'ui/navigation/app_shell.dart';
+import 'ui/theme/app_material.dart';
 import 'ui/theme/theme.dart';
 import 'util/app_lock_coordinator.dart';
 import 'util/biometric_authenticator.dart';
@@ -230,6 +231,7 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
           return const SizedBox.shrink();
         }
         _updateBackHandling();
+        final AppTheme themeStyle = settings.themeStyle;
         return MaterialApp(
           title: 'Okanzo',
           debugShowCheckedModeBanner: false,
@@ -246,24 +248,26 @@ class _OkanzoAppState extends State<OkanzoApp> with WidgetsBindingObserver {
           ],
           supportedLocales: AppLocalizations.supportedLocales,
           locale: AppLocalizations.localeForLanguage(settings.language),
-          theme: buildTheme(
-            brightness: Brightness.light,
-            appTheme: AppTheme.classic,
-          ),
+          theme: buildTheme(brightness: Brightness.light, appTheme: themeStyle),
           darkTheme: buildTheme(
             brightness: Brightness.dark,
-            appTheme: AppTheme.midnight,
+            appTheme: themeStyle == AppTheme.classic
+                ? AppTheme.midnight
+                : themeStyle,
           ),
           themeMode: switch (settings.appearanceMode) {
             AppThemeMode.system => ThemeMode.system,
             AppThemeMode.light => ThemeMode.light,
             AppThemeMode.dark => ThemeMode.dark,
           },
-          builder: (BuildContext context, Widget? navigator) => AppLockGate(
-            appLockEnabled: settings.appLockEnabled,
-            coordinator: appLock,
-            child: navigator!,
-          ),
+          builder: (BuildContext context, Widget? navigator) =>
+              AppThemeBackground(
+                child: AppLockGate(
+                  appLockEnabled: settings.appLockEnabled,
+                  coordinator: appLock,
+                  child: navigator!,
+                ),
+              ),
           home: widget.isDatabaseReady
               ? const AppShell()
               : const Scaffold(body: SizedBox.shrink()),

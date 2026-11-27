@@ -106,6 +106,60 @@ void main() {
       }
     });
 
+    for (final AppTheme style in <AppTheme>[
+      AppTheme.sculpted,
+      AppTheme.liquidGlass,
+    ]) {
+      test(
+        '$style supports both appearances with readable softened surfaces',
+        () {
+          double contrast(Color a, Color b) {
+            final double first = a.computeLuminance();
+            final double second = b.computeLuminance();
+            return ((first > second ? first : second) + 0.05) /
+                ((first > second ? second : first) + 0.05);
+          }
+
+          for (final Brightness brightness in Brightness.values) {
+            final ThemeData theme = buildTheme(
+              brightness: brightness,
+              appTheme: style,
+            );
+            final ColorScheme colors = theme.colorScheme;
+            expect(theme.brightness, brightness);
+            if (brightness == Brightness.light) {
+              expect(
+                colors.surface.computeLuminance(),
+                lessThan(lightColors.surface.computeLuminance() * 0.9),
+              );
+            }
+            for (final Color surface in <Color>[
+              colors.surface,
+              colors.surfaceContainerLow,
+            ]) {
+              expect(
+                contrast(colors.onSurface, surface),
+                greaterThanOrEqualTo(4.5),
+              );
+              expect(
+                contrast(colors.onSurfaceVariant, surface),
+                greaterThanOrEqualTo(4.5),
+              );
+            }
+            expect(
+              contrast(colors.onPrimary, colors.primary),
+              greaterThanOrEqualTo(4.5),
+            );
+            expect(
+              contrast(colors.outline, colors.surfaceContainerLowest),
+              greaterThanOrEqualTo(3),
+            );
+            expect(theme.filledButtonTheme.style?.backgroundBuilder, isNotNull);
+          }
+        },
+      );
+    }
+
     test('Warm Minimalism light palette and terracotta liabilities meet 4.5:1 contrast', () {
       expect(lightColors.surface, const Color(0xFFFAF8F3));
       expect(lightColors.surfaceContainerLow, const Color(0xFFF2EEE5));

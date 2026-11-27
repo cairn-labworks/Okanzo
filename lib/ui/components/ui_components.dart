@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../theme/app_material.dart';
+import '../theme/app_style.dart';
 
 /// App-bar action that toggles Hide Balances across browsing screens.
 class HideBalancesButton extends StatelessWidget {
@@ -89,6 +91,18 @@ class TypeAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final Color? accent = this.accent;
+    if (AppStyle.of(context).isEnhanced) {
+      return AppSurface(
+        radius: size * .3,
+        control: true,
+        tint: accent ?? colors.primary,
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Icon(icon, size: size * .55, color: accent ?? colors.primary),
+        ),
+      );
+    }
     if (accent != null) {
       return Container(
         width: size,

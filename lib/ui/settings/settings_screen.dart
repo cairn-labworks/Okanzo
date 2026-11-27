@@ -9,6 +9,7 @@ import '../../data/backup/backup_models.dart';
 import '../../data/local/entity/portfolio_entity.dart';
 import '../../di/app_container.dart';
 import '../../domain/model/app_language.dart';
+import '../../domain/model/app_theme.dart';
 import '../../domain/model/release_notes.dart';
 import '../../domain/model/theme_mode.dart';
 import '../../l10n/app_localizations.dart';
@@ -21,6 +22,7 @@ import '../components/type_icons.dart';
 import '../components/ui_components.dart';
 import '../components/whats_new_dialog.dart';
 import '../theme/motion.dart';
+import '../theme/app_material.dart';
 import 'settings_view_model.dart';
 
 /// Appearance, currency, security, backup and about.
@@ -105,6 +107,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _ThemeSegmentedRow(
                 selected: settings.appearanceMode,
                 onSave: viewModel.setAppearanceMode,
+              ),
+              _SettingRow(
+                title: 'Theme style'.tr(context),
+                value: settings.themeStyle.displayName.tr(context),
+                valueIcon: Icons.palette_outlined,
+                onTap: () => _showThemeStyleDialog(settings.themeStyle),
               ),
               _SettingRow(
                 title: 'App language'.tr(context),
@@ -299,7 +307,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     PageHeading(category?.title ?? 'Settings'.tr(context)),
                     const SizedBox(height: 28),
                     if (category != null) ...<Widget>[
-                      Card(
+                      AppCard(
                         clipBehavior: Clip.antiAlias,
                         child: Column(
                           children: <Widget>[
@@ -317,7 +325,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       ?category.footer,
                     ] else ...<Widget>[
-                      Card(
+                      AppCard(
                         clipBehavior: Clip.antiAlias,
                         child: Column(
                           children: <Widget>[
@@ -574,6 +582,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return result == BiometricResult.success;
     } finally {
       if (mounted) setState(() => _authenticating = false);
+    }
+  }
+
+  Future<void> _showThemeStyleDialog(AppTheme selected) async {
+    final AppTheme? picked = await showSelectionPickerDialog<AppTheme>(
+      context,
+      title: 'Theme style'.tr(context),
+      selected: selected,
+      options: const <AppTheme>[
+        AppTheme.classic,
+        AppTheme.sculpted,
+        AppTheme.liquidGlass,
+      ],
+      optionLabel: (AppTheme theme) => theme.displayName.tr(context),
+      optionIcon: (AppTheme theme) => switch (theme) {
+        AppTheme.sculpted => Icons.layers_outlined,
+        AppTheme.liquidGlass => Icons.blur_on,
+        AppTheme.classic || AppTheme.midnight => Icons.contrast,
+      },
+      searchable: false,
+    );
+    if (!mounted || picked == null || picked == selected) return;
+    try {
+      await _viewModel!.setAppTheme(picked);
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Couldn't save theme: {error}"
+                .tr(context)
+                .replaceAll('{error}', '$error'),
+          ),
+        ),
+      );
     }
   }
 

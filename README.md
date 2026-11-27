@@ -121,7 +121,7 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 ### Mineral Ledger, Midnight & 21 languages
 
 - **Unified precision UI**: warm alabaster and stone surfaces in Light mode, deep-green Midnight surfaces in Dark mode, sage accents, non-alarmist warm terracotta liabilities, tabular number typography, quiet inset cards and subtle separators across every screen
-- Single **Settings → Appearance → Theme** control: **Light** uses the warm mineral & sage palette, **Dark** uses **Midnight**, and **System default** follows the device. Wallpaper-derived colors are no longer used.
+- **Settings → Appearance → Theme style** offers **Original**, **Sculpted** (layered satin surfaces and tactile buttons), and **Liquid Glass** (frosted translucent surfaces and light-catching edges). **Theme** independently selects **Light**, **Dark**, or **System default**. The new styles use softened paper/sage light surfaces and support all three appearance modes; Original preserves the existing Light/Midnight palettes. Wallpaper-derived colors are not used.
 - **Grouped settings** (**Appearance**, **Currency**, **Security**, **Data**, **About**) and adaptive navigation (bottom bar on phones, navigation rail on tablets and wide windows)
 - **21 languages** with immediate override or automatic device-language selection, including right-to-left Arabic layout
 

@@ -144,4 +144,84 @@ void main() {
       );
     }
   }
+
+  for (final String name in <String>['SCULPTED', 'LIQUID_GLASS']) {
+    test('$name persists while switching appearance and reopening', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'base_currency': 'USD',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final repository = SettingsRepository(prefs);
+      addTearDown(repository.dispose);
+      await repository.setAppTheme(AppTheme.fromName(name));
+
+      for (final AppThemeMode mode in AppThemeMode.values) {
+        await repository.setAppearanceMode(mode);
+        final reopened = SettingsRepository(prefs);
+        addTearDown(reopened.dispose);
+        expect(reopened.current.appTheme.storageName, name);
+        expect(reopened.current.appearanceMode, mode);
+      }
+    });
+
+    test('$name preserves the effective mode of legacy Midnight', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'app_theme': 'MIDNIGHT',
+        'theme_mode': 'LIGHT',
+        'base_currency': 'USD',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final repository = SettingsRepository(prefs);
+      addTearDown(repository.dispose);
+
+      await repository.setAppTheme(AppTheme.fromName(name));
+
+      expect(repository.current.appTheme.storageName, name);
+      expect(repository.current.appearanceMode, AppThemeMode.dark);
+      expect(prefs.getString('theme_mode'), 'DARK');
+    });
+
+    test('$name and a concurrent mode choice both survive', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'base_currency': 'USD',
+      });
+      final repository = SettingsRepository(
+        await SharedPreferences.getInstance(),
+      );
+      addTearDown(repository.dispose);
+
+      await Future.wait<void>(<Future<void>>[
+        repository.setAppTheme(AppTheme.fromName(name)),
+        repository.setAppearanceMode(AppThemeMode.dark),
+      ]);
+
+      expect(repository.current.appTheme.storageName, name);
+      expect(repository.current.appearanceMode, AppThemeMode.dark);
+    });
+  }
+
+  for (final String failedKey in <String>['app_theme', 'theme_mode']) {
+    test(
+      'theme selection rolls back when $failedKey cannot be saved',
+      () async {
+        final original = <String, String>{
+          'theme_mode': 'SYSTEM',
+          'app_theme': 'CLASSIC',
+          'base_currency': 'USD',
+        };
+        final prefs = _Preferences(original, failKey: failedKey);
+        final repository = SettingsRepository(prefs);
+        addTearDown(repository.dispose);
+
+        await expectLater(
+          repository.setAppTheme(AppTheme.fromName('LIQUID_GLASS')),
+          throwsStateError,
+        );
+
+        expect(prefs.stored, original);
+        expect(prefs.cache, original);
+        expect(prefs.reloads, 1);
+      },
+    );
+  }
 }

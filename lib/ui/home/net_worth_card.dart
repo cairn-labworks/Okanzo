@@ -7,6 +7,8 @@ import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../components/form_components.dart' show canvasBoxBorderColor;
 import '../statistics/chart_format.dart';
+import '../theme/app_material.dart';
+import '../theme/app_style.dart';
 import '../theme/motion.dart';
 import '../theme/theme.dart';
 
@@ -33,6 +35,7 @@ class NetWorthCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
+    final bool enhanced = AppStyle.of(context).isEnhanced;
     final FinanceColors finance = FinanceColors.of(context);
     final String baseCode = configuredBaseCurrency ?? summary.baseCurrency;
     final bool isNegative = !hideBalances && summary.netWorth < -0.005;
@@ -41,167 +44,177 @@ class NetWorthCard extends StatelessWidget {
         !hideBalances &&
         (summary.totalAssets > 0 || summary.totalLiabilities > 0);
 
-    return DecoratedBox(
-      key: const ValueKey<String>('net-worth-block'),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) =>
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      Expanded(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Flexible(
-                              child: Text(
-                                'Net worth'.tr(context),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textHeightBehavior: const TextHeightBehavior(
-                                  applyHeightToFirstAscent: false,
-                                  applyHeightToLastDescent: false,
-                                ),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  height: 1.15,
-                                  color: colors.onSurfaceVariant,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                            if (summary.hasApproximateConversions) ...<Widget>[
-                              const SizedBox(width: 6),
-                              Tooltip(
-                                message: 'Some values are approximate'.tr(
-                                  context,
-                                ),
-                                child: Icon(
-                                  Icons.info_outlined,
-                                  size: 16,
-                                  color: colors.primary,
+    return AppSurface(
+      radius: 24,
+      hero: true,
+      child: DecoratedBox(
+        key: const ValueKey<String>('net-worth-block'),
+        decoration: BoxDecoration(
+          color: enhanced ? Colors.transparent : colors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(24),
+          border: enhanced ? null : Border.all(color: colors.outlineVariant),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) =>
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        Expanded(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Flexible(
+                                child: Text(
+                                  'Net worth'.tr(context),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textHeightBehavior: const TextHeightBehavior(
+                                    applyHeightToFirstAscent: false,
+                                    applyHeightToLastDescent: false,
+                                  ),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    height: 1.15,
+                                    color: colors.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
+                              if (summary
+                                  .hasApproximateConversions) ...<Widget>[
+                                const SizedBox(width: 6),
+                                Tooltip(
+                                  message: 'Some values are approximate'.tr(
+                                    context,
+                                  ),
+                                  child: Icon(
+                                    Icons.info_outlined,
+                                    size: 16,
+                                    color: colors.primary,
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      if (baseCode == 'USD')
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
+                        const SizedBox(width: 10),
+                        if (baseCode == 'USD')
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: constraints.maxWidth * 0.65,
+                            ),
+                            child: DecoratedBox(
+                              key: const ValueKey<String>(
+                                'net-worth-base-currency-pill',
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.surface,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: colors.outlineVariant,
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 11,
+                                  vertical: 5,
+                                ),
+                                child: Text(
+                                  'USD',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  textHeightBehavior: const TextHeightBehavior(
+                                    applyHeightToFirstAscent: false,
+                                    applyHeightToLastDescent: false,
+                                  ),
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    fontSize: 11,
+                                    height: 1.1,
+                                    letterSpacing: 0.3,
+                                    fontWeight: FontWeight.w600,
+                                    color: colors.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          _CurrencyPillToggle(
+                            baseCode: baseCode,
+                            showingUsd: showingUsd,
                             maxWidth: constraints.maxWidth * 0.65,
+                            onToggle: onToggleCurrency,
                           ),
-                          child: DecoratedBox(
-                            key: const ValueKey<String>(
-                              'net-worth-base-currency-pill',
-                            ),
-                            decoration: BoxDecoration(
-                              color: colors.surface,
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: colors.outlineVariant),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 11,
-                                vertical: 5,
-                              ),
-                              child: Text(
-                                'USD',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                textHeightBehavior: const TextHeightBehavior(
-                                  applyHeightToFirstAscent: false,
-                                  applyHeightToLastDescent: false,
-                                ),
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  fontSize: 11,
-                                  height: 1.1,
-                                  letterSpacing: 0.3,
-                                  fontWeight: FontWeight.w600,
-                                  color: colors.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        _CurrencyPillToggle(
-                          baseCode: baseCode,
-                          showingUsd: showingUsd,
-                          maxWidth: constraints.maxWidth * 0.65,
-                          onToggle: onToggleCurrency,
-                        ),
-                    ],
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              hideBalances
-                  ? CurrencyUtil.masked(summary.baseCurrency)
-                  : simpleNetWorth
-                  ? CurrencyUtil.formatCompact(
-                      summary.netWorth,
-                      summary.baseCurrency,
-                    )
-                  : CurrencyUtil.format(summary.netWorth, summary.baseCurrency),
-              key: const ValueKey<String>('net-worth-headline'),
-              style: theme.textTheme.displaySmall?.copyWith(
-                fontSize: 42,
-                height: 1.15,
-                letterSpacing: -1.8,
-                fontWeight: FontWeight.w500,
-                color: headlineColor,
+                      ],
+                    ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _MetricTile(
-                    key: const ValueKey<String>('net-worth-assets-tile'),
-                    icon: Icons.trending_up,
-                    accent: finance.positive,
-                    label: 'Assets'.tr(context),
-                    amount: hideBalances
-                        ? CurrencyUtil.maskShort
-                        : CurrencyUtil.format(
-                            summary.totalAssets,
-                            summary.baseCurrency,
-                          ),
-                  ),
+              const SizedBox(height: 8),
+              Text(
+                hideBalances
+                    ? CurrencyUtil.masked(summary.baseCurrency)
+                    : simpleNetWorth
+                    ? CurrencyUtil.formatCompact(
+                        summary.netWorth,
+                        summary.baseCurrency,
+                      )
+                    : CurrencyUtil.format(
+                        summary.netWorth,
+                        summary.baseCurrency,
+                      ),
+                key: const ValueKey<String>('net-worth-headline'),
+                style: theme.textTheme.displaySmall?.copyWith(
+                  fontSize: 42,
+                  height: 1.15,
+                  letterSpacing: -1.8,
+                  fontWeight: FontWeight.w500,
+                  color: headlineColor,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _MetricTile(
-                    key: const ValueKey<String>('net-worth-liabilities-tile'),
-                    icon: Icons.trending_down,
-                    accent: finance.negative,
-                    label: 'Liabilities'.tr(context),
-                    amount: hideBalances
-                        ? CurrencyUtil.maskShort
-                        : CurrencyUtil.format(
-                            summary.totalLiabilities,
-                            summary.baseCurrency,
-                          ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _MetricTile(
+                      key: const ValueKey<String>('net-worth-assets-tile'),
+                      icon: Icons.trending_up,
+                      accent: finance.positive,
+                      label: 'Assets'.tr(context),
+                      amount: hideBalances
+                          ? CurrencyUtil.maskShort
+                          : CurrencyUtil.format(
+                              summary.totalAssets,
+                              summary.baseCurrency,
+                            ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _MetricTile(
+                      key: const ValueKey<String>('net-worth-liabilities-tile'),
+                      icon: Icons.trending_down,
+                      accent: finance.negative,
+                      label: 'Liabilities'.tr(context),
+                      amount: hideBalances
+                          ? CurrencyUtil.maskShort
+                          : CurrencyUtil.format(
+                              summary.totalLiabilities,
+                              summary.baseCurrency,
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+              if (showCoverage) ...<Widget>[
+                const SizedBox(height: 14),
+                _CoverageBar(summary: summary, isNegative: isNegative),
               ],
-            ),
-            if (showCoverage) ...<Widget>[
-              const SizedBox(height: 14),
-              _CoverageBar(summary: summary, isNegative: isNegative),
             ],
-          ],
+          ),
         ),
       ),
     );

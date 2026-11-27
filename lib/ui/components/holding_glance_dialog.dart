@@ -13,6 +13,8 @@ import '../../util/relative_time.dart';
 import '../home/category_groups.dart' show formatQuantity;
 import '../statistics/chart_format.dart';
 import '../theme/theme.dart';
+import '../theme/app_material.dart';
+import '../theme/app_style.dart';
 import 'form_components.dart';
 
 Color holdingGlanceBarrierColor(BuildContext context) =>
@@ -188,7 +190,9 @@ class HoldingGlanceDialog extends StatelessWidget {
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
       child: Dialog(
-        backgroundColor: colors.surface,
+        backgroundColor: AppStyle.of(context).isEnhanced
+            ? Colors.transparent
+            : colors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -196,277 +200,289 @@ class HoldingGlanceDialog extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           side: BorderSide(color: boxBorder),
         ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: 375,
-            maxHeight: MediaQuery.sizeOf(context).height * 0.85,
-          ),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Align(
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: IconButton(
-                    key: closeKey,
-                    tooltip: 'Close'.tr(context),
-                    visualDensity: VisualDensity.compact,
-                    onPressed: canClose
-                        ? () => Navigator.of(context).pop()
-                        : null,
-                    icon: const Icon(Icons.close, size: 20),
+        child: AppSurface(
+          radius: 24,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 375,
+              maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: IconButton(
+                      key: closeKey,
+                      tooltip: 'Close'.tr(context),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: canClose
+                          ? () => Navigator.of(context).pop()
+                          : null,
+                      icon: const Icon(Icons.close, size: 20),
+                    ),
                   ),
-                ),
-                Text(
-                  status ?? '$kindLabel / $typeLabel'.toUpperCase(),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.35,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  name,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: -0.6,
-                    height: 1.25,
-                    color: colors.onSurface,
-                  ),
-                ),
-                if (asset?.customName != null &&
-                    asset!.customName!.trim().isNotEmpty &&
-                    asset.customName!.trim() != asset.name) ...<Widget>[
-                  const SizedBox(height: 2),
                   Text(
-                    asset.name,
-                    style: theme.textTheme.bodySmall?.copyWith(
+                    status ?? '$kindLabel / $typeLabel'.toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.35,
                       color: colors.onSurfaceVariant,
                     ),
                   ),
-                ],
-                const SizedBox(height: 9),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: colors.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: colors.outlineVariant),
+                  const SizedBox(height: 6),
+                  Text(
+                    name,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.6,
+                      height: 1.25,
+                      color: colors.onSurface,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
+                  ),
+                  if (asset?.customName != null &&
+                      asset!.customName!.trim().isNotEmpty &&
+                      asset.customName!.trim() != asset.name) ...<Widget>[
+                    const SizedBox(height: 2),
+                    Text(
+                      asset.name,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Icon(
-                            isMarketDerived ? Icons.sync : Icons.edit_outlined,
-                            size: 13,
-                            color: colors.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 5),
-                          Flexible(
-                            child: Text(
-                              sourceLabel,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: colors.onSurfaceVariant,
+                    ),
+                  ],
+                  const SizedBox(height: 9),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: colors.outlineVariant),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                              isMarketDerived
+                                  ? Icons.sync
+                                  : Icons.edit_outlined,
+                              size: 13,
+                              color: colors.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                sourceLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.onSurfaceVariant,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  headlineValue,
-                  key: const ValueKey<String>('holding-glance-headline-value'),
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    fontSize: 34,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: -0.8,
-                    height: 1.3,
-                    color: isAsset ? colors.primary : finance.negative,
-                    fontFeatures: const <FontFeature>[
-                      FontFeature.tabularFigures(),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                if (showConverted || sharePct.isNotEmpty) ...<Widget>[
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: colors.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: colors.outlineVariant),
+                  const SizedBox(height: 12),
+                  Text(
+                    headlineValue,
+                    key: const ValueKey<String>(
+                      'holding-glance-headline-value',
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 11,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.8,
+                      height: 1.3,
+                      color: isAsset ? colors.primary : finance.negative,
+                      fontFeatures: const <FontFeature>[
+                        FontFeature.tabularFigures(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  if (showConverted || sharePct.isNotEmpty) ...<Widget>[
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: colors.outlineVariant),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          if (showConverted)
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Expanded(
-                                  flex: 4,
-                                  child: Text(
-                                    'Portfolio value ({currency})'
-                                        .tr(context)
-                                        .replaceAll(
-                                          '{currency}',
-                                          baseCurrency!,
-                                        ),
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colors.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  flex: 6,
-                                  child: Text(
-                                    hideBalances
-                                        ? CurrencyUtil.maskShort
-                                        : CurrencyUtil.format(
-                                            convertedValue!,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 11,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            if (showConverted)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Expanded(
+                                    flex: 4,
+                                    child: Text(
+                                      'Portfolio value ({currency})'
+                                          .tr(context)
+                                          .replaceAll(
+                                            '{currency}',
                                             baseCurrency!,
                                           ),
-                                    textAlign: TextAlign.end,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: colors.onSurface,
-                                      fontFeatures: const <FontFeature>[
-                                        FontFeature.tabularFigures(),
-                                      ],
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: colors.onSurfaceVariant,
+                                          ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          if (showConverted && sharePct.isNotEmpty)
-                            const SizedBox(height: 8),
-                          if (sharePct.isNotEmpty) ...<Widget>[
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Expanded(
-                                  flex: 6,
-                                  child: Text(
-                                    (isAsset
-                                            ? 'Share of portfolio assets'
-                                            : 'Share of portfolio liabilities')
-                                        .tr(context),
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: colors.onSurfaceVariant,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 6,
+                                    child: Text(
+                                      hideBalances
+                                          ? CurrencyUtil.maskShort
+                                          : CurrencyUtil.format(
+                                              convertedValue!,
+                                              baseCurrency!,
+                                            ),
+                                      textAlign: TextAlign.end,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: colors.onSurface,
+                                            fontFeatures: const <FontFeature>[
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Flexible(
-                                  flex: 4,
-                                  child: Text(
-                                    sharePct,
-                                    textAlign: TextAlign.end,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: colors.onSurface,
-                                      fontFeatures: const <FontFeature>[
-                                        FontFeature.tabularFigures(),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            ClipRRect(
-                              key: const ValueKey<String>(
-                                'holding-portfolio-share-bar',
+                                ],
                               ),
-                              borderRadius: BorderRadius.circular(999),
-                              child: ColoredBox(
-                                color: colors.surfaceContainerHigh,
-                                child: SizedBox(
-                                  height: 5,
-                                  child: FractionallySizedBox(
-                                    alignment: AlignmentDirectional.centerStart,
-                                    widthFactor: shareFraction,
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        color: isAsset
-                                            ? finance.positive
-                                            : finance.negative,
-                                        borderRadius: BorderRadius.circular(
-                                          999,
+                            if (showConverted && sharePct.isNotEmpty)
+                              const SizedBox(height: 8),
+                            if (sharePct.isNotEmpty) ...<Widget>[
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  Expanded(
+                                    flex: 6,
+                                    child: Text(
+                                      (isAsset
+                                              ? 'Share of portfolio assets'
+                                              : 'Share of portfolio liabilities')
+                                          .tr(context),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: colors.onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Flexible(
+                                    flex: 4,
+                                    child: Text(
+                                      sharePct,
+                                      textAlign: TextAlign.end,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: colors.onSurface,
+                                            fontFeatures: const <FontFeature>[
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              ClipRRect(
+                                key: const ValueKey<String>(
+                                  'holding-portfolio-share-bar',
+                                ),
+                                borderRadius: BorderRadius.circular(999),
+                                child: ColoredBox(
+                                  color: colors.surfaceContainerHigh,
+                                  child: SizedBox(
+                                    height: 5,
+                                    child: FractionallySizedBox(
+                                      alignment:
+                                          AlignmentDirectional.centerStart,
+                                      widthFactor: shareFraction,
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          color: isAsset
+                                              ? finance.positive
+                                              : finance.negative,
+                                          borderRadius: BorderRadius.circular(
+                                            999,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
+                            ],
                           ],
-                        ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(17),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 4,
+                      ),
+                      child: _PortfolioResolvedRows(
+                        portfolioId: portfolioId,
+                        portfolioName: portfolioName,
+                        rows: detailRows,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  if (notice case final Widget message) ...<Widget>[
+                    const SizedBox(height: 14),
+                    message,
+                  ],
+                  const SizedBox(height: 22),
+                  FilledButton(
+                    key: primaryKey,
+                    onPressed: onPrimary,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(48, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                    ),
+                    child: Text(primaryLabel),
+                  ),
+                  ...actions,
                 ],
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colors.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(17),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 4,
-                    ),
-                    child: _PortfolioResolvedRows(
-                      portfolioId: portfolioId,
-                      portfolioName: portfolioName,
-                      rows: detailRows,
-                    ),
-                  ),
-                ),
-                if (notice case final Widget message) ...<Widget>[
-                  const SizedBox(height: 14),
-                  message,
-                ],
-                const SizedBox(height: 22),
-                FilledButton(
-                  key: primaryKey,
-                  onPressed: onPrimary,
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(48, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                  ),
-                  child: Text(primaryLabel),
-                ),
-                ...actions,
-              ],
+              ),
             ),
           ),
         ),
