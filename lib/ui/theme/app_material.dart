@@ -110,7 +110,7 @@ class AppSurface extends StatelessWidget {
         offset: Offset(0, control ? 2 : 8),
       ),
     ];
-    if (!style.isGlass) {
+    if (!style.isGlass || tint != null) {
       return DecoratedBox(
         decoration: decoration.copyWith(boxShadow: shadows),
         child: child,
@@ -132,7 +132,7 @@ class AppSurface extends StatelessWidget {
   }
 }
 
-/// One ambient backdrop behind the navigator, never behind individual rows.
+/// An opaque backdrop with optional ambient glass lighting.
 class AppThemeBackground extends StatelessWidget {
   const AppThemeBackground({required this.child, super.key});
 
@@ -140,7 +140,7 @@ class AppThemeBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!AppStyle.of(context).isGlass) return child;
+    final bool glass = AppStyle.of(context).isGlass;
     final ColorScheme colors = Theme.of(context).colorScheme;
     final bool dark = colors.brightness == Brightness.dark;
     final List<(Alignment, Color)> lights = dark
@@ -159,21 +159,54 @@ class AppThemeBackground extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          for (final (Alignment center, Color color) in lights)
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: center,
-                  radius: 1.1,
-                  colors: <Color>[color, color.withValues(alpha: 0)],
-                ),
-              ),
-            ),
+          Positioned.fill(
+            child: glass
+                ? IgnorePointer(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: <Widget>[
+                        for (final (Alignment center, Color color) in lights)
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: RadialGradient(
+                                center: center,
+                                radius: 1.1,
+                                colors: <Color>[
+                                  color,
+                                  color.withValues(alpha: 0),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
           child,
         ],
       ),
     );
   }
+}
+
+class AppPageTransitionsTheme extends PageTransitionsTheme {
+  const AppPageTransitionsTheme();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) => super.buildTransitions<T>(
+    route,
+    context,
+    animation,
+    secondaryAnimation,
+    AppThemeBackground(child: child),
+  );
 }
 
 Widget appButtonSheen(

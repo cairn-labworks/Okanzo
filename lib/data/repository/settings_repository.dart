@@ -58,7 +58,11 @@ class CategorySection {
 /// Reads and writes app preferences, mirroring the Android DataStore keys so an
 /// existing installation's semantics are preserved.
 class SettingsRepository {
-  SettingsRepository(this._prefs);
+  SettingsRepository(this._prefs)
+    : _committedAppearance = (
+        mode: _prefs.getString(_keyThemeMode),
+        theme: _prefs.getString(_keyAppTheme),
+      );
 
   static const String _keyThemeMode = 'theme_mode';
   static const String _keyAppTheme = 'app_theme';
@@ -72,6 +76,7 @@ class SettingsRepository {
   static const String _keyLastSeenVersion = 'last_seen_version';
   final SharedPreferences _prefs;
   // SharedPreferences updates its cache before confirming a write.
+  ({String? mode, String? theme}) _committedAppearance;
   bool? _blockScreenshots;
   bool? _simpleNetWorth;
   int? _selectedPortfolioId;
@@ -88,8 +93,8 @@ class SettingsRepository {
   }
 
   AppSettings get current => AppSettings(
-    themeMode: AppThemeMode.fromName(_prefs.getString(_keyThemeMode)),
-    appTheme: AppTheme.fromName(_prefs.getString(_keyAppTheme)),
+    themeMode: AppThemeMode.fromName(_committedAppearance.mode),
+    appTheme: AppTheme.fromName(_committedAppearance.theme),
     baseCurrency:
         _prefs.getString(_keyBaseCurrency) ?? CurrencyUtil.deviceCurrencyCode(),
     appLockEnabled: _prefs.getBool(_keyAppLock) ?? false,
@@ -163,10 +168,8 @@ class SettingsRepository {
     _emit();
   }
 
-  Future<void> setThemeMode(AppThemeMode mode) async {
-    await _prefs.setString(_keyThemeMode, mode.storageName);
-    _emit();
-  }
+  Future<void> setThemeMode(AppThemeMode mode) =>
+      _updateAppearance(() => (mode, current.appTheme));
 
   Future<void> setAppTheme(AppTheme theme) => _updateAppearance(() {
     final AppThemeMode mode = theme == AppTheme.midnight
@@ -210,8 +213,8 @@ class SettingsRepository {
 
   Future<void> _saveAppearance(AppThemeMode mode, AppTheme theme) async {
     final Map<String, String?> original = <String, String?>{
-      _keyThemeMode: _prefs.getString(_keyThemeMode),
-      _keyAppTheme: _prefs.getString(_keyAppTheme),
+      _keyThemeMode: _committedAppearance.mode,
+      _keyAppTheme: _committedAppearance.theme,
     };
     bool saved = false;
     try {
@@ -219,6 +222,7 @@ class SettingsRepository {
           !await _prefs.setString(_keyAppTheme, theme.storageName)) {
         throw StateError('Theme preference could not be saved');
       }
+      _committedAppearance = (mode: mode.storageName, theme: theme.storageName);
       saved = true;
     } finally {
       if (!saved) {

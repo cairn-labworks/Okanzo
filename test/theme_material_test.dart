@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:okanzo/domain/model/app_theme.dart';
 import 'package:okanzo/domain/model/net_worth_summary.dart';
+import 'package:okanzo/ui/components/ui_components.dart';
 import 'package:okanzo/ui/home/net_worth_card.dart';
+import 'package:okanzo/ui/theme/app_material.dart';
 import 'package:okanzo/ui/theme/theme.dart';
 
 const NetWorthSummary _summary = NetWorthSummary(
@@ -32,6 +34,73 @@ Widget _app(AppTheme style, Brightness brightness, Widget child) => MaterialApp(
 );
 
 void main() {
+  testWidgets('pushed glass pages own an opaque route backdrop', (
+    WidgetTester tester,
+  ) async {
+    const Key nextPage = ValueKey<String>('glass-pushed-page');
+    final theme = buildTheme(
+      brightness: Brightness.light,
+      appTheme: AppTheme.liquidGlass,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        builder: (_, child) => AppThemeBackground(child: child!),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      const Scaffold(key: nextPage, body: Text('Next page')),
+                ),
+              ),
+              child: const Text('Open page'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open page'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    final Finder localBackdrops = find.descendant(
+      of: find.byType(Navigator),
+      matching: find.byType(AppThemeBackground),
+    );
+    final Finder pageBackdrop = find.ancestor(
+      of: find.byKey(nextPage),
+      matching: localBackdrops,
+    );
+    expect(pageBackdrop, findsWidgets);
+    final ColoredBox background = tester.widget<ColoredBox>(
+      find
+          .descendant(of: pageBackdrop.first, matching: find.byType(ColoredBox))
+          .first,
+    );
+    expect(background.color.a, 1);
+    await tester.pumpAndSettle();
+    Navigator.of(tester.element(find.byKey(nextPage))).pop();
+    await tester.pumpAndSettle();
+    expect(find.text('Open page'), findsOneWidget);
+  });
+
+  testWidgets('opaque glass avatar tints do not add backdrop filters', (
+    WidgetTester tester,
+  ) async {
+    for (final Brightness brightness in Brightness.values) {
+      await tester.pumpWidget(
+        _app(
+          AppTheme.liquidGlass,
+          brightness,
+          const TypeAvatar(Icons.wallet_outlined),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(BackdropFilter), findsNothing);
+    }
+  });
+
   for (final AppTheme style in <AppTheme>[
     AppTheme.sculpted,
     AppTheme.liquidGlass,

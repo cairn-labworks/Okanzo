@@ -13,7 +13,10 @@ import 'package:okanzo/domain/model/theme_mode.dart';
 import 'package:okanzo/main.dart' as app;
 import 'package:okanzo/ui/home/home_screen.dart';
 import 'package:okanzo/ui/theme/app_style.dart';
+import 'package:okanzo/util/screenshot_protection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'helpers/device_test_cleanup.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -216,34 +219,49 @@ void main() {
         }
       }
     } finally {
-      await tester.pumpWidget(const SizedBox.shrink());
-      await settle();
-      try {
-        if (fixtureId != null) {
-          expect(await container.portfolioRepository.delete(fixtureId), isTrue);
-          expect(
-            await container.assetRepository.getForPortfolio(fixtureId),
-            isEmpty,
-          );
-          expect(
-            await container.liabilityRepository.getForPortfolio(fixtureId),
-            isEmpty,
-          );
-        }
-        await settings.setBlockScreenshots(blockScreenshots);
-        for (final MapEntry<String, Object?> entry in original.entries) {
-          final bool restored = switch (entry.value) {
-            null => await preferences.remove(entry.key),
-            final String value => await preferences.setString(entry.key, value),
-            final bool value => await preferences.setBool(entry.key, value),
-            _ => throw StateError('Unexpected preference type: ${entry.key}'),
-          };
-          expect(restored, isTrue, reason: 'Restore ${entry.key}');
-        }
-      } finally {
-        await settings.dispose();
-        await container.database.close();
-      }
+      await runDeviceTestCleanup(<DeviceTestCleanupStep>[
+        (
+          'restore native screenshot protection',
+          () => ScreenshotProtection.setEnabled(blockScreenshots),
+        ),
+        for (final entry in original.entries)
+          (
+            'restore ${entry.key}',
+            () => restoreDeviceTestPreference(
+              preferences,
+              entry.key,
+              entry.value,
+            ),
+          ),
+        (
+          'unmount test widgets',
+          () => tester.pumpWidget(const SizedBox.shrink()),
+        ),
+        ('settle test widgets', settle),
+        if (fixtureId case final int id) ...<DeviceTestCleanupStep>[
+          (
+            'delete test portfolio',
+            () async =>
+                expect(await container.portfolioRepository.delete(id), isTrue),
+          ),
+          (
+            'verify test assets removed',
+            () async => expect(
+              await container.assetRepository.getForPortfolio(id),
+              isEmpty,
+            ),
+          ),
+          (
+            'verify test liabilities removed',
+            () async => expect(
+              await container.liabilityRepository.getForPortfolio(id),
+              isEmpty,
+            ),
+          ),
+        ],
+        ('dispose settings', settings.dispose),
+        ('close database', container.database.close),
+      ]);
     }
   }, timeout: const Timeout(Duration(minutes: 4)));
 }

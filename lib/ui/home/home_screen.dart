@@ -1461,7 +1461,7 @@ class _CategoryCardShell extends StatelessWidget {
       ),
     );
     return Material(
-      color: AppStyle.of(context).isEnhanced
+      color: AppStyle.of(context).isEnhanced && !isDragging
           ? Colors.transparent
           : theme.colorScheme.surfaceContainerLow,
       elevation: isDragging ? 8 : 0,

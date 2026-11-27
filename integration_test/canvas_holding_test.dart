@@ -7,6 +7,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:okanzo/data/local/entity/asset_entity.dart';
 import 'package:okanzo/data/local/entity/liability_entity.dart';
 import 'package:okanzo/di/app_container.dart';
+import 'package:okanzo/domain/model/app_theme.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/release_notes.dart';
 import 'package:okanzo/domain/model/theme_mode.dart';
@@ -16,6 +17,8 @@ import 'package:okanzo/ui/components/holding_editor_chrome.dart';
 import 'package:okanzo/ui/components/holding_saved_summary_screen.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:okanzo/util/screenshot_protection.dart';
+
+import 'helpers/device_test_cleanup.dart';
 
 Future<void> tap(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
@@ -90,6 +93,26 @@ void main() {
     final List<int> liabilities = <int>[];
     await tester.runAsync(() async {
       container = await AppContainer.create();
+      final previous = container.settingsRepository.current;
+      addTearDown(
+        () => runDeviceTestCleanup(<DeviceTestCleanupStep>[
+          (
+            'restore canvas appearance mode',
+            () => container.settingsRepository.setAppearanceMode(
+              previous.appearanceMode,
+            ),
+          ),
+          (
+            'restore canvas theme style',
+            () => container.settingsRepository.setAppTheme(previous.appTheme),
+          ),
+          (
+            'restore native screenshot protection',
+            () => ScreenshotProtection.setEnabled(previous.blockScreenshots),
+          ),
+        ]),
+      );
+      await container.settingsRepository.setAppTheme(AppTheme.classic);
       await container.settingsRepository.setBaseCurrency('USD');
       await container.settingsRepository.setAppearanceMode(AppThemeMode.dark);
       await container.settingsRepository.setLastSeenVersion(

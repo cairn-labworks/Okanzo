@@ -257,6 +257,18 @@ class _FailingThemeRepository extends SettingsRepository {
   }
 }
 
+class _DelayedThemeRepository extends SettingsRepository {
+  _DelayedThemeRepository(super.preferences);
+
+  final Completer<void> releaseThemeSave = Completer<void>();
+
+  @override
+  Future<void> setAppTheme(AppTheme theme) async {
+    await releaseThemeSave.future;
+    await super.setAppTheme(theme);
+  }
+}
+
 class _RejectingScreenshotPreferences extends Fake
     implements SharedPreferences {
   _RejectingScreenshotPreferences({required this.throwOnWrite});
@@ -1825,6 +1837,72 @@ void main() {
     },
   );
 
+  for (final AppTheme style in <AppTheme>[
+    AppTheme.sculpted,
+    AppTheme.liquidGlass,
+  ]) {
+    testWidgets(
+      '$style category drag feedback stays opaque outside its panel',
+      (WidgetTester tester) async {
+        container.assetRepository.items = const <AssetEntity>[
+          AssetEntity(
+            id: 1,
+            portfolioId: 1,
+            type: AssetType.cash,
+            name: 'Cash reserve',
+            currency: 'USD',
+            manualValue: 100,
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+          AssetEntity(
+            id: 2,
+            portfolioId: 1,
+            type: AssetType.stock,
+            name: 'Shares',
+            currency: 'USD',
+            quantity: 1,
+            lastPrice: 100,
+            symbol: 'AAPL',
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+        ];
+        await tester.pumpWidget(
+          _app(
+            container,
+            HomeScreen(
+              onOpenAssetEditor: (_, _) {},
+              onOpenLiabilityEditor: (_, _) {},
+              onManagePortfolios: () {},
+              onOpenSettings: () {},
+            ),
+            appTheme: style,
+          ),
+        );
+        await _tap(tester, find.text('Open'));
+        final TestGesture gesture = await tester.startGesture(
+          tester.getCenter(find.text('Cash')),
+        );
+        try {
+          await tester.pump(const Duration(milliseconds: 600));
+          await gesture.moveBy(const Offset(0, 40));
+          await tester.pump(const Duration(milliseconds: 200));
+          final Material proxy = tester.widget<Material>(
+            find.byWidgetPredicate(
+              (Widget widget) => widget is Material && widget.elevation == 8,
+            ),
+          );
+          expect(proxy.color, isNotNull);
+          expect(proxy.color!.a, 1);
+        } finally {
+          await gesture.up();
+          await tester.pumpAndSettle();
+        }
+      },
+    );
+  }
+
   testWidgets(
     'expanded categories can be reordered by long-pressing their header',
     (WidgetTester tester) async {
@@ -2552,6 +2630,59 @@ void main() {
     expect(find.textContaining("Couldn't save theme:"), findsOneWidget);
     expect(failing.current.themeStyle, AppTheme.classic);
   });
+
+  for (final (AppTheme from, AppTheme to) in <(AppTheme, AppTheme)>[
+    (AppTheme.classic, AppTheme.liquidGlass),
+    (AppTheme.liquidGlass, AppTheme.sculpted),
+  ]) {
+    testWidgets('$from to $to after locking keeps the pushed draft', (
+      WidgetTester tester,
+    ) async {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString('app_theme', from.storageName);
+      final settings = _DelayedThemeRepository(preferences);
+      addTearDown(settings.dispose);
+      final delayedContainer = _Container(settings);
+      await settings.setLastSeenVersion(AppReleaseNotes.currentVersion);
+      await tester.pumpWidget(
+        AppScope(container: delayedContainer, child: const app.OkanzoApp()),
+      );
+      await tester.pumpAndSettle();
+      const Key draftKey = ValueKey<String>('retained-theme-draft');
+      unawaited(
+        Navigator.of(tester.element(find.byType(HomeScreen))).push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: TextField(key: draftKey)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(draftKey), 'Unsaved holding');
+      final Future<void> save = settings.setAppTheme(to);
+      try {
+        delayedContainer.appLock.lock();
+        await settings.setAppLockEnabled(true);
+        await tester.pumpAndSettle();
+        expect(find.byType(LockScreen), findsOneWidget);
+
+        settings.releaseThemeSave.complete();
+        await save;
+        await tester.pumpAndSettle();
+        expect(find.byType(LockScreen), findsOneWidget);
+        delayedContainer.appLock.markUnlocked();
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(draftKey), findsOneWidget);
+        expect(find.text('Unsaved holding'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      } finally {
+        if (!settings.releaseThemeSave.isCompleted) {
+          settings.releaseThemeSave.complete();
+        }
+        await save;
+      }
+    });
+  }
 
   for (final AppTheme style in <AppTheme>[
     AppTheme.sculpted,

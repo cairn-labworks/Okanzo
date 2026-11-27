@@ -106,6 +106,33 @@ void main() {
       }
     });
 
+    test('Liquid Glass fades preserve surface RGB in both appearances', () {
+      for (final Brightness brightness in Brightness.values) {
+        final ThemeData original = buildTheme(brightness: brightness);
+        final ThemeData glass = buildTheme(
+          brightness: brightness,
+          appTheme: AppTheme.liquidGlass,
+        );
+        for (final (ThemeData from, ThemeData to) in <(ThemeData, ThemeData)>[
+          (original, glass),
+          (glass, original),
+        ]) {
+          for (final double t in <double>[.25, .5, .75]) {
+            final ThemeData frame = ThemeData.lerp(from, to, t);
+            final Color composite = Color.alphaBlend(
+              frame.scaffoldBackgroundColor,
+              frame.colorScheme.surface,
+            );
+            expect(
+              composite.computeLuminance(),
+              closeTo(frame.colorScheme.surface.computeLuminance(), .00001),
+              reason: '$brightness at $t must not fade through black',
+            );
+          }
+        }
+      }
+    });
+
     for (final AppTheme style in <AppTheme>[
       AppTheme.sculpted,
       AppTheme.liquidGlass,

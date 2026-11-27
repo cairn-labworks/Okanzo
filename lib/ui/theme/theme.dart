@@ -177,8 +177,9 @@ ThemeData buildTheme({
     brightness: dark ? Brightness.dark : Brightness.light,
     colorScheme: scheme,
     scaffoldBackgroundColor: appStyle.isGlass
-        ? Colors.transparent
+        ? scheme.surface.withValues(alpha: 0)
         : scheme.surface,
+    pageTransitionsTheme: const AppPageTransitionsTheme(),
     textTheme: textTheme,
     extensions: <ThemeExtension<dynamic>>[
       dark ? FinanceColors.dark : FinanceColors.light,
