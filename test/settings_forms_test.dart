@@ -60,6 +60,7 @@ import 'package:okanzo/util/currency_util.dart';
 import 'package:okanzo/util/screenshot_protection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:okanzo/util/app_lock_coordinator.dart';
+import 'package:okanzo/util/backup_file_picker.dart';
 import 'package:okanzo/util/biometric_authenticator.dart';
 
 import 'helpers/fake_biometric_authenticator.dart';
@@ -165,6 +166,16 @@ class _Liabilities extends Fake implements LiabilityRepository {
 }
 
 class _Portfolios extends Fake implements PortfolioRepository {
+  List<PortfolioEntity> items = const <PortfolioEntity>[
+    PortfolioEntity(
+      id: 1,
+      name: 'Personal',
+      isDefault: true,
+      createdAt: 0,
+      updatedAt: 0,
+    ),
+  ];
+
   @override
   Future<int> ensureDefaultPortfolio([
     String defaultName = 'My Portfolio',
@@ -172,15 +183,7 @@ class _Portfolios extends Fake implements PortfolioRepository {
 
   @override
   Stream<List<PortfolioEntity>> observeAll() =>
-      Stream<List<PortfolioEntity>>.value(const <PortfolioEntity>[
-        PortfolioEntity(
-          id: 1,
-          name: 'Personal',
-          isDefault: true,
-          createdAt: 0,
-          updatedAt: 0,
-        ),
-      ]);
+      Stream<List<PortfolioEntity>>.value(items);
 }
 
 class _Rates extends Fake implements FxRepository {
@@ -205,7 +208,26 @@ class _Rates extends Fake implements FxRepository {
   }
 }
 
-class _Backups extends Fake implements BackupRepository {}
+class _Backups extends Fake implements BackupRepository {
+  List<int>? exportedIds;
+  String? exportPassword;
+
+  @override
+  Future<Uint8List> export(List<int> portfolioIds, String password) async {
+    exportedIds = List<int>.of(portfolioIds);
+    exportPassword = password;
+    return Uint8List.fromList(<int>[1, 2, 3]);
+  }
+}
+
+class _BackupPicker extends Fake implements BackupFilePicker {
+  @override
+  Future<Uri?> saveFile({
+    required String dialogTitle,
+    required String fileName,
+    required Uint8List bytes,
+  }) async => Uri.parse('memory:okanzo-backup.okanzo');
+}
 
 class _Search extends Fake implements StockSearchService {
   List<StockSearchResult> matches = <StockSearchResult>[];
@@ -282,6 +304,8 @@ class _Container extends Fake implements AppContainer {
   final _Rates fxRepository = _Rates();
   @override
   final _Backups backupRepository = _Backups();
+  @override
+  final _BackupPicker backupFilePicker = _BackupPicker();
 }
 
 Widget _app(
@@ -2664,7 +2688,8 @@ void main() {
     expect(find.text('Exchange rates updated'), findsOneWidget);
     await _tap(tester, find.text('Export portfolios'));
     expect(find.byType(AlertDialog), findsOneWidget);
-    expect(find.text('Personal'), findsOneWidget);
+    expect(find.text('1 portfolio selected'), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsNothing);
     expect(find.text('Confirm password'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
@@ -2675,6 +2700,179 @@ void main() {
       isNotNull,
     );
   });
+
+  testWidgets('quiet export dialog preserves edits when changing portfolios', (
+    WidgetTester tester,
+  ) async {
+    container.portfolioRepository.items = const <PortfolioEntity>[
+      PortfolioEntity(
+        id: 1,
+        name: 'Personal',
+        isDefault: true,
+        createdAt: 0,
+        updatedAt: 0,
+      ),
+      PortfolioEntity(id: 2, name: 'Investments', createdAt: 0, updatedAt: 0),
+      PortfolioEntity(id: 3, name: 'Long-term', createdAt: 0, updatedAt: 0),
+    ];
+    await open(tester, SettingsScreen(onClose: () {}));
+    await _tap(tester, find.text('Data'));
+    await _tap(tester, find.text('Export portfolios'));
+
+    expect(find.text('All 3 portfolios'), findsOneWidget);
+    expect(find.byType(CheckboxListTile), findsNothing);
+    final Finder password = find.widgetWithText(TextField, 'Password');
+    final Finder confirmation = find.widgetWithText(
+      TextField,
+      'Confirm password',
+    );
+    await tester.enterText(password, 'demo');
+    await tester.enterText(confirmation, 'demo');
+    await _tap(tester, find.text('Change'));
+    await _tap(tester, find.widgetWithText(CheckboxListTile, 'Investments'));
+    expect(find.text('2 portfolios selected'), findsOneWidget);
+    await _tap(tester, find.text('Done'));
+    expect(find.byType(CheckboxListTile), findsNothing);
+    expect(tester.widget<TextField>(password).controller!.text, 'demo');
+    expect(tester.widget<TextField>(confirmation).controller!.text, 'demo');
+
+    await _tap(tester, find.byTooltip('Show password').first);
+    expect(tester.widget<TextField>(password).obscureText, isFalse);
+    expect(tester.widget<TextField>(confirmation).obscureText, isFalse);
+    await _tap(tester, find.widgetWithText(FilledButton, 'Export'));
+    expect(container.backupRepository.exportedIds, <int>[1, 3]);
+    expect(container.backupRepository.exportPassword, 'demo');
+    expect(find.text('Exported 2 portfolio(s)'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('quiet export dialog validates collapsed selections', (
+    WidgetTester tester,
+  ) async {
+    await open(tester, SettingsScreen(onClose: () {}));
+    await _tap(tester, find.text('Data'));
+    await _tap(tester, find.text('Export portfolios'));
+    final Finder export = find.widgetWithText(FilledButton, 'Export');
+    final Finder password = find.widgetWithText(TextField, 'Password');
+    final Finder confirmation = find.widgetWithText(
+      TextField,
+      'Confirm password',
+    );
+    expect(tester.widget<FilledButton>(export).onPressed, isNull);
+    await tester.enterText(password, 'abc');
+    await tester.enterText(confirmation, 'abc');
+    await tester.pumpAndSettle();
+    expect(find.text('Use at least 4 characters'), findsOneWidget);
+    expect(tester.widget<FilledButton>(export).onPressed, isNull);
+    await tester.enterText(password, 'abcd');
+    await tester.pumpAndSettle();
+    expect(find.text("Passwords don't match"), findsOneWidget);
+    expect(tester.widget<FilledButton>(export).onPressed, isNull);
+    await tester.enterText(confirmation, 'abcd');
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(export).onPressed, isNotNull);
+
+    await _tap(tester, find.text('Change'));
+    await _tap(tester, find.text('Clear all'));
+    await _tap(tester, find.text('Done'));
+    expect(find.text('0 portfolios selected'), findsOneWidget);
+    expect(tester.widget<FilledButton>(export).onPressed, isNull);
+    await _tap(tester, find.text('Change'));
+    await _tap(tester, find.text('Select all'));
+    await _tap(tester, find.text('Done'));
+    expect(find.text('1 portfolio selected'), findsOneWidget);
+    expect(tester.widget<FilledButton>(export).onPressed, isNotNull);
+    await _tap(tester, find.widgetWithText(OutlinedButton, 'Cancel'));
+    expect(container.backupRepository.exportedIds, isNull);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final (Locale locale, AppTheme appTheme, Brightness brightness)
+      in <(Locale, AppTheme, Brightness)>[
+        (const Locale('de'), AppTheme.classic, Brightness.light),
+        (const Locale('ar'), AppTheme.midnight, Brightness.dark),
+      ]) {
+    testWidgets(
+      'quiet export dialog keeps long selections and password accessible at large text in $locale',
+      (WidgetTester tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(320, 640);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetViewInsets);
+        container.portfolioRepository.items = List<PortfolioEntity>.generate(
+          12,
+          (int index) => PortfolioEntity(
+            id: index + 1,
+            name: 'Long-term investments for family and retirement $index',
+            isDefault: index == 0,
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+        );
+        final AppLocalizations strings = AppLocalizations(locale);
+        await tester.pumpWidget(
+          _app(
+            container,
+            SettingsScreen(onClose: () {}),
+            locale: locale,
+            textScale: 2,
+            appTheme: appTheme,
+            brightness: brightness,
+          ),
+        );
+        await _tap(tester, find.text('Open'));
+        await _tap(tester, find.text(strings.text('Data')));
+        await _tap(tester, find.text(strings.text('Export portfolios')));
+        await _tap(tester, find.text(strings.text('Change')));
+        await _tap(
+          tester,
+          find.widgetWithText(
+            CheckboxListTile,
+            'Long-term investments for family and retirement 11',
+          ),
+        );
+        await _tap(tester, find.text(strings.text('Done')));
+        expect(find.byType(CheckboxListTile), findsNothing);
+        expect(
+          find.text(
+            strings
+                .text('{count} portfolios selected')
+                .replaceAll('{count}', '11'),
+          ),
+          findsOneWidget,
+        );
+        tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+        await tester.enterText(
+          find.widgetWithText(TextField, strings.text('Password')),
+          'demo',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextField, strings.text('Confirm password')),
+          'demo',
+        );
+        await tester.pumpAndSettle();
+        final Finder export = find.widgetWithText(
+          FilledButton,
+          strings.text('Export'),
+        );
+        await tester.ensureVisible(export);
+        expect(tester.widget<FilledButton>(export).onPressed, isNotNull);
+        expect(
+          Directionality.of(tester.element(find.byType(AlertDialog))),
+          locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+        );
+        await _tap(
+          tester,
+          find.widgetWithText(OutlinedButton, strings.text('Cancel')),
+        );
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('base currency and app lock remain persistent settings', (
     WidgetTester tester,

@@ -1315,6 +1315,7 @@ class _ExportDialogState extends State<_ExportDialog> {
   final TextEditingController _password = TextEditingController();
   final TextEditingController _confirm = TextEditingController();
   bool _visible = false;
+  bool _choosingPortfolios = false;
 
   @override
   void dispose() {
@@ -1326,6 +1327,7 @@ class _ExportDialogState extends State<_ExportDialog> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
     final List<int> chosen = <int>[
       for (final PortfolioEntity portfolio in widget.portfolios)
         if (_selected[portfolio.id] == true) portfolio.id,
@@ -1335,32 +1337,175 @@ class _ExportDialogState extends State<_ExportDialog> {
     final bool mismatch = confirm.isNotEmpty && password != confirm;
     final bool canExport =
         chosen.isNotEmpty && password.length >= 4 && password == confirm;
+    final bool allSelected = chosen.length == widget.portfolios.length;
+    final String selection = allSelected && chosen.length > 1
+        ? 'All {count} portfolios'
+              .tr(context)
+              .replaceAll('{count}', '${chosen.length}')
+        : chosen.length == 1
+        ? '1 portfolio selected'.tr(context)
+        : '{count} portfolios selected'
+              .tr(context)
+              .replaceAll('{count}', '${chosen.length}');
 
     return AlertDialog(
-      title: Text('Export portfolios'.tr(context)),
-      content: SingleChildScrollView(
+      backgroundColor: colors.surface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: canvasBoxBorderColor(colors)),
+      ),
+      scrollable: true,
+      titlePadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      contentPadding: const EdgeInsets.fromLTRB(24, 22, 24, 0),
+      actionsPadding: const EdgeInsets.all(24),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
+      actionsOverflowButtonSpacing: 12,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              Icon(Icons.ios_share_outlined, color: colors.primary, size: 22),
+              IconButton(
+                tooltip: 'Cancel'.tr(context),
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close, size: 20),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Export portfolios'.tr(context),
+            style: theme.textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'One encrypted file. Yours to keep.'.tr(context),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 328,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(
-              'Choose portfolios and set a password. Use the same password '
-                      'to import the backup.'
-                  .tr(context),
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 12),
-            for (final PortfolioEntity portfolio in widget.portfolios)
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                dense: true,
-                value: _selected[portfolio.id] ?? false,
-                onChanged: (bool? value) =>
-                    setState(() => _selected[portfolio.id] = value ?? false),
-                title: Text(portfolio.name),
+            Material(
+              color: colors.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text(
+                                'Include in backup'.tr(context),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colors.onSurfaceVariant,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Semantics(
+                                liveRegion: true,
+                                child: Text(
+                                  selection,
+                                  style: theme.textTheme.titleSmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Semantics(
+                          expanded: _choosingPortfolios,
+                          child: TextButton(
+                            onPressed: () => setState(
+                              () => _choosingPortfolios = !_choosingPortfolios,
+                            ),
+                            child: Text(
+                              (_choosingPortfolios ? 'Done' : 'Change').tr(
+                                context,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_choosingPortfolios) ...<Widget>[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: TextButton(
+                          onPressed: () => setState(
+                            () => _selected.updateAll((_, _) => !allSelected),
+                          ),
+                          child: Text(
+                            (allSelected ? 'Clear all' : 'Select all').tr(
+                              context,
+                            ),
+                          ),
+                        ),
+                      ),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 224),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              for (final PortfolioEntity portfolio
+                                  in widget.portfolios)
+                                CheckboxListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  controlAffinity:
+                                      ListTileControlAffinity.trailing,
+                                  value: _selected[portfolio.id] ?? false,
+                                  onChanged: (bool? value) => setState(
+                                    () => _selected[portfolio.id] =
+                                        value ?? false,
+                                  ),
+                                  title: Text(
+                                    portfolio.name,
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                  subtitle: portfolio.isDefault
+                                      ? Text(
+                                          'Default'.tr(context),
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: colors.onSurfaceVariant,
+                                              ),
+                                        )
+                                      : null,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            const SizedBox(height: 8),
+            ),
+            const SizedBox(height: 20),
             _PasswordField(
               controller: _password,
               label: 'Password'.tr(context),
@@ -1368,9 +1513,7 @@ class _ExportDialogState extends State<_ExportDialog> {
               onToggleVisibility: () => setState(() => _visible = !_visible),
               onChanged: (_) => setState(() {}),
               isError: password.isNotEmpty && password.length < 4,
-              supportingText: password.isNotEmpty && password.length < 4
-                  ? 'Use at least 4 characters'.tr(context)
-                  : null,
+              supportingText: 'Use at least 4 characters'.tr(context),
             ),
             const SizedBox(height: 8),
             _PasswordField(
@@ -1384,15 +1527,42 @@ class _ExportDialogState extends State<_ExportDialog> {
                   ? "Passwords don't match".tr(context)
                   : null,
             ),
+            const SizedBox(height: 24),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Icon(
+                    Icons.key_outlined,
+                    size: 16,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "Keep this password safe. You'll need it to import "
+                            'your backup.'
+                        .tr(context),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
       actions: <Widget>[
-        TextButton(
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(minimumSize: const Size(128, 48)),
           onPressed: () => Navigator.of(context).pop(),
           child: Text('Cancel'.tr(context)),
         ),
-        TextButton(
+        FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size(128, 48)),
           onPressed: canExport
               ? () =>
                     Navigator.of(context).pop(_ExportRequest(chosen, password))

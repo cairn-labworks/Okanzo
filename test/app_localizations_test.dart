@@ -171,6 +171,25 @@ void main() {
     }
   });
 
+  test('quiet export dialog guidance and selection are localized', () {
+    for (final Locale locale in AppLocalizations.supportedLocales.skip(1)) {
+      final AppLocalizations strings = AppLocalizations(locale);
+      for (final String source in <String>[
+        'One encrypted file. Yours to keep.',
+        'Include in backup',
+        'All {count} portfolios',
+        '1 portfolio selected',
+        '{count} portfolios selected',
+        'Change',
+        'Select all',
+        'Clear all',
+        "Keep this password safe. You'll need it to import your backup.",
+      ]) {
+        expect(strings.text(source), isNot(source), reason: '$locale: $source');
+      }
+    }
+  });
+
   test(
     'security prompts and credential guidance are translated in all locales',
     () {
