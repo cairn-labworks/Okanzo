@@ -42,29 +42,41 @@ class AppContainer {
     required this.biometricAuthenticator,
     required this.backupFilePicker,
     required this.clock,
-  }) : appLock = AppLockCoordinator(
-         authenticator: biometricAuthenticator,
-         now: clock,
-       );
+    AppLockCoordinator? appLock,
+  }) : appLock =
+           appLock ??
+           AppLockCoordinator(
+             authenticator: biometricAuthenticator,
+             now: clock,
+           );
 
   static Future<AppContainer> create({
+    SharedPreferences? preferences,
+    SettingsRepository? settingsRepository,
+    AppLockCoordinator? appLock,
+    Future<String>? passphraseFuture,
+    Future<String>? databasesDirFuture,
     BiometricAuthenticator? biometricAuthenticator,
     BackupFilePicker backupFilePicker = const SystemBackupFilePicker(),
     DateTime Function()? clock,
   }) async {
     const DatabaseKeyProvider keyProvider = DatabaseKeyProvider();
-    final Future<SharedPreferences> prefsFuture =
-        SharedPreferences.getInstance();
-    final Future<String> passphraseFuture = keyProvider.getOrCreatePassphrase();
-    final Future<String> databasesDirFuture = getDatabasesPath();
+    final Future<SharedPreferences> prefsFuture = preferences != null
+        ? Future<SharedPreferences>.value(preferences)
+        : SharedPreferences.getInstance();
+    final Future<String> effectivePassphraseFuture =
+        passphraseFuture ?? keyProvider.getOrCreatePassphrase();
+    final Future<String> effectiveDatabasesDirFuture =
+        databasesDirFuture ?? getDatabasesPath();
 
-    final String databasesDir = await databasesDirFuture;
+    final String databasesDir = await effectiveDatabasesDirFuture;
     final String path = p.join(databasesDir, AppDatabase.databaseName);
     await _migrateLegacyDatabase(databasesDir, path);
     final AppDatabase database = await AppDatabase.open(
       path: path,
-      password: await passphraseFuture,
+      password: await effectivePassphraseFuture,
     );
+    final SharedPreferences prefs = await prefsFuture;
 
     final ApiClient client = ApiClient();
     final StockPriceService stockPriceService = StockPriceService(
@@ -79,10 +91,13 @@ class AppContainer {
       fxRateDao,
       FxApi(client: client),
     );
+    final BiometricAuthenticator resolvedAuthenticator =
+        biometricAuthenticator ?? LocalBiometricAuthenticator();
+    final DateTime Function() resolvedClock = clock ?? DateTime.now;
 
     return AppContainer._(
       database: database,
-      settingsRepository: SettingsRepository(await prefsFuture),
+      settingsRepository: settingsRepository ?? SettingsRepository(prefs),
       portfolioRepository: PortfolioRepository(portfolioDao),
       assetRepository: AssetRepository(
         assetDao,
@@ -93,10 +108,10 @@ class AppContainer {
       liabilityRepository: LiabilityRepository(liabilityDao),
       fxRepository: fxRepository,
       backupRepository: BackupRepository(portfolioDao, assetDao, liabilityDao),
-      biometricAuthenticator:
-          biometricAuthenticator ?? LocalBiometricAuthenticator(),
+      biometricAuthenticator: resolvedAuthenticator,
       backupFilePicker: backupFilePicker,
-      clock: clock ?? DateTime.now,
+      clock: resolvedClock,
+      appLock: appLock,
     );
   }
 

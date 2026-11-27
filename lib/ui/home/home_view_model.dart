@@ -110,6 +110,10 @@ class HomeViewModel extends ChangeNotifier {
   bool _refreshing = false;
   bool _displayInUsd = false;
   bool _loadedPortfolios = false;
+  bool _loadedAssets = false;
+  bool _loadedLiabilities = false;
+  bool _ensuringDefaultPortfolio = false;
+  bool _startedBackgroundFxCheck = false;
 
   HomeState _state = const HomeState();
   String? _message;
@@ -149,6 +153,18 @@ class HomeViewModel extends ChangeNotifier {
           unawaited(_settingsRepository.setSelectedPortfolioId(null));
           _settings = _settingsRepository.current;
         }
+      } else if (!_ensuringDefaultPortfolio) {
+        _ensuringDefaultPortfolio = true;
+        unawaited(
+          _portfolioRepository.ensureDefaultPortfolio().whenComplete(() {
+            _ensuringDefaultPortfolio = false;
+            if (!_loadedPortfolios) {
+              _loadedPortfolios = true;
+              _rebuild();
+            }
+          }),
+        );
+        if (portfolios.isEmpty && !_loadedPortfolios) return;
       }
       _portfolios = portfolios;
       _loadedPortfolios = true;
@@ -158,8 +174,6 @@ class HomeViewModel extends ChangeNotifier {
       _converter = value;
       _rebuild();
     });
-    unawaited(_portfolioRepository.ensureDefaultPortfolio());
-    unawaited(_fxRepository.ensureFreshRates());
   }
 
   List<String> _lastAssetCategoryOrder = const <String>[];
@@ -268,6 +282,7 @@ class HomeViewModel extends ChangeNotifier {
         : settings.baseCurrency;
 
     if (active == null) {
+      _scheduleBackgroundFxCheck();
       _state = HomeState(
         loading: false,
         portfolios: _portfolios,
@@ -280,6 +295,12 @@ class HomeViewModel extends ChangeNotifier {
       notifyListeners();
       return;
     }
+
+    if (!_loadedAssets || !_loadedLiabilities) {
+      return;
+    }
+
+    _scheduleBackgroundFxCheck();
 
     final NetWorthSummary summary = _calculator.calculate(
       assets: _assets,
@@ -304,6 +325,12 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _scheduleBackgroundFxCheck() {
+    if (_startedBackgroundFxCheck) return;
+    _startedBackgroundFxCheck = true;
+    unawaited(_fxRepository.ensureFreshRates());
+  }
+
   void _watchPortfolio(int? portfolioId) {
     if (portfolioId == _watchedPortfolioId) return;
     _watchedPortfolioId = portfolioId;
@@ -311,17 +338,21 @@ class HomeViewModel extends ChangeNotifier {
     _liabilitySub?.cancel();
     _assets = const <AssetEntity>[];
     _liabilities = const <LiabilityEntity>[];
+    _loadedAssets = false;
+    _loadedLiabilities = false;
     if (portfolioId == null) return;
     _assetSub = _assetRepository.observeForPortfolio(portfolioId).listen((
       List<AssetEntity> assets,
     ) {
       _assets = assets;
+      _loadedAssets = true;
       _rebuild();
     });
     _liabilitySub = _liabilityRepository
         .observeForPortfolio(portfolioId)
         .listen((List<LiabilityEntity> liabilities) {
           _liabilities = liabilities;
+          _loadedLiabilities = true;
           _rebuild();
         });
   }

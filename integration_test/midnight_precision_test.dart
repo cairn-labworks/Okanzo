@@ -218,15 +218,10 @@ void main() {
       await app.main();
       await _wait(
         tester,
-        () => find.byType(app.OkanzoApp).evaluate().isNotEmpty,
-        'startup',
-      );
-      container = AppScope.of(tester.element(find.byType(app.OkanzoApp)));
-      await _wait(
-        tester,
         () => find.byType(HomeScreen).evaluate().isNotEmpty,
         'unlocked home',
       );
+      container = AppScope.of(tester.element(find.byType(HomeScreen)));
       final theme = Theme.of(tester.element(find.byType(HomeScreen)));
       expect(theme.colorScheme.surface, const Color(0xFF172220));
       expect(theme.colorScheme.primary, const Color(0xFFC1E1BD));

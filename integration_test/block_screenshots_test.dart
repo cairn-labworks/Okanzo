@@ -117,7 +117,7 @@ void main() {
           () => find.byType(HomeScreen).evaluate().isNotEmpty,
           'unlocked home screen',
         );
-        container = AppScope.of(tester.element(find.byType(app.OkanzoApp)));
+        container = AppScope.of(tester.element(find.byType(HomeScreen)));
 
         expect(container.settingsRepository.current.blockScreenshots, isTrue);
         expect(await ScreenshotProtection.isEnabled(), isTrue);
@@ -161,7 +161,7 @@ void main() {
           () => find.byType(HomeScreen).evaluate().isNotEmpty,
           'relaunched home with Block screenshots off',
         );
-        container = AppScope.of(tester.element(find.byType(app.OkanzoApp)));
+        container = AppScope.of(tester.element(find.byType(HomeScreen)));
         expect(container.settingsRepository.current.blockScreenshots, isFalse);
         expect(await ScreenshotProtection.isEnabled(), isFalse);
         passed('relaunch preserves disabled FLAG_SECURE state');

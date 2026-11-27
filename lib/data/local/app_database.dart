@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:sqflite_sqlcipher/sqflite.dart';
 
 /// Table names, also used as change-notification topics.
@@ -47,17 +48,21 @@ class AppDatabase {
     required String password,
   }) async {
     final Database db = await openDatabase(path, password: password);
-    await _migrate(db);
+    await prepareOpen(db);
     return AppDatabase(db);
   }
 
-  /// Applies the schema at [schemaVersion], creating tables on first run and
-  /// upgrading older databases in place, tracking progress with
-  /// `PRAGMA user_version`.
-  static Future<void> _migrate(Database db) async {
+  /// Configures SQLite pragmas and applies any pending migrations up to
+  /// [schemaVersion], tracking progress with `PRAGMA user_version`.
+  @visibleForTesting
+  static Future<void> prepareOpen(Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
+    await db.rawQuery('PRAGMA journal_mode = WAL');
+    await db.execute('PRAGMA synchronous = NORMAL');
     final int currentVersion =
         Sqflite.firstIntValue(await db.rawQuery('PRAGMA user_version')) ?? 0;
+
+    if (currentVersion >= schemaVersion) return;
 
     if (currentVersion == 0) {
       await db.transaction((Transaction txn) async {
