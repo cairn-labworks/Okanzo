@@ -14,6 +14,7 @@ import '../liability/liability_edit_screen.dart';
 import '../portfolio/portfolio_screen.dart';
 import '../settings/settings_screen.dart';
 import '../statistics/statistics_screen.dart';
+import '../theme/app_material.dart';
 import '../theme/motion.dart';
 
 /// Top-level destinations shown in the bottom bar / navigation rail.
@@ -166,27 +167,31 @@ class _AppShellState extends State<AppShell> {
     if (!useRail) {
       return Scaffold(
         body: body,
-        bottomNavigationBar: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(
-                color: Theme.of(context).colorScheme.outlineVariant,
-                width: 0.5,
+        bottomNavigationBar: AppSurface(
+          radius: 0,
+          control: true,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  width: 0.5,
+                ),
               ),
             ),
-          ),
-          child: NavigationBar(
-            selectedIndex: _index,
-            onDestinationSelected: _select,
-            destinations: <Widget>[
-              for (final TopLevelDestination destination
-                  in TopLevelDestination.values)
-                NavigationDestination(
-                  icon: Icon(destination.unselectedIcon),
-                  selectedIcon: Icon(destination.selectedIcon),
-                  label: destination.label.tr(context),
-                ),
-            ],
+            child: NavigationBar(
+              selectedIndex: _index,
+              onDestinationSelected: _select,
+              destinations: <Widget>[
+                for (final TopLevelDestination destination
+                    in TopLevelDestination.values)
+                  NavigationDestination(
+                    icon: Icon(destination.unselectedIcon),
+                    selectedIcon: Icon(destination.selectedIcon),
+                    label: destination.label.tr(context),
+                  ),
+              ],
+            ),
           ),
         ),
       );
@@ -195,19 +200,23 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       body: Row(
         children: <Widget>[
-          NavigationRail(
-            selectedIndex: _index,
-            onDestinationSelected: _select,
-            labelType: NavigationRailLabelType.all,
-            destinations: <NavigationRailDestination>[
-              for (final TopLevelDestination destination
-                  in TopLevelDestination.values)
-                NavigationRailDestination(
-                  icon: Icon(destination.unselectedIcon),
-                  selectedIcon: Icon(destination.selectedIcon),
-                  label: Text(destination.label.tr(context)),
-                ),
-            ],
+          AppSurface(
+            radius: 0,
+            control: true,
+            child: NavigationRail(
+              selectedIndex: _index,
+              onDestinationSelected: _select,
+              labelType: NavigationRailLabelType.all,
+              destinations: <NavigationRailDestination>[
+                for (final TopLevelDestination destination
+                    in TopLevelDestination.values)
+                  NavigationRailDestination(
+                    icon: Icon(destination.unselectedIcon),
+                    selectedIcon: Icon(destination.selectedIcon),
+                    label: Text(destination.label.tr(context)),
+                  ),
+              ],
+            ),
           ),
           const VerticalDivider(width: 1, thickness: 1),
           Expanded(child: body),

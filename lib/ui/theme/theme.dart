@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 
 import '../../domain/model/app_theme.dart';
+import 'app_material.dart';
 import 'app_style.dart';
 import 'colors.dart';
 import 'motion.dart';
@@ -153,10 +154,19 @@ ThemeData buildTheme({
 }) {
   final bool midnight = appTheme == AppTheme.midnight;
   final bool dark = midnight || brightness == Brightness.dark;
+  final AppStyle appStyle = switch (appTheme) {
+    AppTheme.classic => AppStyle.classic,
+    AppTheme.midnight => AppStyle.midnight,
+    AppTheme.sculpted => AppStyle.sculpted,
+    AppTheme.liquidGlass => AppStyle.liquidGlass,
+  };
   final ColorScheme scheme = midnight
       ? midnightColors
+      : appStyle.isEnhanced
+      ? (dark
+            ? (appStyle.isGlass ? glassDarkColors : darkColors)
+            : softenedLightColors)
       : (dark ? darkColors : lightColors);
-  final AppStyle appStyle = midnight ? AppStyle.midnight : AppStyle.classic;
   final Typography typography = Typography.material2021(
     platform: defaultTargetPlatform,
   );
@@ -167,13 +177,15 @@ ThemeData buildTheme({
     useMaterial3: true,
     brightness: dark ? Brightness.dark : Brightness.light,
     colorScheme: scheme,
-    pageTransitionsTheme: PageTransitionsTheme(
+    scaffoldBackgroundColor: appStyle.isGlass
+        ? scheme.surface.withValues(alpha: 0)
+        : scheme.surface,
+    pageTransitionsTheme: AppPageTransitionsTheme(
       builders: <TargetPlatform, PageTransitionsBuilder>{
         ...const PageTransitionsTheme().builders,
         TargetPlatform.android: const AppPageTransitionsBuilder(),
       },
     ),
-    scaffoldBackgroundColor: scheme.surface,
     textTheme: textTheme,
     extensions: <ThemeExtension<dynamic>>[
       dark ? FinanceColors.dark : FinanceColors.light,
@@ -240,7 +252,9 @@ ThemeData buildTheme({
       errorMaxLines: 3,
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: scheme.surface,
+      backgroundColor: appStyle.isGlass
+          ? scheme.surface.withValues(alpha: .76)
+          : scheme.surface,
       foregroundColor: scheme.onSurface,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
@@ -252,11 +266,34 @@ ThemeData buildTheme({
       iconTheme: IconThemeData(color: scheme.onSurfaceVariant, size: 22),
     ),
     filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        minimumSize: const Size(48, 48),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
+      style:
+          FilledButton.styleFrom(
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ).copyWith(
+            backgroundBuilder: appStyle.isEnhanced ? appButtonSheen : null,
+            elevation: appStyle.isEnhanced
+                ? WidgetStateProperty.resolveWith<double>((
+                    Set<WidgetState> states,
+                  ) {
+                    if (states.contains(WidgetState.disabled)) return 0;
+                    if (states.contains(WidgetState.pressed)) return 1;
+                    if (states.contains(WidgetState.hovered)) return 8;
+                    return 4;
+                  })
+                : null,
+            shadowColor: appStyle.isEnhanced
+                ? WidgetStatePropertyAll<Color>(
+                    Colors.black.withValues(alpha: dark ? .5 : .25),
+                  )
+                : null,
+            surfaceTintColor: appStyle.isEnhanced
+                ? const WidgetStatePropertyAll<Color>(Colors.transparent)
+                : null,
+          ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
@@ -277,13 +314,17 @@ ThemeData buildTheme({
       ),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: scheme.surface,
+      backgroundColor: appStyle.isEnhanced
+          ? Colors.transparent
+          : scheme.surface,
       surfaceTintColor: Colors.transparent,
       indicatorColor: scheme.secondaryContainer,
       elevation: 0,
     ),
     navigationRailTheme: NavigationRailThemeData(
-      backgroundColor: scheme.surface,
+      backgroundColor: appStyle.isEnhanced
+          ? Colors.transparent
+          : scheme.surface,
       indicatorColor: scheme.secondaryContainer,
       useIndicator: true,
     ),

@@ -70,6 +70,24 @@ const ColorScheme darkColors = ColorScheme(
   inversePrimary: Color(0xFF3D6249),
 );
 
+final ColorScheme softenedLightColors = lightColors.copyWith(
+  surface: const Color(0xFFE9E8E0),
+  surfaceContainerLowest: const Color(0xFFF0EFE8),
+  surfaceContainerLow: const Color(0xFFE4E4D9),
+  surfaceContainer: const Color(0xFFDDDFD3),
+  surfaceContainerHigh: const Color(0xFFD4DACB),
+  surfaceContainerHighest: const Color(0xFFC9D1BF),
+  onSurfaceVariant: const Color(0xFF526057),
+  outline: const Color(0xFF7D8B7B),
+  outlineVariant: const Color(0xFFCDD1C3),
+  primaryContainer: const Color(0xFFD0DDCA),
+  secondaryContainer: const Color(0xFFD0DDCA),
+);
+
+final ColorScheme glassDarkColors = darkColors.copyWith(
+  onSurfaceVariant: const Color(0xFFB8CBBE),
+);
+
 // Semantic colors for positive (assets) and non-alarmist warm terracotta liabilities.
 const Color positiveGreen = Color(0xFF3D6249);
 const Color positiveGreenDark = Color(0xFFC1E1BD);

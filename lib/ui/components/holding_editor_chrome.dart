@@ -5,6 +5,8 @@ import '../../di/app_container.dart';
 import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../theme/theme.dart';
+import '../theme/app_material.dart';
+import '../theme/app_style.dart';
 import 'ui_components.dart';
 
 class HoldingEditorHeading extends StatelessWidget {
@@ -204,137 +206,147 @@ class HoldingEditorFooter extends StatelessWidget {
         : null;
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          border: Border(top: BorderSide(color: colors.outlineVariant)),
-        ),
-        child: SafeArea(
-          top: false,
-          minimum: const EdgeInsets.fromLTRB(24, 14, 24, 14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Container(
-                padding: const EdgeInsets.only(top: 2, bottom: 13),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: colors.outlineVariant),
+      child: AppSurface(
+        radius: 0,
+        control: true,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: AppStyle.of(context).isEnhanced
+                ? Colors.transparent
+                : theme.scaffoldBackgroundColor,
+            border: Border(top: BorderSide(color: colors.outlineVariant)),
+          ),
+          child: SafeArea(
+            top: false,
+            minimum: const EdgeInsets.fromLTRB(24, 14, 24, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.only(top: 2, bottom: 13),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: colors.outlineVariant),
+                    ),
                   ),
-                ),
-                child: LayoutBuilder(
-                  builder: (BuildContext context, BoxConstraints constraints) =>
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: <Widget>[
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Text(
-                                  (asset
-                                          ? 'Estimated value'
-                                          : 'Outstanding amount')
-                                      .tr(context),
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colors.onSurfaceVariant,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.25,
-                                  ),
-                                ),
-                                if (effectiveCalculation != null &&
-                                    effectiveCalculation
-                                        .isNotEmpty) ...<Widget>[
-                                  const SizedBox(height: 4),
+                  child: LayoutBuilder(
+                    builder:
+                        (
+                          BuildContext context,
+                          BoxConstraints constraints,
+                        ) => Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: <Widget>[
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
                                   Text(
-                                    effectiveCalculation,
-                                    key: ValueKey<String>(
-                                      priced
-                                          ? 'asset-valuation-caption'
-                                          : 'asset-valuation-pending-caption',
-                                    ),
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      fontSize: 11.5,
-                                      height: 1.35,
+                                    (asset
+                                            ? 'Estimated value'
+                                            : 'Outstanding amount')
+                                        .tr(context),
+                                    style: theme.textTheme.bodySmall?.copyWith(
                                       color: colors.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.25,
                                     ),
                                   ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: constraints.maxWidth * 0.52,
-                            ),
-                            child: Text(
-                              amountError == null
-                                  ? CurrencyUtil.format(amount, currency)
-                                  : '—',
-                              key: ValueKey<String>(
-                                asset
-                                    ? 'asset-estimated-value'
-                                    : 'liability-outstanding-amount',
-                              ),
-                              textAlign: TextAlign.end,
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontSize: 26,
-                                height: 1.1,
-                                letterSpacing: -0.65,
-                                fontWeight: FontWeight.w600,
-                                color: asset
-                                    ? colors.primary
-                                    : FinanceColors.of(context).negative,
-                                fontFeatures: const <FontFeature>[
-                                  FontFeature.tabularFigures(),
+                                  if (effectiveCalculation != null &&
+                                      effectiveCalculation
+                                          .isNotEmpty) ...<Widget>[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      effectiveCalculation,
+                                      key: ValueKey<String>(
+                                        priced
+                                            ? 'asset-valuation-caption'
+                                            : 'asset-valuation-pending-caption',
+                                      ),
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            fontSize: 11.5,
+                                            height: 1.35,
+                                            color: colors.onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: !ready || saving ? null : onSave,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(48, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(13),
+                            const SizedBox(width: 14),
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: constraints.maxWidth * 0.52,
+                              ),
+                              child: Text(
+                                amountError == null
+                                    ? CurrencyUtil.format(amount, currency)
+                                    : '—',
+                                key: ValueKey<String>(
+                                  asset
+                                      ? 'asset-estimated-value'
+                                      : 'liability-outstanding-amount',
+                                ),
+                                textAlign: TextAlign.end,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  fontSize: 26,
+                                  height: 1.1,
+                                  letterSpacing: -0.65,
+                                  fontWeight: FontWeight.w600,
+                                  color: asset
+                                      ? colors.primary
+                                      : FinanceColors.of(context).negative,
+                                  fontFeatures: const <FontFeature>[
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                   ),
                 ),
-                child: saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        (asset ? 'Save asset' : 'Save liability').tr(context),
-                      ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                (amountError ??
-                        (!ready
-                            ? 'Complete the required fields with valid values.'
-                            : !priced
-                            ? 'Ready to save without a price; refresh when available.'
-                            : 'All required details are ready.'))
-                    .tr(context),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  fontSize: 10,
-                  height: 1.5,
-                  color: amountError == null
-                      ? colors.onSurfaceVariant
-                      : colors.error,
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: !ready || saving ? null : onSave,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(48, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                  ),
+                  child: saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          (asset ? 'Save asset' : 'Save liability').tr(context),
+                        ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  (amountError ??
+                          (!ready
+                              ? 'Complete the required fields with valid values.'
+                              : !priced
+                              ? 'Ready to save without a price; refresh when available.'
+                              : 'All required details are ready.'))
+                      .tr(context),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontSize: 10,
+                    height: 1.5,
+                    color: amountError == null
+                        ? colors.onSurfaceVariant
+                        : colors.error,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

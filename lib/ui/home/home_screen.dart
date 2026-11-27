@@ -14,6 +14,7 @@ import '../components/form_components.dart';
 import '../components/type_icons.dart';
 import '../components/ui_components.dart';
 import '../statistics/chart_format.dart';
+import '../theme/app_material.dart';
 import '../theme/app_style.dart';
 import '../theme/colors.dart';
 import '../theme/motion.dart';
@@ -1357,14 +1358,18 @@ class _CategoryPanel extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Material(
-    key: const ValueKey<String>('home-category-panel'),
-    color: Theme.of(context).colorScheme.surfaceContainerLow,
-    borderRadius: BorderRadius.circular(20),
-    clipBehavior: Clip.antiAlias,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: child,
+  Widget build(BuildContext context) => AppSurface(
+    child: Material(
+      key: const ValueKey<String>('home-category-panel'),
+      color: AppStyle.of(context).isEnhanced
+          ? Colors.transparent
+          : Theme.of(context).colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: child,
+      ),
     ),
   );
 }
@@ -1467,7 +1472,9 @@ class _CategoryCardShell extends StatelessWidget {
       ),
     );
     return Material(
-      color: theme.colorScheme.surfaceContainerLow,
+      color: AppStyle.of(context).isEnhanced && !isDragging
+          ? Colors.transparent
+          : theme.colorScheme.surfaceContainerLow,
       elevation: isDragging ? 8 : 0,
       borderRadius: isDragging ? BorderRadius.circular(20) : null,
       clipBehavior: Clip.antiAlias,
@@ -1508,7 +1515,9 @@ class _HoldingItemRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     return Material(
-      color: theme.colorScheme.surfaceContainerLow,
+      color: AppStyle.of(context).isEnhanced
+          ? Colors.transparent
+          : theme.colorScheme.surfaceContainerLow,
       child: InkWell(
         onTap: onOpen,
         child: Padding(

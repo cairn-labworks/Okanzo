@@ -248,6 +248,27 @@ class _FailingAppearanceRepository extends SettingsRepository {
   }
 }
 
+class _FailingThemeRepository extends SettingsRepository {
+  _FailingThemeRepository(super.preferences);
+
+  @override
+  Future<void> setAppTheme(AppTheme theme) async {
+    throw StateError('Storage unavailable');
+  }
+}
+
+class _DelayedThemeRepository extends SettingsRepository {
+  _DelayedThemeRepository(super.preferences);
+
+  final Completer<void> releaseThemeSave = Completer<void>();
+
+  @override
+  Future<void> setAppTheme(AppTheme theme) async {
+    await releaseThemeSave.future;
+    await super.setAppTheme(theme);
+  }
+}
+
 class _RejectingScreenshotPreferences extends Fake
     implements SharedPreferences {
   _RejectingScreenshotPreferences({required this.throwOnWrite});
@@ -1889,6 +1910,72 @@ void main() {
     },
   );
 
+  for (final AppTheme style in <AppTheme>[
+    AppTheme.sculpted,
+    AppTheme.liquidGlass,
+  ]) {
+    testWidgets(
+      '$style category drag feedback stays opaque outside its panel',
+      (WidgetTester tester) async {
+        container.assetRepository.items = const <AssetEntity>[
+          AssetEntity(
+            id: 1,
+            portfolioId: 1,
+            type: AssetType.cash,
+            name: 'Cash reserve',
+            currency: 'USD',
+            manualValue: 100,
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+          AssetEntity(
+            id: 2,
+            portfolioId: 1,
+            type: AssetType.stock,
+            name: 'Shares',
+            currency: 'USD',
+            quantity: 1,
+            lastPrice: 100,
+            symbol: 'AAPL',
+            createdAt: 0,
+            updatedAt: 0,
+          ),
+        ];
+        await tester.pumpWidget(
+          _app(
+            container,
+            HomeScreen(
+              onOpenAssetEditor: (_, _) {},
+              onOpenLiabilityEditor: (_, _) {},
+              onManagePortfolios: () {},
+              onOpenSettings: () {},
+            ),
+            appTheme: style,
+          ),
+        );
+        await _tap(tester, find.text('Open'));
+        final TestGesture gesture = await tester.startGesture(
+          tester.getCenter(find.text('Cash')),
+        );
+        try {
+          await tester.pump(const Duration(milliseconds: 600));
+          await gesture.moveBy(const Offset(0, 40));
+          await tester.pump(const Duration(milliseconds: 200));
+          final Material proxy = tester.widget<Material>(
+            find.byWidgetPredicate(
+              (Widget widget) => widget is Material && widget.elevation == 8,
+            ),
+          );
+          expect(proxy.color, isNotNull);
+          expect(proxy.color!.a, 1);
+        } finally {
+          await gesture.up();
+          await tester.pumpAndSettle();
+        }
+      },
+    );
+  }
+
   testWidgets(
     'expanded categories can be reordered by long-pressing their header',
     (WidgetTester tester) async {
@@ -2522,6 +2609,227 @@ void main() {
       );
     },
   );
+
+  testWidgets('theme style picker keeps appearance mode independent', (
+    WidgetTester tester,
+  ) async {
+    await container.settingsRepository.setAppearanceMode(AppThemeMode.dark);
+    await open(tester, SettingsScreen(onClose: () {}));
+    await _tap(tester, find.text('Appearance'));
+    expect(find.text('Theme style'), findsOneWidget);
+    for (final AppTheme style in <AppTheme>[
+      AppTheme.sculpted,
+      AppTheme.liquidGlass,
+      AppTheme.classic,
+    ]) {
+      await _tap(tester, find.text('Theme style'));
+      await _tap(
+        tester,
+        find.descendant(
+          of: find.byType(Dialog),
+          matching: find.text(style.displayName),
+        ),
+      );
+      expect(container.settingsRepository.current.themeStyle, style);
+      expect(
+        container.settingsRepository.current.appearanceMode,
+        AppThemeMode.dark,
+      );
+    }
+  });
+
+  for (final (AppTheme style, Locale locale, Brightness brightness)
+      in <(AppTheme, Locale, Brightness)>[
+        (AppTheme.sculpted, const Locale('de'), Brightness.light),
+        (AppTheme.liquidGlass, const Locale('ar'), Brightness.dark),
+      ]) {
+    testWidgets('$style chooser supports narrow localized large text', (
+      WidgetTester tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(320, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await container.settingsRepository.setAppTheme(style);
+      final AppLocalizations strings = AppLocalizations(locale);
+      await tester.pumpWidget(
+        _app(
+          container,
+          SettingsScreen(onClose: () {}),
+          locale: locale,
+          textScale: 2,
+          brightness: brightness,
+          appTheme: style,
+        ),
+      );
+      await _tap(tester, find.text('Open'));
+      await _tap(tester, find.text(strings.text('Appearance')));
+      await _tap(tester, find.text(strings.text('Theme style')));
+      final AppTheme next = style == AppTheme.sculpted
+          ? AppTheme.liquidGlass
+          : AppTheme.sculpted;
+      await _tap(
+        tester,
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text(strings.text(next.displayName)),
+        ),
+      );
+      expect(container.settingsRepository.current.themeStyle, next);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('theme style save failure keeps the current choice visible', (
+    WidgetTester tester,
+  ) async {
+    final failing = _FailingThemeRepository(
+      await SharedPreferences.getInstance(),
+    );
+    addTearDown(failing.dispose);
+    await tester.pumpWidget(
+      _app(_Container(failing), SettingsScreen(onClose: () {})),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await _tap(tester, find.text('Appearance'));
+    expect(find.text('Theme style'), findsOneWidget);
+    await _tap(tester, find.text('Theme style'));
+    await _tap(
+      tester,
+      find.descendant(
+        of: find.byType(Dialog),
+        matching: find.text('Liquid Glass'),
+      ),
+    );
+    expect(find.textContaining("Couldn't save theme:"), findsOneWidget);
+    expect(failing.current.themeStyle, AppTheme.classic);
+  });
+
+  for (final (AppTheme from, AppTheme to) in <(AppTheme, AppTheme)>[
+    (AppTheme.classic, AppTheme.liquidGlass),
+    (AppTheme.liquidGlass, AppTheme.sculpted),
+  ]) {
+    testWidgets('$from to $to after locking keeps the pushed draft', (
+      WidgetTester tester,
+    ) async {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString('app_theme', from.storageName);
+      final settings = _DelayedThemeRepository(preferences);
+      addTearDown(settings.dispose);
+      final delayedContainer = _Container(settings);
+      await settings.setLastSeenVersion(AppReleaseNotes.currentVersion);
+      await tester.pumpWidget(
+        AppScope(container: delayedContainer, child: const app.OkanzoApp()),
+      );
+      await tester.pumpAndSettle();
+      const Key draftKey = ValueKey<String>('retained-theme-draft');
+      unawaited(
+        Navigator.of(tester.element(find.byType(HomeScreen))).push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: TextField(key: draftKey)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(draftKey), 'Unsaved holding');
+      final Future<void> save = settings.setAppTheme(to);
+      try {
+        delayedContainer.appLock.lock();
+        await settings.setAppLockEnabled(true);
+        await tester.pumpAndSettle();
+        expect(find.byType(LockScreen), findsOneWidget);
+
+        settings.releaseThemeSave.complete();
+        await save;
+        await tester.pumpAndSettle();
+        expect(find.byType(LockScreen), findsOneWidget);
+        delayedContainer.appLock.markUnlocked();
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(draftKey), findsOneWidget);
+        expect(find.text('Unsaved holding'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      } finally {
+        if (!settings.releaseThemeSave.isCompleted) {
+          settings.releaseThemeSave.complete();
+        }
+        await save;
+      }
+    });
+  }
+
+  for (final AppTheme style in <AppTheme>[
+    AppTheme.sculpted,
+    AppTheme.liquidGlass,
+  ]) {
+    testWidgets('$style hides the shell when app lock is enabled', (
+      WidgetTester tester,
+    ) async {
+      await container.settingsRepository.setAppTheme(style);
+      await container.settingsRepository.setLastSeenVersion(
+        AppReleaseNotes.currentVersion,
+      );
+      await tester.pumpWidget(
+        AppScope(container: container, child: const app.OkanzoApp()),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('net-worth-headline')),
+        findsOneWidget,
+      );
+
+      container.appLock.lock();
+      await container.settingsRepository.setAppLockEnabled(true);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LockScreen), findsOneWidget);
+      expect(find.byType(HomeScreen), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('net-worth-headline')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('$style remains selected as the actual app follows System', (
+      WidgetTester tester,
+    ) async {
+      await container.settingsRepository.setLastSeenVersion(
+        AppReleaseNotes.currentVersion,
+      );
+      await container.settingsRepository.setAppTheme(style);
+      await container.settingsRepository.setAppearanceMode(AppThemeMode.system);
+      addTearDown(
+        tester.binding.platformDispatcher.clearPlatformBrightnessTestValue,
+      );
+      tester.binding.platformDispatcher.platformBrightnessTestValue =
+          Brightness.light;
+      await tester.pumpWidget(
+        AppScope(container: container, child: const app.OkanzoApp()),
+      );
+      await tester.pumpAndSettle();
+      ThemeData currentTheme() =>
+          Theme.of(tester.element(find.byType(HomeScreen)));
+      expect(currentTheme().brightness, Brightness.light);
+      expect(currentTheme().extension<AppStyle>()?.appTheme, style);
+      expect(
+        currentTheme().colorScheme.surface.computeLuminance(),
+        lessThan(lightColors.surface.computeLuminance()),
+      );
+
+      tester.binding.platformDispatcher.platformBrightnessTestValue =
+          Brightness.dark;
+      await tester.pumpAndSettle();
+      expect(currentTheme().brightness, Brightness.dark);
+      expect(currentTheme().extension<AppStyle>()?.appTheme, style);
+
+      await container.settingsRepository.setAppearanceMode(AppThemeMode.light);
+      await tester.pumpAndSettle();
+      expect(currentTheme().brightness, Brightness.light);
+      expect(currentTheme().extension<AppStyle>()?.appTheme, style);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets(
     'the actual app follows System with light and Midnight dark variants',
@@ -5442,11 +5750,19 @@ void main() {
       );
 
       // App language row uses an outlined tactile PickerChip with language icon & unfold_more.
-      final PickerChip langChip = tester.widget<PickerChip>(
-        find.byType(PickerChip),
+      final Finder languageChip = find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is PickerChip && widget.icon == Icons.language,
       );
+      final PickerChip langChip = tester.widget<PickerChip>(languageChip);
       expect(langChip.icon, Icons.language);
-      expect(find.byIcon(Icons.unfold_more_rounded), findsOneWidget);
+      expect(
+        find.descendant(
+          of: languageChip,
+          matching: find.byIcon(Icons.unfold_more_rounded),
+        ),
+        findsOneWidget,
+      );
 
       // App language picker has a Search button that focuses live filtering.
       await _tap(tester, find.text('App language'));

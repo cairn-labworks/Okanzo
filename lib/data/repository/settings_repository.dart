@@ -42,6 +42,9 @@ class AppSettings {
   /// Midnight was previously selectable independently of light/dark mode.
   AppThemeMode get appearanceMode =>
       appTheme == AppTheme.midnight ? AppThemeMode.dark : themeMode;
+
+  AppTheme get themeStyle =>
+      appTheme == AppTheme.midnight ? AppTheme.classic : appTheme;
 }
 
 /// Section names used when persisting a portfolio's custom category order.
@@ -69,13 +72,20 @@ class SettingsRepository {
   static const String _keyLastSeenVersion = 'last_seen_version';
   final SharedPreferences _prefs;
   // SharedPreferences updates its cache before confirming a write.
+  ({String? mode, String? theme})? _committedAppearance;
   bool? _blockScreenshots;
   bool? _simpleNetWorth;
   int? _selectedPortfolioId;
   List<String>? _cachedExchangeNames;
   List<StockExchange>? _cachedPreferredExchanges;
+  Future<void>? _appearanceWrite;
   final StreamController<AppSettings> _controller =
       StreamController<AppSettings>.broadcast();
+
+  ({String? mode, String? theme}) get _appearance => _committedAppearance ??= (
+    mode: _prefs.getString(_keyThemeMode),
+    theme: _prefs.getString(_keyAppTheme),
+  );
 
   /// Emits the current settings immediately and again after every change.
   Stream<AppSettings> get settings async* {
@@ -84,8 +94,8 @@ class SettingsRepository {
   }
 
   AppSettings get current => AppSettings(
-    themeMode: AppThemeMode.fromName(_prefs.getString(_keyThemeMode)),
-    appTheme: AppTheme.fromName(_prefs.getString(_keyAppTheme)),
+    themeMode: AppThemeMode.fromName(_appearance.mode),
+    appTheme: AppTheme.fromName(_appearance.theme),
     baseCurrency:
         _prefs.getString(_keyBaseCurrency) ?? CurrencyUtil.deviceCurrencyCode(),
     appLockEnabled: _prefs.getBool(_keyAppLock) ?? false,
@@ -159,31 +169,61 @@ class SettingsRepository {
     _emit();
   }
 
-  Future<void> setThemeMode(AppThemeMode mode) async {
-    await _prefs.setString(_keyThemeMode, mode.storageName);
-    _emit();
+  Future<void> setThemeMode(AppThemeMode mode) =>
+      _updateAppearance(() => (mode, current.appTheme));
+
+  Future<void> setAppTheme(AppTheme theme) => _updateAppearance(() {
+    final AppThemeMode mode = theme == AppTheme.midnight
+        ? AppThemeMode.dark
+        : current.appearanceMode;
+    return (
+      mode,
+      theme == AppTheme.classic && mode == AppThemeMode.dark
+          ? AppTheme.midnight
+          : theme,
+    );
+  });
+
+  Future<void> setAppearanceMode(AppThemeMode mode) => _updateAppearance(() {
+    final AppTheme theme = current.themeStyle;
+    return (
+      mode,
+      theme == AppTheme.classic && mode == AppThemeMode.dark
+          ? AppTheme.midnight
+          : theme,
+    );
+  });
+
+  Future<void> _updateAppearance(
+    (AppThemeMode, AppTheme) Function() choose,
+  ) async {
+    final Future<void>? previous = _appearanceWrite;
+    final Completer<void> completed = Completer<void>();
+    _appearanceWrite = completed.future;
+    try {
+      if (previous != null) await previous;
+      final (AppThemeMode mode, AppTheme theme) = choose();
+      await _saveAppearance(mode, theme);
+    } finally {
+      completed.complete();
+      if (identical(_appearanceWrite, completed.future)) {
+        _appearanceWrite = null;
+      }
+    }
   }
 
-  Future<void> setAppTheme(AppTheme theme) async {
-    await _prefs.setString(_keyAppTheme, theme.storageName);
-    _emit();
-  }
-
-  Future<void> setAppearanceMode(AppThemeMode mode) async {
+  Future<void> _saveAppearance(AppThemeMode mode, AppTheme theme) async {
     final Map<String, String?> original = <String, String?>{
-      _keyThemeMode: _prefs.getString(_keyThemeMode),
-      _keyAppTheme: _prefs.getString(_keyAppTheme),
+      _keyThemeMode: _appearance.mode,
+      _keyAppTheme: _appearance.theme,
     };
     bool saved = false;
     try {
       if (!await _prefs.setString(_keyThemeMode, mode.storageName) ||
-          !await _prefs.setString(
-            _keyAppTheme,
-            (mode == AppThemeMode.dark ? AppTheme.midnight : AppTheme.classic)
-                .storageName,
-          )) {
+          !await _prefs.setString(_keyAppTheme, theme.storageName)) {
         throw StateError('Theme preference could not be saved');
       }
+      _committedAppearance = (mode: mode.storageName, theme: theme.storageName);
       saved = true;
     } finally {
       if (!saved) {

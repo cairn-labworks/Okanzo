@@ -7,6 +7,8 @@ import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../asset/asset_form_state.dart' show filterDecimal;
 import '../theme/motion.dart';
+import '../theme/app_material.dart';
+import '../theme/app_style.dart';
 import 'type_icons.dart';
 
 const EdgeInsets _editorFieldPadding = EdgeInsets.only(top: 24, bottom: 4);
@@ -148,6 +150,7 @@ class LabeledTextField extends StatelessWidget {
     if (canvas) {
       final ThemeData theme = Theme.of(context);
       final ColorScheme colors = theme.colorScheme;
+      final AppStyle style = AppStyle.of(context);
       final TextStyle? inputStyle = prominent
           ? theme.textTheme.displaySmall?.copyWith(
               color: effectiveProminentColor,
@@ -157,7 +160,11 @@ class LabeledTextField extends StatelessWidget {
           : theme.textTheme.bodyLarge;
       final OutlineInputBorder border = OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: canvasBoxBorderColor(colors)),
+        borderSide: BorderSide(
+          color: style.isEnhanced
+              ? colors.outline
+              : canvasBoxBorderColor(colors),
+        ),
       );
       return Padding(
         padding: const EdgeInsets.only(bottom: 6),
@@ -200,7 +207,11 @@ class LabeledTextField extends StatelessWidget {
                     color: colors.onSurfaceVariant,
                   ),
                   filled: !prominent,
-                  fillColor: colors.surfaceContainerLow,
+                  fillColor: style.isGlass
+                      ? colors.surfaceContainerLowest.withValues(alpha: .65)
+                      : style.isEnhanced
+                      ? colors.surfaceContainerLowest
+                      : colors.surfaceContainerLow,
                   border: prominent
                       ? UnderlineInputBorder(
                           borderSide: BorderSide(color: colors.outlineVariant),
@@ -414,6 +425,7 @@ class PickerChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final AppStyle style = AppStyle.of(context);
     if (fieldLabel != null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -425,38 +437,48 @@ class PickerChip extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 7),
-          Material(
-            color: theme.colorScheme.surfaceContainerLow,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-              side: BorderSide(color: canvasBoxBorderColor(theme.colorScheme)),
-            ),
-            child: InkWell(
-              focusNode: focusNode,
-              borderRadius: BorderRadius.circular(10),
-              onTap: onPressed,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 11,
-                  vertical: 14,
+          AppSurface(
+            radius: 10,
+            control: true,
+            child: Material(
+              color: style.isEnhanced
+                  ? Colors.transparent
+                  : theme.colorScheme.surfaceContainerLow,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: style.isEnhanced
+                      ? theme.colorScheme.outline
+                      : canvasBoxBorderColor(theme.colorScheme),
                 ),
-                child: Row(
-                  children: <Widget>[
-                    if (icon != null) ...<Widget>[
-                      Icon(icon, size: 19, color: theme.colorScheme.primary),
-                      const SizedBox(width: 9),
-                    ],
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: theme.textTheme.bodyMedium,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+              ),
+              child: InkWell(
+                focusNode: focusNode,
+                borderRadius: BorderRadius.circular(10),
+                onTap: onPressed,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      if (icon != null) ...<Widget>[
+                        Icon(icon, size: 19, color: theme.colorScheme.primary),
+                        const SizedBox(width: 9),
+                      ],
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: theme.textTheme.bodyMedium,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.expand_more, size: 16),
-                  ],
+                      const SizedBox(width: 6),
+                      const Icon(Icons.expand_more, size: 16),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -489,10 +511,14 @@ class PickerChip extends StatelessWidget {
             widthFactor: 1,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
+                color: style.isGlass
+                    ? theme.colorScheme.surface.withValues(alpha: .65)
+                    : theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: canvasBoxBorderColor(theme.colorScheme),
+                  color: style.isEnhanced
+                      ? theme.colorScheme.outline
+                      : canvasBoxBorderColor(theme.colorScheme),
                 ),
               ),
               child: Padding(
@@ -864,11 +890,12 @@ Future<T?> showSelectionPickerDialog<T>(
   bool searchable = true,
 }) {
   final bool dark = Theme.of(context).brightness == Brightness.dark;
+  final bool glass = AppStyle.of(context).isGlass;
   return showDialog<T>(
     context: context,
     barrierColor: dark ? const Color(0xAA10231B) : const Color(0x7310231B),
     builder: (BuildContext context) => BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+      filter: ImageFilter.blur(sigmaX: glass ? 14 : 3, sigmaY: glass ? 14 : 3),
       child: _SelectionPickerDialog<T>(
         eyebrow: eyebrow,
         title: title,
@@ -951,7 +978,9 @@ class _SelectionPickerDialogState<T> extends State<_SelectionPickerDialog<T>> {
       borderSide: BorderSide(color: boxBorder),
     );
     return AlertDialog(
-      backgroundColor: colors.surface,
+      backgroundColor: AppStyle.of(context).isGlass
+          ? colors.surfaceContainerLow.withValues(alpha: .90)
+          : colors.surface,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),

@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../util/currency_util.dart';
 import '../components/ui_components.dart';
 import '../theme/theme.dart';
+import '../theme/app_material.dart';
 import 'portfolio_list_view_model.dart';
 
 /// Manage portfolios: create, rename, set default and delete.
@@ -205,7 +206,7 @@ class _PortfolioCard extends StatelessWidget {
     final ColorScheme colors = theme.colorScheme;
     final FinanceColors finance = FinanceColors.of(context);
     final bool isNegative = !hideBalances && row.netWorth < -0.005;
-    return Card(
+    return AppCard(
       clipBehavior: Clip.antiAlias,
       color: row.isViewing
           ? colors.surfaceContainer

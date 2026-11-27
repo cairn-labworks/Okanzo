@@ -7,6 +7,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:okanzo/data/local/entity/asset_entity.dart';
 import 'package:okanzo/data/local/entity/liability_entity.dart';
 import 'package:okanzo/di/app_container.dart';
+import 'package:okanzo/domain/model/app_theme.dart';
 import 'package:okanzo/domain/model/asset_type.dart';
 import 'package:okanzo/domain/model/release_notes.dart';
 import 'package:okanzo/domain/model/theme_mode.dart';
@@ -16,6 +17,8 @@ import 'package:okanzo/ui/components/holding_editor_chrome.dart';
 import 'package:okanzo/ui/components/holding_saved_summary_screen.dart';
 import 'package:okanzo/util/currency_util.dart';
 import 'package:okanzo/util/screenshot_protection.dart';
+
+import 'helpers/device_test_cleanup.dart';
 
 Future<void> tap(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
@@ -86,17 +89,69 @@ void main() {
   testWidgets('approved Canvas holding journeys on Android', (tester) async {
     late AppContainer container;
     late int portfolioId;
+    int? fixtureId;
     final List<int> assets = <int>[];
     final List<int> liabilities = <int>[];
     await tester.runAsync(() async {
       container = await AppContainer.create();
+      final previous = container.settingsRepository.current;
+      addTearDown(
+        () => runDeviceTestCleanup(<DeviceTestCleanupStep>[
+          (
+            'restore native screenshot protection',
+            () => ScreenshotProtection.setEnabled(previous.blockScreenshots),
+          ),
+          (
+            'restore canvas appearance mode',
+            () => container.settingsRepository.setAppearanceMode(
+              previous.appearanceMode,
+            ),
+          ),
+          (
+            'restore canvas theme style',
+            () => container.settingsRepository.setAppTheme(previous.appTheme),
+          ),
+          (
+            'unmount canvas widgets',
+            () => tester.pumpWidget(const SizedBox.shrink()),
+          ),
+          (
+            'settle canvas widgets',
+            () async {
+              await tester.pumpAndSettle();
+            },
+          ),
+          if (fixtureId case final int id)
+            (
+              'delete canvas test portfolio',
+              () async {
+                if (await container.portfolioRepository.getById(id) != null) {
+                  expect(
+                    await container.portfolioRepository.delete(id),
+                    isTrue,
+                  );
+                }
+              },
+            ),
+          ('dispose canvas settings', container.settingsRepository.dispose),
+          ('close canvas database', container.database.close),
+        ]),
+      );
+      if (const bool.fromEnvironment('CANVAS_STORED_GLASS')) {
+        await container.settingsRepository.setAppTheme(AppTheme.liquidGlass);
+      }
+      await container.settingsRepository.setAppTheme(AppTheme.classic);
       await container.settingsRepository.setBaseCurrency('USD');
       await container.settingsRepository.setAppearanceMode(AppThemeMode.dark);
       await container.settingsRepository.setLastSeenVersion(
         AppReleaseNotes.currentVersion,
       );
       await ScreenshotProtection.setEnabled(false);
-      portfolioId = await container.portfolioRepository.create('Canvas demo');
+      await container.portfolioRepository.ensureDefaultPortfolio();
+      portfolioId = await container.portfolioRepository.create(
+        'Canvas demo ${DateTime.now().microsecondsSinceEpoch}',
+      );
+      fixtureId = portfolioId;
       await container.settingsRepository.setSelectedPortfolioId(portfolioId);
       for (final (String name, String ticker, double price) holding
           in <(String, String, double)>[
@@ -133,6 +188,7 @@ void main() {
         ),
       );
     });
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(
       RepaintBoundary(
         key: const ValueKey<String>('canvas-evidence'),
@@ -299,17 +355,5 @@ void main() {
       ),
       isNotNull,
     );
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpAndSettle();
-    await tester.runAsync(() async {
-      for (final int id in assets) {
-        await container.assetRepository.delete(id);
-      }
-      for (final int id in liabilities) {
-        await container.liabilityRepository.delete(id);
-      }
-      await container.portfolioRepository.delete(portfolioId);
-    });
   });
 }

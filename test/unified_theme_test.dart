@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:okanzo/data/repository/settings_repository.dart';
 import 'package:okanzo/domain/model/app_theme.dart';
@@ -9,6 +11,7 @@ class _Preferences extends Fake implements SharedPreferences {
     Map<String, String> values, {
     this.failKey,
     this.throwOnFailure = false,
+    this.pendingKey,
   }) : stored = Map<String, String>.of(values),
        cache = Map<String, String>.of(values);
 
@@ -16,12 +19,16 @@ class _Preferences extends Fake implements SharedPreferences {
   final Map<String, String> cache;
   String? failKey;
   final bool throwOnFailure;
+  String? pendingKey;
+  final Completer<void> pendingStarted = Completer<void>();
+  final Completer<bool> pendingResult = Completer<bool>();
+  final Map<String, bool> flags = <String, bool>{};
   int reloads = 0;
 
   @override
   String? getString(String key) => cache[key];
   @override
-  bool? getBool(String key) => null;
+  bool? getBool(String key) => flags[key];
   @override
   int? getInt(String key) => null;
   @override
@@ -30,12 +37,23 @@ class _Preferences extends Fake implements SharedPreferences {
   @override
   Future<bool> setString(String key, String value) async {
     cache[key] = value;
+    if (key == pendingKey) {
+      pendingKey = null;
+      pendingStarted.complete();
+      if (!await pendingResult.future) return false;
+    }
     if (key == failKey) {
       failKey = null;
       if (throwOnFailure) throw StateError('Storage unavailable');
       return false;
     }
     stored[key] = value;
+    return true;
+  }
+
+  @override
+  Future<bool> setBool(String key, bool value) async {
+    flags[key] = value;
     return true;
   }
 
@@ -140,6 +158,150 @@ void main() {
           expect(prefs.reloads, 1);
           expect(repository.current.appearanceMode, AppThemeMode.light);
           expect(changes, hasLength(1));
+        },
+      );
+    }
+  }
+
+  for (final String name in <String>['SCULPTED', 'LIQUID_GLASS']) {
+    test('$name persists while switching appearance and reopening', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'base_currency': 'USD',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final repository = SettingsRepository(prefs);
+      addTearDown(repository.dispose);
+      await repository.setAppTheme(AppTheme.fromName(name));
+
+      for (final AppThemeMode mode in AppThemeMode.values) {
+        await repository.setAppearanceMode(mode);
+        final reopened = SettingsRepository(prefs);
+        addTearDown(reopened.dispose);
+        expect(reopened.current.appTheme.storageName, name);
+        expect(reopened.current.appearanceMode, mode);
+      }
+    });
+
+    test('$name preserves the effective mode of legacy Midnight', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'app_theme': 'MIDNIGHT',
+        'theme_mode': 'LIGHT',
+        'base_currency': 'USD',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final repository = SettingsRepository(prefs);
+      addTearDown(repository.dispose);
+
+      await repository.setAppTheme(AppTheme.fromName(name));
+
+      expect(repository.current.appTheme.storageName, name);
+      expect(repository.current.appearanceMode, AppThemeMode.dark);
+      expect(prefs.getString('theme_mode'), 'DARK');
+    });
+
+    test('$name and a concurrent mode choice both survive', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'base_currency': 'USD',
+      });
+      final repository = SettingsRepository(
+        await SharedPreferences.getInstance(),
+      );
+      addTearDown(repository.dispose);
+
+      await Future.wait<void>(<Future<void>>[
+        repository.setAppTheme(AppTheme.fromName(name)),
+        repository.setAppearanceMode(AppThemeMode.dark),
+      ]);
+
+      expect(repository.current.appTheme.storageName, name);
+      expect(repository.current.appearanceMode, AppThemeMode.dark);
+    });
+  }
+
+  for (final String failedKey in <String>['app_theme', 'theme_mode']) {
+    test(
+      'theme selection rolls back when $failedKey cannot be saved',
+      () async {
+        final original = <String, String>{
+          'theme_mode': 'SYSTEM',
+          'app_theme': 'CLASSIC',
+          'base_currency': 'USD',
+        };
+        final prefs = _Preferences(original, failKey: failedKey);
+        final repository = SettingsRepository(prefs);
+        addTearDown(repository.dispose);
+
+        await expectLater(
+          repository.setAppTheme(AppTheme.fromName('LIQUID_GLASS')),
+          throwsStateError,
+        );
+
+        expect(prefs.stored, original);
+        expect(prefs.cache, original);
+        expect(prefs.reloads, 1);
+      },
+    );
+  }
+
+  for (final String pendingKey in <String>['theme_mode', 'app_theme']) {
+    for (final bool saveSucceeds in <bool>[false, true]) {
+      test(
+        '$pendingKey stays committed during an interleaved save (success=$saveSucceeds)',
+        () async {
+          final prefs = _Preferences(<String, String>{
+            'theme_mode': 'LIGHT',
+            'app_theme': 'CLASSIC',
+            'base_currency': 'USD',
+          }, pendingKey: pendingKey);
+          final repository = SettingsRepository(prefs);
+          addTearDown(repository.dispose);
+          final List<AppSettings> changes = <AppSettings>[];
+          final subscription = repository.settings.listen(changes.add);
+          addTearDown(subscription.cancel);
+          await Future<void>.delayed(Duration.zero);
+
+          final Future<void> save = pendingKey == 'app_theme'
+              ? repository.setAppTheme(AppTheme.liquidGlass)
+              : repository.setAppearanceMode(AppThemeMode.dark);
+          final Future<void> result = saveSucceeds
+              ? save
+              : expectLater(save, throwsStateError);
+          try {
+            await prefs.pendingStarted.future;
+            await repository.setHideBalances(true);
+            await Future<void>.delayed(Duration.zero);
+
+            expect(repository.current.themeMode, AppThemeMode.light);
+            expect(repository.current.appTheme, AppTheme.classic);
+            expect(changes.last.hideBalances, isTrue);
+            expect(
+              changes.every(
+                (AppSettings value) =>
+                    value.themeMode == AppThemeMode.light &&
+                    value.appTheme == AppTheme.classic,
+              ),
+              isTrue,
+            );
+          } finally {
+            prefs.pendingResult.complete(saveSucceeds);
+            await result;
+          }
+          await Future<void>.delayed(Duration.zero);
+          expect(
+            changes.last.appTheme,
+            !saveSucceeds
+                ? AppTheme.classic
+                : pendingKey == 'app_theme'
+                ? AppTheme.liquidGlass
+                : AppTheme.midnight,
+          );
+          expect(
+            changes.last.appearanceMode,
+            saveSucceeds && pendingKey == 'theme_mode'
+                ? AppThemeMode.dark
+                : AppThemeMode.light,
+          );
+          expect(changes.last.hideBalances, isTrue);
         },
       );
     }
