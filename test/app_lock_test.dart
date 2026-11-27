@@ -571,7 +571,7 @@ void main({
               );
             }
             container.backupFilePicker.saving = Completer<Uri?>();
-            await _tap(tester, find.widgetWithText(TextButton, 'Export'));
+            await _tap(tester, find.widgetWithText(FilledButton, 'Export'));
             expect(container.backupFilePicker.saves, 1);
           } else {
             container.backupFilePicker.picking = Completer<PlatformFile?>();

@@ -143,6 +143,7 @@ Your financial data is stored **encrypted on your device** and never leaves it, 
 ### Encrypted backups
 
 - Export selected portfolios — or all of them — into a single password-protected `.okanzo` file (**AES-256-GCM** with **PBKDF2-HMAC-SHA256**)
+- The export dialog starts with all portfolios selected; use **Change** to adjust the selection, then set and confirm the password before exporting
 - Restore backups on any device with zero cloud dependency
 - Byte-for-byte compatible with the `MWB1` encrypted backup format from the earlier Android release
 
