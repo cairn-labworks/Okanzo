@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../domain/model/app_theme.dart';
 import 'app_style.dart';
 import 'colors.dart';
+import 'motion.dart';
 
 /// Semantic colors that are not part of the standard Material scheme.
 @immutable
@@ -166,6 +167,12 @@ ThemeData buildTheme({
     useMaterial3: true,
     brightness: dark ? Brightness.dark : Brightness.light,
     colorScheme: scheme,
+    pageTransitionsTheme: PageTransitionsTheme(
+      builders: <TargetPlatform, PageTransitionsBuilder>{
+        ...const PageTransitionsTheme().builders,
+        TargetPlatform.android: const AppPageTransitionsBuilder(),
+      },
+    ),
     scaffoldBackgroundColor: scheme.surface,
     textTheme: textTheme,
     extensions: <ThemeExtension<dynamic>>[

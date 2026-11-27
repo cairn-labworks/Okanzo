@@ -145,62 +145,77 @@ class NetWorthCard extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 8),
-            Text(
-              hideBalances
-                  ? CurrencyUtil.masked(summary.baseCurrency)
-                  : simpleNetWorth
-                  ? CurrencyUtil.formatCompact(
-                      summary.netWorth,
-                      summary.baseCurrency,
-                    )
-                  : CurrencyUtil.format(summary.netWorth, summary.baseCurrency),
-              key: const ValueKey<String>('net-worth-headline'),
-              style: theme.textTheme.displaySmall?.copyWith(
-                fontSize: 42,
-                height: 1.15,
-                letterSpacing: -1.8,
-                fontWeight: FontWeight.w500,
-                color: headlineColor,
+            MotionEntrance(
+              trigger: summary.baseCurrency,
+              distance: 0,
+              enabled: !hideBalances,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    hideBalances
+                        ? CurrencyUtil.masked(summary.baseCurrency)
+                        : simpleNetWorth
+                        ? CurrencyUtil.formatCompact(
+                            summary.netWorth,
+                            summary.baseCurrency,
+                          )
+                        : CurrencyUtil.format(
+                            summary.netWorth,
+                            summary.baseCurrency,
+                          ),
+                    key: const ValueKey<String>('net-worth-headline'),
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      fontSize: 42,
+                      height: 1.15,
+                      letterSpacing: -1.8,
+                      fontWeight: FontWeight.w500,
+                      color: headlineColor,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: _MetricTile(
+                          key: const ValueKey<String>('net-worth-assets-tile'),
+                          icon: Icons.trending_up,
+                          accent: finance.positive,
+                          label: 'Assets'.tr(context),
+                          amount: hideBalances
+                              ? CurrencyUtil.maskShort
+                              : CurrencyUtil.format(
+                                  summary.totalAssets,
+                                  summary.baseCurrency,
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _MetricTile(
+                          key: const ValueKey<String>(
+                            'net-worth-liabilities-tile',
+                          ),
+                          icon: Icons.trending_down,
+                          accent: finance.negative,
+                          label: 'Liabilities'.tr(context),
+                          amount: hideBalances
+                              ? CurrencyUtil.maskShort
+                              : CurrencyUtil.format(
+                                  summary.totalLiabilities,
+                                  summary.baseCurrency,
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (showCoverage) ...<Widget>[
+                    const SizedBox(height: 14),
+                    _CoverageBar(summary: summary, isNegative: isNegative),
+                  ],
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _MetricTile(
-                    key: const ValueKey<String>('net-worth-assets-tile'),
-                    icon: Icons.trending_up,
-                    accent: finance.positive,
-                    label: 'Assets'.tr(context),
-                    amount: hideBalances
-                        ? CurrencyUtil.maskShort
-                        : CurrencyUtil.format(
-                            summary.totalAssets,
-                            summary.baseCurrency,
-                          ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _MetricTile(
-                    key: const ValueKey<String>('net-worth-liabilities-tile'),
-                    icon: Icons.trending_down,
-                    accent: finance.negative,
-                    label: 'Liabilities'.tr(context),
-                    amount: hideBalances
-                        ? CurrencyUtil.maskShort
-                        : CurrencyUtil.format(
-                            summary.totalLiabilities,
-                            summary.baseCurrency,
-                          ),
-                  ),
-                ),
-              ],
-            ),
-            if (showCoverage) ...<Widget>[
-              const SizedBox(height: 14),
-              _CoverageBar(summary: summary, isNegative: isNegative),
-            ],
           ],
         ),
       ),
@@ -484,7 +499,7 @@ class _MetricTile extends StatelessWidget {
   }
 }
 
-class _CurrencyPillToggle extends StatelessWidget {
+class _CurrencyPillToggle extends StatefulWidget {
   const _CurrencyPillToggle({
     required this.baseCode,
     required this.showingUsd,
@@ -498,105 +513,120 @@ class _CurrencyPillToggle extends StatelessWidget {
   final VoidCallback? onToggle;
 
   @override
+  State<_CurrencyPillToggle> createState() => _CurrencyPillToggleState();
+}
+
+class _CurrencyPillToggleState extends State<_CurrencyPillToggle> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
+    final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
     final double targetWidth = math.min(
-      maxWidth,
+      widget.maxWidth,
       MediaQuery.textScalerOf(context).scale(98).clamp(98.0, 152.0),
     );
     final List<(String code, bool active)> segments = <(String, bool)>[
-      (baseCode, !showingUsd),
-      ('USD', showingUsd),
+      (widget.baseCode, !widget.showingUsd),
+      ('USD', widget.showingUsd),
     ];
 
-    return Material(
-      type: MaterialType.transparency,
-      child: Semantics(
-        button: true,
-        toggled: showingUsd,
-        label: '$baseCode / USD',
-        child: InkWell(
-          key: const ValueKey<String>('net-worth-base-currency-pill'),
-          borderRadius: BorderRadius.circular(999),
-          onTap: onToggle,
-          child: SizedBox(
-            width: targetWidth,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.surface,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: canvasBoxBorderColor(colors)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(2.5),
-                child: Stack(
-                  children: <Widget>[
-                    Positioned.fill(
-                      child: AnimatedAlign(
-                        alignment: showingUsd
-                            ? AlignmentDirectional.centerEnd
-                            : AlignmentDirectional.centerStart,
-                        duration: interactionDuration(context),
-                        curve: interactionCurve,
-                        child: FractionallySizedBox(
-                          widthFactor: 0.5,
-                          heightFactor: 1.0,
-                          child: DecoratedBox(
-                            key: const ValueKey<String>(
-                              'net-worth-currency-thumb',
-                            ),
-                            decoration: BoxDecoration(
-                              color: colors.primary,
-                              borderRadius: BorderRadius.circular(999),
+    return AnimatedScale(
+      scale: _pressed && !reduceMotion ? 0.98 : 1,
+      duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 90),
+      curve: interactionCurve,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Semantics(
+          button: true,
+          toggled: widget.showingUsd,
+          label: '${widget.baseCode} / USD',
+          child: InkWell(
+            key: const ValueKey<String>('net-worth-base-currency-pill'),
+            borderRadius: BorderRadius.circular(999),
+            onTap: widget.onToggle,
+            onHighlightChanged: (bool pressed) =>
+                setState(() => _pressed = pressed),
+            child: SizedBox(
+              width: targetWidth,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: canvasBoxBorderColor(colors)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(2.5),
+                  child: Stack(
+                    children: <Widget>[
+                      Positioned.fill(
+                        child: AnimatedAlign(
+                          alignment: widget.showingUsd
+                              ? AlignmentDirectional.centerEnd
+                              : AlignmentDirectional.centerStart,
+                          duration: interactionDuration(context),
+                          curve: interactionCurve,
+                          child: FractionallySizedBox(
+                            widthFactor: 0.5,
+                            heightFactor: 1.0,
+                            child: DecoratedBox(
+                              key: const ValueKey<String>(
+                                'net-worth-currency-thumb',
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.primary,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Row(
-                      children: <Widget>[
-                        for (final (String code, bool active) in segments)
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 4.5,
-                              ),
-                              child: Center(
-                                child: AnimatedDefaultTextStyle(
-                                  duration: interactionDuration(context),
-                                  curve: interactionCurve,
-                                  style:
-                                      (theme.textTheme.labelSmall ??
-                                              const TextStyle())
-                                          .copyWith(
-                                            fontSize: 10.5,
-                                            height: 1.1,
-                                            letterSpacing: 0.25,
-                                            fontWeight: FontWeight.w600,
-                                            color: active
-                                                ? colors.onPrimary
-                                                : colors.onSurfaceVariant,
+                      Row(
+                        children: <Widget>[
+                          for (final (String code, bool active) in segments)
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 4.5,
+                                ),
+                                child: Center(
+                                  child: AnimatedDefaultTextStyle(
+                                    duration: interactionDuration(context),
+                                    curve: interactionCurve,
+                                    style:
+                                        (theme.textTheme.labelSmall ??
+                                                const TextStyle())
+                                            .copyWith(
+                                              fontSize: 10.5,
+                                              height: 1.1,
+                                              letterSpacing: 0.25,
+                                              fontWeight: FontWeight.w600,
+                                              color: active
+                                                  ? colors.onPrimary
+                                                  : colors.onSurfaceVariant,
+                                            ),
+                                    child: Text(
+                                      code,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      textHeightBehavior:
+                                          const TextHeightBehavior(
+                                            applyHeightToFirstAscent: false,
+                                            applyHeightToLastDescent: false,
                                           ),
-                                  child: Text(
-                                    code,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                    textHeightBehavior:
-                                        const TextHeightBehavior(
-                                          applyHeightToFirstAscent: false,
-                                          applyHeightToLastDescent: false,
-                                        ),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
