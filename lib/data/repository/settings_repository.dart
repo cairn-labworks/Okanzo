@@ -58,11 +58,7 @@ class CategorySection {
 /// Reads and writes app preferences, mirroring the Android DataStore keys so an
 /// existing installation's semantics are preserved.
 class SettingsRepository {
-  SettingsRepository(this._prefs)
-    : _committedAppearance = (
-        mode: _prefs.getString(_keyThemeMode),
-        theme: _prefs.getString(_keyAppTheme),
-      );
+  SettingsRepository(this._prefs);
 
   static const String _keyThemeMode = 'theme_mode';
   static const String _keyAppTheme = 'app_theme';
@@ -76,7 +72,7 @@ class SettingsRepository {
   static const String _keyLastSeenVersion = 'last_seen_version';
   final SharedPreferences _prefs;
   // SharedPreferences updates its cache before confirming a write.
-  ({String? mode, String? theme}) _committedAppearance;
+  ({String? mode, String? theme})? _committedAppearance;
   bool? _blockScreenshots;
   bool? _simpleNetWorth;
   int? _selectedPortfolioId;
@@ -86,6 +82,11 @@ class SettingsRepository {
   final StreamController<AppSettings> _controller =
       StreamController<AppSettings>.broadcast();
 
+  ({String? mode, String? theme}) get _appearance => _committedAppearance ??= (
+    mode: _prefs.getString(_keyThemeMode),
+    theme: _prefs.getString(_keyAppTheme),
+  );
+
   /// Emits the current settings immediately and again after every change.
   Stream<AppSettings> get settings async* {
     yield current;
@@ -93,8 +94,8 @@ class SettingsRepository {
   }
 
   AppSettings get current => AppSettings(
-    themeMode: AppThemeMode.fromName(_committedAppearance.mode),
-    appTheme: AppTheme.fromName(_committedAppearance.theme),
+    themeMode: AppThemeMode.fromName(_appearance.mode),
+    appTheme: AppTheme.fromName(_appearance.theme),
     baseCurrency:
         _prefs.getString(_keyBaseCurrency) ?? CurrencyUtil.deviceCurrencyCode(),
     appLockEnabled: _prefs.getBool(_keyAppLock) ?? false,
@@ -213,8 +214,8 @@ class SettingsRepository {
 
   Future<void> _saveAppearance(AppThemeMode mode, AppTheme theme) async {
     final Map<String, String?> original = <String, String?>{
-      _keyThemeMode: _committedAppearance.mode,
-      _keyAppTheme: _committedAppearance.theme,
+      _keyThemeMode: _appearance.mode,
+      _keyAppTheme: _appearance.theme,
     };
     bool saved = false;
     try {

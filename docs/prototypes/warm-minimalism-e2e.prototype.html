@@ -29,6 +29,7 @@
     --ease-std: cubic-bezier(0.2, 0, 0, 1);
     --dur-fast: 150ms;
     --dur-interaction: 180ms; /* interactionDuration(context) in motion.dart */
+    --dur-window: 220ms;      /* Android page transition in motion.dart */
     --dur-med: 240ms;
     --dur-morph: 360ms;       /* AddHoldingButton transitionDuration */
   }
@@ -43,6 +44,7 @@
   body[data-reduced-motion="true"] {
     --dur-fast: 0ms;
     --dur-interaction: 0ms;
+    --dur-window: 0ms;
     --dur-med: 0ms;
     --dur-morph: 0ms;
   }
@@ -326,17 +328,20 @@
   .screen-stage {
     flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative;
   }
-  .screen-stage.anim-tab {
-    animation: routeTab var(--dur-interaction) var(--ease-out-cubic);
+  .screen-stage.anim-tab > :not(nav, .shell-row),
+  .screen-stage.anim-tab .shell-main > *,
+  .home-results.is-entering {
+    animation: contentEntrance var(--dur-interaction) var(--ease-out-cubic);
   }
   .screen-stage.anim-push {
-    animation: routePush var(--dur-med) var(--ease-out-cubic);
+    animation: routePush var(--dur-window) var(--ease-out-cubic);
   }
   .screen-stage.anim-pop {
-    animation: routePop 210ms var(--ease-out-cubic);
+    animation: routePop var(--dur-window) var(--ease-out-cubic);
   }
-  @keyframes routeTab {
-    from { opacity: 0.72; transform: translateY(4px); }
+  .screen-stage.is-drill-in { --dur-window: var(--dur-med); }
+  @keyframes contentEntrance {
+    from { opacity: 0.72; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
   }
   @keyframes routePush {
@@ -406,14 +411,37 @@
     display: inline-grid; grid-template-columns: 1fr 1fr; padding: 2.5px;
     width: 96px; border-radius: 999px; background: var(--bg); border: 1px solid var(--box-line);
     font-size: 10.5px; font-weight: 650;
+    --thumb-inset: 2.5px;
+    --thumb-color: var(--accent);
+    transition: transform 90ms var(--ease-out-cubic);
   }
+  body:not([data-reduced-motion="true"]) .fx-pill-toggle:active { transform: scale(0.98); }
   .fx-pill-seg {
     padding: 4px 6px; border-radius: 999px; text-align: center; color: var(--muted);
-    transition: all var(--dur-interaction) var(--ease-out-cubic);
   }
-  .fx-pill-seg.is-active {
-    background: var(--accent); color: var(--on-accent);
+  .fx-pill-seg.is-active { color: var(--on-accent); }
+
+  [data-motion-thumb] { position: relative; --thumb-end: 100%; }
+  [dir="rtl"] [data-motion-thumb] { --thumb-end: -100%; }
+  [data-motion-thumb][data-thumb-at-end="true"] { --thumb-position: var(--thumb-end); }
+  [data-motion-thumb]::before {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    inset-block: var(--thumb-inset);
+    inset-inline-start: var(--thumb-inset);
+    width: calc(50% - var(--thumb-inset));
+    border-radius: 999px;
+    background: var(--thumb-color);
+    transform: translateX(var(--thumb-drag, var(--thumb-position, 0%)));
+    transition: transform var(--dur-interaction) var(--ease-out-cubic);
   }
+  [data-motion-thumb] > * { position: relative; }
+  [data-motion-thumb].is-dragging::before { transition: none; }
+  [data-motion-thumb].is-switching::before {
+    animation: thumbSwitch var(--dur-interaction) var(--ease-out-cubic);
+  }
+  @keyframes thumbSwitch { from { transform: var(--thumb-from); } }
   .refresh-banner {
     display: flex; align-items: center; justify-content: center; gap: 8px;
     margin: 0 auto 10px; width: fit-content; padding: 6px 14px;
@@ -432,13 +460,12 @@
   .nw-headline {
     font-size: 39px; font-weight: 560; letter-spacing: -1.5px; line-height: 1.12;
     margin: 6px 0 12px; color: var(--accent);
-    transition: opacity var(--dur-fast) var(--ease-std), transform var(--dur-fast) var(--ease-emph);
   }
   .nw-headline.is-negative { color: var(--liab); }
-  .nw-headline.value-swap { animation: valSwap var(--dur-interaction) var(--ease-out-cubic); }
+  .nw-hero-values.value-swap { animation: valSwap var(--dur-interaction) var(--ease-out-cubic); }
   @keyframes valSwap {
-    from { opacity: 0.4; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0.72; }
+    to { opacity: 1; }
   }
 
   /* Tonal Balance Sheet Tiles + Color-Coded Split Bar */
@@ -496,6 +523,17 @@
   .seg-btn[aria-selected="true"] {
     background: var(--soft-high); color: var(--ink); font-weight: 650;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .home-holdings-tabs {
+    touch-action: pan-y;
+    user-select: none;
+    --thumb-inset: 4px;
+    --thumb-color: var(--soft-high);
+  }
+  .home-holdings-tabs .seg-btn { touch-action: pan-y; }
+  .home-holdings-tabs .seg-btn[aria-selected="true"] {
+    background: transparent;
+    box-shadow: none;
   }
 
   /* Section Toolbar + DisclosureSize (180ms easeOutCubic from lib/ui/theme/motion.dart) */
@@ -1896,6 +1934,7 @@ const app = {
   settingsCategory: null, // null | 'appearance' | 'currency' | 'security' | 'data' | 'about'
   editorReturnScreen: 'home',
   routeAnim: '',
+  removeAnimations: false,
   lastMotion: 'Ready · 180ms easeOutCubic (motion.dart)',
   currentStep: 1,
   homeTab: 'asset',
@@ -2031,7 +2070,7 @@ function renderHomeView(st) {
 
   const currencyPillHtml = st.baseCurrency === 'USD'
     ? `<span class="fx-pill">USD</span>`
-    : `<button type="button" class="fx-pill-toggle" data-act="toggle-display-currency" title="Switch between ${st.baseCurrency} and USD">
+    : `<button type="button" class="fx-pill-toggle" data-motion-thumb data-thumb-at-end="${st.displayInUsd}" data-act="toggle-display-currency" title="Switch between ${st.baseCurrency} and USD">
          <span class="fx-pill-seg${!st.displayInUsd ? ' is-active' : ''}">${st.baseCurrency}</span>
          <span class="fx-pill-seg${st.displayInUsd ? ' is-active' : ''}">USD</span>
        </button>`;
@@ -2058,7 +2097,8 @@ function renderHomeView(st) {
           <span class="nw-caption">Net worth</span>
           ${currencyPillHtml}
         </div>
-        <div class="nw-headline tabular num-ltr value-swap${neg && !st.masked ? ' is-negative' : ''}">
+        <div class="nw-hero-values">
+        <div class="nw-headline tabular num-ltr${neg && !st.masked ? ' is-negative' : ''}">
           ${formatMoney(sum.netWorth, displayCurr, { masked: st.masked, compact: st.compact })}
         </div>
 
@@ -2085,9 +2125,10 @@ function renderHomeView(st) {
           </div>
           ${neg ? `<div style="margin-top:4px;font-size:11px;color:var(--liab);font-weight:600;">Liabilities exceed assets</div>` : ''}
         </div>` : ''}
+        </div>
       </div>
 
-      <div class="seg-bar" role="tablist">
+      <div class="seg-bar home-holdings-tabs" role="tablist" data-home-tabs data-motion-thumb data-thumb-at-end="${st.homeTab === 'liability'}">
         <button class="seg-btn" role="tab" aria-selected="${st.homeTab === 'asset'}" data-act="home-tab" data-val="asset">Assets</button>
         <button class="seg-btn" role="tab" aria-selected="${st.homeTab === 'liability'}" data-act="home-tab" data-val="liability">Liabilities</button>
       </div>
@@ -2113,6 +2154,7 @@ function renderHomeView(st) {
         </div>
       </div>
 
+      <div class="home-results">
       ${visibleGroups.length === 0 ? `
         <div style="text-align:center;padding:34px 18px;background:var(--soft);border-radius:20px;border:1px solid var(--line);">
           <div style="color:var(--accent);margin-bottom:8px;">${ico('folder')}</div>
@@ -2157,6 +2199,7 @@ function renderHomeView(st) {
           }).join('')}
         </div>
       `}
+      </div>
     </div>
 
     <div class="scrim-blur${st.addExpanded ? ' is-open' : ''}" id="home-scrim" data-act="close-add"></div>
@@ -3316,6 +3359,16 @@ function canSystemPop(st) {
   return false;
 }
 
+const systemReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+function syncMotionPreference() {
+  const reduced = app.removeAnimations || systemReducedMotion.matches;
+  document.body.dataset.reducedMotion = String(reduced);
+  const control = document.getElementById('pill-motion');
+  control.setAttribute('aria-pressed', String(reduced));
+  control.disabled = systemReducedMotion.matches;
+}
+
 function syncInspectorAndControls() {
   app.theme = resolveTheme(app.appearanceMode);
 
@@ -3329,7 +3382,7 @@ function syncInspectorAndControls() {
   document.getElementById('pill-lock').setAttribute('aria-pressed', String(app.locked));
   document.getElementById('pill-tablet').setAttribute('aria-pressed', String(app.formFactor === 'tablet'));
   document.getElementById('pill-offline').setAttribute('aria-pressed', String(app.offline));
-  document.getElementById('pill-motion').setAttribute('aria-pressed', String(document.body.dataset.reducedMotion === 'true'));
+  syncMotionPreference();
 
   if (app.topMode === 'renders') return;
 
@@ -3614,7 +3667,7 @@ function clearAllStatSelectionsInPlace() {
   syncInspectorAndControls();
 }
 
-function renderStudio({ preserveInput = false, anim = '' } = {}) {
+function renderStudio({ preserveInput = false, anim = '', homeMotion = '' } = {}) {
   app.theme = resolveTheme(app.appearanceMode);
 
   if (app.topMode === 'renders') {
@@ -3627,7 +3680,29 @@ function renderStudio({ preserveInput = false, anim = '' } = {}) {
     const animClass = anim || app.routeAnim || '';
     app.routeAnim = '';
     const host = document.getElementById('phone-app');
+    const thumbSelector = homeMotion === 'currency' ? '.fx-pill-toggle' : '[data-home-tabs]';
+    const oldTrack = homeMotion ? host.querySelector(thumbSelector) : null;
+    const thumbFrom = oldTrack && getComputedStyle(oldTrack, '::before').transform;
+    const restoreFocus = oldTrack?.contains(document.activeElement);
+    const scrollTop = homeMotion ? host.querySelector('[data-home-scroll]')?.scrollTop : null;
     host.innerHTML = `<div class="screen-stage${animClass ? ` ${animClass}` : ''}">${renderPhoneScreen(app)}</div>`;
+    if (homeMotion && app.screen === 'home') {
+      const track = host.querySelector(thumbSelector);
+      if (track && thumbFrom) {
+        track.style.setProperty('--thumb-from', thumbFrom);
+        track.classList.add('is-switching');
+      }
+      host.querySelector('[data-home-scroll]').scrollTop = scrollTop ?? 0;
+      if (restoreFocus) {
+        (homeMotion === 'currency' ? track : track?.querySelector('[aria-selected="true"]'))
+          ?.focus({ preventScroll: true });
+      }
+      if (homeMotion === 'section') {
+        host.querySelector('.home-results').classList.add('is-entering');
+      } else if (!app.masked) {
+        host.querySelector('.nw-hero-values').classList.add('value-swap');
+      }
+    }
   } else {
     updateEditorFooterInPlace();
     updateModalLiveInputs();
@@ -4043,7 +4118,7 @@ function handleSystemBack() {
     if (app.settingsCategory) {
       app.settingsCategory = null;
       recordMotion('SettingsScreen: pop category → Hub');
-      renderStudio({ anim: 'anim-pop' });
+      renderStudio({ anim: 'anim-pop is-drill-in' });
     } else {
       app.screen = app.shellTab || 'home';
       recordMotion(`Navigator.pop(SettingsScreen) → ${app.screen}`);
@@ -4114,9 +4189,8 @@ document.addEventListener('click', e => {
       app.offline = !app.offline;
       recordMotion(`Network mode → ${app.offline ? 'Offline' : 'Online'}`);
     } else if (k === 'motion') {
-      const next = document.body.dataset.reducedMotion !== 'true';
-      document.body.dataset.reducedMotion = String(next);
-      recordMotion(next ? 'Android Remove animations: ON (0ms)' : 'Standard motion restored (180ms / 360ms)');
+      app.removeAnimations = !app.removeAnimations;
+      recordMotion(app.removeAnimations ? 'Android Remove animations: ON (0ms)' : 'Standard motion restored');
     }
     renderStudio();
     return;
@@ -4124,6 +4198,7 @@ document.addEventListener('click', e => {
 
   const navBtn = e.target.closest('[data-nav]');
   if (navBtn) {
+    if (app.screen === navBtn.dataset.nav) return;
     app.modal = null; app.addExpanded = false;
     app.shellTab = navBtn.dataset.nav;
     app.screen = navBtn.dataset.nav;
@@ -4157,13 +4232,13 @@ document.addEventListener('click', e => {
     if (app.screen !== 'settings' && app.screen !== 'editor') app.shellTab = app.screen;
     app.addExpanded = false; app.modal = null;
     app.screen = 'settings'; app.settingsCategory = null;
-    recordMotion('Navigator.push(SettingsScreen) · 240ms easeOutCubic');
+    recordMotion('Navigator.push(SettingsScreen) · 220ms');
     renderStudio({ anim: 'anim-push' });
   }
   else if (act === 'open-settings-cat') {
     app.settingsCategory = actEl.dataset.cat;
     recordMotion(`SettingsScreen drill-in → ${app.settingsCategory} · 240ms easeOutCubic`);
-    renderStudio({ anim: 'anim-push' });
+    renderStudio({ anim: 'anim-push is-drill-in' });
   }
   else if (act === 'settings-back') {
     handleSystemBack();
@@ -4185,8 +4260,8 @@ document.addEventListener('click', e => {
   else if (act === 'toggle-display-currency') {
     if (app.baseCurrency === 'USD') return;
     app.displayInUsd = !app.displayInUsd;
-    recordMotion(`Home display currency → ${app.displayInUsd ? 'USD' : app.baseCurrency}`);
-    renderStudio();
+    recordMotion(`Home display currency → ${app.displayInUsd ? 'USD' : app.baseCurrency} · 180ms fade`);
+    renderStudio({ homeMotion: 'currency' });
   }
   else if (act === 'pick-language') {
     const code = actEl.dataset.val;
@@ -4322,9 +4397,7 @@ document.addEventListener('click', e => {
     renderStudio();
   }
   else if (act === 'home-tab') {
-    app.homeTab = actEl.dataset.val;
-    recordMotion(`Home segmented switch → ${app.homeTab}s · 180ms easeOutCubic`);
-    renderStudio();
+    if (!ignoreSectionClick || e.detail === 0) selectHomeSection(actEl.dataset.val);
   }
   else if (act === 'toggle-cat') { toggleCatInPlace(actEl.dataset.key); }
   else if (act === 'toggle-expand-all') { toggleExpandAllInPlace(); }
@@ -4680,8 +4753,29 @@ document.addEventListener('change', e => {
   }
 });
 
+function selectHomeSection(next) {
+  if (app.homeTab === next) return;
+  app.homeTab = next;
+  recordMotion(`Home holdings → ${next}s · 180ms`);
+  renderStudio({ homeMotion: 'section' });
+}
+
 let pullStartY = null;
+let sectionDrag = null;
+let ignoreSectionClick = false;
 document.addEventListener('pointerdown', e => {
+  if (!e.isPrimary || e.button !== 0) return;
+  ignoreSectionClick = false;
+  const track = e.target.closest('#phone-app [data-home-tabs]');
+  if (track) {
+    pullStartY = null;
+    sectionDrag = {
+      track, pointer: e.pointerId, x: e.clientX, y: e.clientY, dragging: false,
+      direction: getComputedStyle(track).direction === 'rtl' ? -1 : 1,
+      thumbWidth: parseFloat(getComputedStyle(track, '::before').width)
+    };
+    return;
+  }
   const scroller = e.target.closest('[data-home-scroll="true"]');
   if (scroller && scroller.scrollTop <= 0 && !e.target.closest('button, input')) {
     pullStartY = e.clientY;
@@ -4689,7 +4783,45 @@ document.addEventListener('pointerdown', e => {
     pullStartY = null;
   }
 });
+document.addEventListener('pointermove', e => {
+  const drag = sectionDrag;
+  if (!drag || drag.pointer !== e.pointerId || !drag.track.isConnected) return;
+  const dx = (e.clientX - drag.x) * drag.direction;
+  if (!drag.dragging) {
+    if (Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(e.clientY - drag.y)) return;
+    drag.dragging = true;
+    drag.track.setPointerCapture(e.pointerId);
+    drag.track.classList.add('is-dragging');
+  }
+  if (document.body.dataset.reducedMotion === 'true') return;
+  const start = app.homeTab === 'asset' ? 0 : drag.thumbWidth;
+  const offset = Math.max(0, Math.min(drag.thumbWidth, start + dx));
+  drag.track.style.setProperty('--thumb-drag', `${offset * drag.direction}px`);
+});
+
+function finishSectionDrag(e, canceled = false) {
+  const drag = sectionDrag;
+  if (!drag || drag.pointer !== e.pointerId) return false;
+  sectionDrag = null;
+  if (!drag.dragging || !drag.track.isConnected) return true;
+  ignoreSectionClick = true;
+  const dx = (e.clientX - drag.x) * drag.direction;
+  const next = dx > 18 ? 'liability' : dx < -18 ? 'asset' : app.homeTab;
+  if (!canceled && next !== app.homeTab) {
+    selectHomeSection(next);
+  } else {
+    drag.track.classList.remove('is-dragging');
+    drag.track.style.removeProperty('--thumb-drag');
+  }
+  return true;
+}
+
+document.addEventListener('pointercancel', e => {
+  finishSectionDrag(e, true);
+  if (e.isPrimary) pullStartY = null;
+});
 document.addEventListener('pointerup', e => {
+  if (!e.isPrimary || finishSectionDrag(e)) return;
   if (pullStartY !== null && e.clientY - pullStartY > 48 && !app.refreshing) {
     pullStartY = null;
     app.refreshing = true;
@@ -4709,6 +4841,7 @@ document.addEventListener('pointerup', e => {
 window.matchMedia?.('(prefers-color-scheme: dark)')?.addEventListener?.('change', () => {
   if (app.appearanceMode === 'system') renderStudio();
 });
+systemReducedMotion.addEventListener('change', syncMotionPreference);
 
 const finishDescriptions = {
   original: 'The current app, untouched. Compare it with the two finish studies.',

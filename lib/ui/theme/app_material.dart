@@ -191,7 +191,7 @@ class AppThemeBackground extends StatelessWidget {
 }
 
 class AppPageTransitionsTheme extends PageTransitionsTheme {
-  const AppPageTransitionsTheme();
+  const AppPageTransitionsTheme({required super.builders});
 
   @override
   Widget buildTransitions<T>(

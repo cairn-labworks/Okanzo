@@ -5,6 +5,7 @@ import '../../domain/model/app_theme.dart';
 import 'app_material.dart';
 import 'app_style.dart';
 import 'colors.dart';
+import 'motion.dart';
 
 /// Semantic colors that are not part of the standard Material scheme.
 @immutable
@@ -179,7 +180,12 @@ ThemeData buildTheme({
     scaffoldBackgroundColor: appStyle.isGlass
         ? scheme.surface.withValues(alpha: 0)
         : scheme.surface,
-    pageTransitionsTheme: const AppPageTransitionsTheme(),
+    pageTransitionsTheme: AppPageTransitionsTheme(
+      builders: <TargetPlatform, PageTransitionsBuilder>{
+        ...const PageTransitionsTheme().builders,
+        TargetPlatform.android: const AppPageTransitionsBuilder(),
+      },
+    ),
     textTheme: textTheme,
     extensions: <ThemeExtension<dynamic>>[
       dark ? FinanceColors.dark : FinanceColors.light,

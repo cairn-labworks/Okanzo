@@ -15,6 +15,7 @@ import '../portfolio/portfolio_screen.dart';
 import '../settings/settings_screen.dart';
 import '../statistics/statistics_screen.dart';
 import '../theme/app_material.dart';
+import '../theme/motion.dart';
 
 /// Top-level destinations shown in the bottom bar / navigation rail.
 enum TopLevelDestination {
@@ -100,7 +101,9 @@ class _AppShellState extends State<AppShell> {
     }
   }
 
-  void _select(int index) => setState(() => _index = index);
+  void _select(int index) {
+    if (index != _index) setState(() => _index = index);
+  }
 
   void _openAssetEditor(int portfolioId, int assetId) {
     Navigator.of(context).push(
@@ -137,23 +140,28 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final bool useRail = MediaQuery.sizeOf(context).width >= 600;
-    final Widget body = IndexedStack(
-      index: _index,
-      children: <Widget>[
-        HomeScreen(
-          onOpenAssetEditor: _openAssetEditor,
-          onOpenLiabilityEditor: _openLiabilityEditor,
-          onManagePortfolios: () =>
-              _select(TopLevelDestination.portfolios.index),
-          onOpenSettings: _openSettings,
+    final Widget body = ClipRect(
+      child: MotionEntrance(
+        trigger: _index,
+        child: IndexedStack(
+          index: _index,
+          children: <Widget>[
+            HomeScreen(
+              onOpenAssetEditor: _openAssetEditor,
+              onOpenLiabilityEditor: _openLiabilityEditor,
+              onManagePortfolios: () =>
+                  _select(TopLevelDestination.portfolios.index),
+              onOpenSettings: _openSettings,
+            ),
+            _index == TopLevelDestination.statistics.index
+                ? const StatisticsScreen()
+                : const SizedBox.shrink(),
+            _index == TopLevelDestination.portfolios.index
+                ? const PortfolioScreen()
+                : const SizedBox.shrink(),
+          ],
         ),
-        _index == TopLevelDestination.statistics.index
-            ? const StatisticsScreen()
-            : const SizedBox.shrink(),
-        _index == TopLevelDestination.portfolios.index
-            ? const PortfolioScreen()
-            : const SizedBox.shrink(),
-      ],
+      ),
     );
 
     if (!useRail) {

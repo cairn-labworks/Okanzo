@@ -805,95 +805,106 @@ class _HomeContent extends StatelessWidget {
                     )
                   : const SizedBox(height: 12),
             ),
-            if (showAssets && !state.hasAnyAssets)
-              EmptyState(
-                icon: Icons.account_balance_wallet,
-                title: 'No assets yet'.tr(context),
-                subtitle:
-                    'Add stocks, cash, property and more to track their value.'
-                        .tr(context),
-              ),
-            if (showAssets &&
-                state.hasAnyAssets &&
-                needle.isNotEmpty &&
-                visibleAssetGroups.isEmpty)
-              EmptyState(
-                icon: Icons.search_off,
-                title: 'No matching holdings'.tr(context),
-                subtitle: 'Try another name, ticker, or currency code.'.tr(
-                  context,
-                ),
-              ),
-            if (showAssets && visibleAssetGroups.isNotEmpty)
-              _CategoryPanel(
-                child: needle.isNotEmpty
-                    ? Column(
-                        children: <Widget>[
-                          for (final AssetCategoryGroup group
-                              in visibleAssetGroups)
-                            buildAssetGroupWidget(group, false),
-                        ],
-                      )
-                    : DragReorderColumn<AssetCategoryGroup>(
-                        items: visibleAssetGroups,
-                        keyOf: (AssetCategoryGroup group) => group.type,
-                        onReordered: (List<AssetCategoryGroup> groups) =>
-                            viewModel.onAssetCategoriesReordered(
-                              groups
-                                  .map((AssetCategoryGroup g) => g.type)
-                                  .toList(),
+            MotionEntrance(
+              trigger: showAssets,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  if (showAssets && !state.hasAnyAssets)
+                    EmptyState(
+                      icon: Icons.account_balance_wallet,
+                      title: 'No assets yet'.tr(context),
+                      subtitle: 'Add stocks, cash, property and more to track their value.'
+                          .tr(context),
+                    ),
+                  if (showAssets &&
+                      state.hasAnyAssets &&
+                      needle.isNotEmpty &&
+                      visibleAssetGroups.isEmpty)
+                    EmptyState(
+                      icon: Icons.search_off,
+                      title: 'No matching holdings'.tr(context),
+                      subtitle: 'Try another name, ticker, or currency code.'
+                          .tr(context),
+                    ),
+                  if (showAssets && visibleAssetGroups.isNotEmpty)
+                    _CategoryPanel(
+                      child: needle.isNotEmpty
+                          ? Column(
+                              children: <Widget>[
+                                for (final AssetCategoryGroup group
+                                    in visibleAssetGroups)
+                                  buildAssetGroupWidget(group, false),
+                              ],
+                            )
+                          : DragReorderColumn<AssetCategoryGroup>(
+                              items: visibleAssetGroups,
+                              keyOf: (AssetCategoryGroup group) => group.type,
+                              onReordered: (List<AssetCategoryGroup> groups) =>
+                                  viewModel.onAssetCategoriesReordered(
+                                    groups
+                                        .map((AssetCategoryGroup g) => g.type)
+                                        .toList(),
+                                  ),
+                              itemBuilder: (
+                                BuildContext context,
+                                AssetCategoryGroup group,
+                                bool dragging,
+                              ) => buildAssetGroupWidget(group, dragging),
                             ),
-                        itemBuilder: (
-                          BuildContext context,
-                          AssetCategoryGroup group,
-                          bool dragging,
-                        ) => buildAssetGroupWidget(group, dragging),
-                      ),
-              ),
-            if (!showAssets && !state.hasAnyLiabilities)
-              EmptyState(
-                icon: Icons.inbox,
-                title: 'No liabilities'.tr(context),
-                subtitle: 'Track loans, credit cards and pending payments here.'
-                    .tr(context),
-              ),
-            if (!showAssets &&
-                state.hasAnyLiabilities &&
-                needle.isNotEmpty &&
-                visibleLiabilityGroups.isEmpty)
-              EmptyState(
-                icon: Icons.search_off,
-                title: 'No matching holdings'.tr(context),
-                subtitle: 'Try another name, ticker, or currency code.'.tr(
-                  context,
-                ),
-              ),
-            if (!showAssets && visibleLiabilityGroups.isNotEmpty)
-              _CategoryPanel(
-                child: needle.isNotEmpty
-                    ? Column(
-                        children: <Widget>[
-                          for (final LiabilityCategoryGroup group
-                              in visibleLiabilityGroups)
-                            buildLiabilityGroupWidget(group, false),
-                        ],
-                      )
-                    : DragReorderColumn<LiabilityCategoryGroup>(
-                        items: visibleLiabilityGroups,
-                        keyOf: (LiabilityCategoryGroup group) => group.type,
-                        onReordered: (List<LiabilityCategoryGroup> groups) =>
-                            viewModel.onLiabilityCategoriesReordered(
-                              groups
-                                  .map((LiabilityCategoryGroup g) => g.type)
-                                  .toList(),
+                    ),
+                  if (!showAssets && !state.hasAnyLiabilities)
+                    EmptyState(
+                      icon: Icons.inbox,
+                      title: 'No liabilities'.tr(context),
+                      subtitle:
+                          'Track loans, credit cards and pending payments here.'
+                              .tr(context),
+                    ),
+                  if (!showAssets &&
+                      state.hasAnyLiabilities &&
+                      needle.isNotEmpty &&
+                      visibleLiabilityGroups.isEmpty)
+                    EmptyState(
+                      icon: Icons.search_off,
+                      title: 'No matching holdings'.tr(context),
+                      subtitle: 'Try another name, ticker, or currency code.'
+                          .tr(context),
+                    ),
+                  if (!showAssets && visibleLiabilityGroups.isNotEmpty)
+                    _CategoryPanel(
+                      child: needle.isNotEmpty
+                          ? Column(
+                              children: <Widget>[
+                                for (final LiabilityCategoryGroup group
+                                    in visibleLiabilityGroups)
+                                  buildLiabilityGroupWidget(group, false),
+                              ],
+                            )
+                          : DragReorderColumn<LiabilityCategoryGroup>(
+                              items: visibleLiabilityGroups,
+                              keyOf: (LiabilityCategoryGroup group) =>
+                                  group.type,
+                              onReordered:
+                                  (List<LiabilityCategoryGroup> groups) =>
+                                      viewModel.onLiabilityCategoriesReordered(
+                                        groups
+                                            .map(
+                                              (LiabilityCategoryGroup g) =>
+                                                  g.type,
+                                            )
+                                            .toList(),
+                                      ),
+                              itemBuilder: (
+                                BuildContext context,
+                                LiabilityCategoryGroup group,
+                                bool dragging,
+                              ) => buildLiabilityGroupWidget(group, dragging),
                             ),
-                        itemBuilder: (
-                          BuildContext context,
-                          LiabilityCategoryGroup group,
-                          bool dragging,
-                        ) => buildLiabilityGroupWidget(group, dragging),
-                      ),
+                    ),
+                ],
               ),
+            ),
             const SizedBox(height: 8),
           ],
         ),

@@ -112,6 +112,9 @@ void main() {
           ),
         ]),
       );
+      if (const bool.fromEnvironment('CANVAS_STORED_GLASS')) {
+        await container.settingsRepository.setAppTheme(AppTheme.liquidGlass);
+      }
       await container.settingsRepository.setAppTheme(AppTheme.classic);
       await container.settingsRepository.setBaseCurrency('USD');
       await container.settingsRepository.setAppearanceMode(AppThemeMode.dark);
